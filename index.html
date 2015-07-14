@@ -66,21 +66,30 @@
     <article id="post-mysql_error_1048" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_error_1048/" class="article-date">
-  <time datetime="2015-07-14T09:38:40.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_error_1048/">Mysql Error 1048 奇遇记</a>
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="Mysql_Error_1048_奇遇记">Mysql Error 1048 奇遇记</h1>
-<blockquote>
-<p>   Error: 1048 SQLSTATE: 23000 (ER_BAD_NULL_ERROR) Message: Column ‘%s’ cannot be null </p>
-</blockquote>
-<p><a href="http://dev.mysql.com/doc/refman/5.6/en/error-messages-server.html#error_er_bad_null_error" target="_blank" rel="external">Mysql reference 5.6 error code</a></p>
-<h2 id="前提">前提</h2>
+        <h2 id="前提">前提</h2>
 <hr>
 <p>上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">[ERROR] Slave SQL: Error <span class="attribute">'Column</span> <span class="attribute">'type_id</span>' cannot be <span class="keyword">null</span>' <span class="keyword">on</span> query. <span class="keyword">Default</span> database: ''. Query: <span class="attribute">'insert</span> into if_dw_stats.da_upload_nh_score_rank_result(city_id,city_name,comm_id,region_name,paid,comm_name_nh,region_id_num,region_id,subregion_id_num,subregion_id,vcuv,vcuv_z,call_vcuv,call_vcuv_z,orders_vcuv,orders_vcuv_z,peitao,peitao_z,result_score,rank,type_id,type_name,pinyin,cal_dt) values (N), 其中N&gt;<span class="number">9000</span>;</div></pre></td></tr></table></figure>
@@ -147,6 +156,8 @@
 </ol>
 </li>
 </ul>
+<hr>
+<p><a href="http://dev.mysql.com/doc/refman/5.6/en/error-messages-server.html#error_er_bad_null_error" target="_blank" rel="external">Mysql reference 5.6 error code</a></p>
 
       
     </div>
@@ -154,60 +165,8 @@
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_error_1048/" data-id="wedy7mo64m00itqw" class="article-share-link">Share</a>
       
       
-    </footer>
-  </div>
-  
-</article>
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
 
-
-  
-    <article id="post-hello-world" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2014/11/10/hello-world/" class="article-date">
-  <time datetime="2014-11-10T08:30:34.000Z" itemprop="datePublished">Nov 10 2014</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 itemprop="name">
-      <a class="article-title" href="/2014/11/10/hello-world/">Hello World</a>
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>Welcome to <a href="http://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="http://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="http://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">trobuleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick_Start">Quick Start</h2>
-<h3 id="Create_a_new_post">Create a new post</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
-
-<p>More info: <a href="http://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run_server">Run server</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
-
-<p>More info: <a href="http://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate_static_files">Generate static files</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
-
-<p>More info: <a href="http://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy_to_remote_sites">Deploy to remote sites</h3>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
-
-<p>More info: <a href="http://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2014/11/10/hello-world/" data-id="7id1xqegukm99n1x" class="article-share-link">Share</a>
-      
-      
     </footer>
   </div>
   
@@ -221,16 +180,37 @@
           <aside id="sidebar">
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">1</span></li></ul>
+    </div>
+  </div>
+
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">1</span></li></ul>
+    </div>
+  </div>
+
   
     
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/MySQL-Error/" style="font-size: NaNpx;">MySQL Error</a>
+    </div>
+  </div>
+
   
     
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/11/">November 2014</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">1</span></li></ul>
     </div>
   </div>
 
@@ -242,11 +222,7 @@
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_error_1048/">(no title)</a>
-          </li>
-        
-          <li>
-            <a href="/2014/11/10/hello-world/">Hello World</a>
+            <a href="/2015/07/14/mysql_error_1048/">Mysql Error 1048 奇遇记</a>
           </li>
         
       </ul>
