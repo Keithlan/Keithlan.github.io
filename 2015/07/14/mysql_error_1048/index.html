@@ -7,22 +7,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="description" content="前提
 
-上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟
-1[ERROR] Slave SQL: Error 'Column 'type_id' cannot be null' on query. Default databa">
+上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Mysql Error 1048 奇遇记">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_error_1048/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
 <meta property="og:description" content="前提
 
-上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟
-1[ERROR] Slave SQL: Error 'Column 'type_id' cannot be null' on query. Default databa">
+上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Mysql Error 1048 奇遇记">
 <meta name="twitter:description" content="前提
 
-上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟
-1[ERROR] Slave SQL: Error 'Column 'type_id' cannot be null' on query. Default databa">
+上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -98,7 +95,7 @@
       
         <h2 id="前提">前提</h2>
 <hr>
-<p>上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟</p>
+<p>上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟<a id="more"></a></p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">[ERROR] Slave SQL: Error <span class="attribute">'Column</span> <span class="attribute">'type_id</span>' cannot be <span class="keyword">null</span>' <span class="keyword">on</span> query. <span class="keyword">Default</span> database: ''. Query: <span class="attribute">'insert</span> into if_dw_stats.da_upload_nh_score_rank_result(city_id,city_name,comm_id,region_name,paid,comm_name_nh,region_id_num,region_id,subregion_id_num,subregion_id,vcuv,vcuv_z,call_vcuv,call_vcuv_z,orders_vcuv,orders_vcuv_z,peitao,peitao_z,result_score,rank,type_id,type_name,pinyin,cal_dt) values (N), 其中N&gt;<span class="number">9000</span>;</div></pre></td></tr></table></figure>
 
 <p>这里总结一下我遇到过的错误，分三种情况,虽然都是由于null引起，但是1048才是重点。</p>
