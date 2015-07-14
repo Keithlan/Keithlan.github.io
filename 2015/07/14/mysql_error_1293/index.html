@@ -3,41 +3,35 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>深入浅出timestamp | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="深入浅出timestamp
-
-前提
+  <meta name="description" content="前提
 1对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp
 
 错误场景
 
 好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 (HY000):
-12345678* Mysql version 5.1.54create">
+12345678* Mysql version 5.1.54create table lc_test_">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="深入浅出timestamp">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_error_1293/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="深入浅出timestamp
-
-前提
+<meta property="og:description" content="前提
 1对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp
 
 错误场景
 
 好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 (HY000):
-12345678* Mysql version 5.1.54create">
+12345678* Mysql version 5.1.54create table lc_test_">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="深入浅出timestamp
-
-前提
+<meta name="twitter:title" content="深入浅出timestamp">
+<meta name="twitter:description" content="前提
 1对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp
 
 错误场景
 
 好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 (HY000):
-12345678* Mysql version 5.1.54create">
+12345678* Mysql version 5.1.54create table lc_test_">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -88,24 +82,38 @@
         <section id="main"><article id="post-mysql_error_1293" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_error_1293/" class="article-date">
-  <time datetime="2015-07-14T11:30:10.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      深入浅出timestamp
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="深入浅出timestamp">深入浅出timestamp</h1>
-<hr>
-<h2 id="前提">前提</h2>
+        <h2 id="前提">前提</h2>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp</div></pre></td></tr></table></figure>
 
 <h2 id="错误场景">错误场景</h2>
 <hr>
 <p>好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 (HY000):</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* Mysql version 5.1.54</div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">create</span> <span class="keyword">table</span> lc_test_0(</span></div><div class="line">	<span class="string">`update_time`</span> <span class="keyword">timestamp</span> <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="keyword">CURRENT_TIMESTAMP</span> <span class="keyword">ON</span> <span class="keyword">UPDATE</span> <span class="keyword">CURRENT_TIMESTAMP</span> COMMENT <span class="string">'cms时间'</span> ,</div><div class="line">    <span class="string">`upload_time`</span> <span class="keyword">timestamp</span> <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="keyword">CURRENT_TIMESTAMP</span> <span class="keyword">ON</span> <span class="keyword">UPDATE</span> <span class="keyword">CURRENT_TIMESTAMP</span> COMMENT <span class="string">'上传时间'</span></div><div class="line">)<span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8 COMMENT=<span class="string">'已推送客户列表'</span>;</div><div class="line"></div><div class="line">ERROR 1293 (HY000): Incorrect table definition; there can be only one TIMESTAMP column with CURRENT_TIMESTAMP in DEFAULT or ON <span class="operator"><span class="keyword">UPDATE</span> clause</span></div></pre></td></tr></table></figure>
+
+<a id="more"></a>
 
 <p>通过以上错误，查查手册就知道，timestamp类型不允许有两个CURRENT_TIMESTAMP作为default值。</p>
 <p>既然如此，那我们就去掉一个呗</p>
@@ -154,13 +162,15 @@
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_error_1293/" data-id="z3iewuouo64qlisk" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
     
 <nav id="article-nav">
   
-    <a href="/2015/07/14/mysql_group_order_limit/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_in/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
@@ -170,9 +180,9 @@
     </a>
   
   
-    <a href="/2015/07/14/mysql_ulimit/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_error_1048/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title"></div>
+      <div class="article-nav-title">Mysql Error 1048 奇遇记</div>
     </a>
   
 </nav>
@@ -208,7 +218,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">1</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
     </div>
   </div>
 
@@ -217,7 +227,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">1</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
     </div>
   </div>
 
@@ -247,15 +257,11 @@
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
-          </li>
-        
-          <li>
             <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_error_1293/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
           </li>
         
           <li>
@@ -264,6 +270,10 @@
         
           <li>
             <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
           </li>
         
       </ul>
