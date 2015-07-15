@@ -1,0 +1,692 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>mysql日志分析神器之mysqlsla | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="hack mysqlsla 文档
+背景
+
+什么是mysqlsla？
+  Mysqlsla 是daniel-nichter 用perl 写的一个脚本，专门用于处理分析Mysql的日志而存在。 
+
+mysqlsla 能解决什么问题？
+  作为一名Mysql DBA，日常工作中处理日志是再正常不过的事情了">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/07/15/mysqsla/" title="mysql日志分析神器之mysqlsla" itemprop="url">mysql日志分析神器之mysqlsla</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-07-15T03:32:24.000Z" itemprop="datePublished">Jul 15 2015</time>
+    Updated:<time datetime="2015-07-15T07:36:12.000Z" itemprop="dateModified">Jul 15 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla介绍"><span class="toc-number">2.</span> <span class="toc-text">mysqlsla介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla安装"><span class="toc-number">3.</span> <span class="toc-text">mysqlsla安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的基本使用"><span class="toc-number">4.</span> <span class="toc-text">mysqlsla的基本使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的核心功能之filter"><span class="toc-number">5.</span> <span class="toc-text">mysqlsla的核心功能之filter</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的核心功能之report"><span class="toc-number">6.</span> <span class="toc-text">mysqlsla的核心功能之report</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的其他高级功能：_replay，user-defined-logs"><span class="toc-number">7.</span> <span class="toc-text">mysqlsla的其他高级功能： replay，user-defined-logs</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">8.</span> <span class="toc-text">最后</span></a></li></ol>
+		</div>
+		
+		<p><a href="http://hackmysql.com/mysqlsla" target="_blank" rel="external">hack mysqlsla 文档</a></p>
+<h2 id="背景">背景</h2>
+<ul>
+<li><p><strong>什么是mysqlsla？</strong></p>
+<p>  Mysqlsla 是daniel-nichter 用perl 写的一个脚本，专门用于处理分析Mysql的日志而存在。 </p>
+</li>
+<li><p><strong>mysqlsla 能解决什么问题？</strong></p>
+<p>  作为一名Mysql DBA，日常工作中处理日志是再正常不过的事情了。 通过Mysql的日志主要分为：General log，slow log，binary log三种。通    过query日志，我们可以分析业务的逻辑，业务特点。通过slow log，我们可以找到服务器的瓶颈。通过binary log，我们可以恢复数据。Mysqlsla     可以处理其中的任意日志，这也是我喜欢它的最主要原因之一。</p>
+</li>
+<li><p><strong>为什么选择mysqlsla？</strong></p>
+<p>  分析mysql日志的工具当然不止mysqlsla一种，据我所知的有：</p>
+<ul>
+<li>mysqldumpslow</li>
+<li>mysqlbinlog</li>
+<li>myprofi</li>
+<li>mysql-explain-slow-log</li>
+<li>mysql-log-filter</li>
+<li>pt-query-digest</li>
+<li>mysqlsla</li>
+</ul>
+</li>
+</ul>
+<p>下面做一个对比：</p>
+<table>
+<thead>
+<tr>
+<th>工具</th>
+<th>一般统计</th>
+<th>高级统计</th>
+<th>语言</th>
+<th>优势</th>
+<th>针对log</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>mysqldumpslow</td>
+<td>支持</td>
+<td>不支持</td>
+<td>perl</td>
+<td>mysql官方自带</td>
+<td>slow</td>
+</tr>
+<tr>
+<td>myprofi</td>
+<td>支持</td>
+<td>不支持</td>
+<td>php</td>
+<td>简单</td>
+<td>slow</td>
+</tr>
+<tr>
+<td>mysql-log-filter</td>
+<td>支持</td>
+<td>部分支持</td>
+<td>python</td>
+<td>简单</td>
+<td>slow</td>
+</tr>
+<tr>
+<td>mysql-explain-slow-log</td>
+<td>支持</td>
+<td>不支持</td>
+<td>perl</td>
+<td>无</td>
+<td>slow</td>
+</tr>
+<tr>
+<td>mysqlbinlog</td>
+<td>支持</td>
+<td>不支持</td>
+<td>二进制</td>
+<td>mysql官方自带</td>
+<td>binary log</td>
+</tr>
+<tr>
+<td>mysqlsla</td>
+<td>支持</td>
+<td>支持</td>
+<td>perl</td>
+<td>总能强大，使用简单，自定义能力强</td>
+<td>所有日志，包括自定义日志</td>
+<td></td>
+</tr>
+<tr>
+<td>pt-query-digest</td>
+<td>支持</td>
+<td>支持</td>
+<td>perl</td>
+<td>总能强大，使用简单，自定义能力强</td>
+<td>所有日志，包括自定义日志</td>
+</tr>
+</tbody>
+</table>
+<p>根据以上特点，最适合的工具非 mysqlsla 与 pt-query-digest 莫属。 mysqlsla与pt-query-digest的作者是同一个人。现在主打开发pt系列工具。由于个人已经使用过mysqlsla 三年，被其强大的功能所吸引，可以完成DBA工作的99%的需求，所以这里详细介绍mysqlsla的使用，并对现有mysqlsla的一些不足，进行二次开发。</p>
+<h2 id="mysqlsla介绍">mysqlsla介绍</h2>
+<hr>
+<p>大致将mysqlsla 分解出来分为： Mysqlsla的安装，Mysqlsla的功能，Mysqlsla的用法，Mysqlsla 的filter，Mysqlsla的report，Mysqlsla的replay，Mysqlsla的user-defined-Logs。 其中最核心的当然是：filter以及report。</p>
+<p>大致流程是：   LOGS(UDL,defalut) -&gt; parse -&gt; filter -&gt; sort -&gt; reprot -&gt; replay .</p>
+<p> <img src="image/mysqlsla_pic.png" alt="test" title="test"></p>
+<p>这里说的，Mysqlsla可以处理任意日志。默认可以处理mysql的三种常见日志。</p>
+<p>如：General log，binary log，slow log</p>
+<ul>
+<li><p>Slow log： mysqlsla ­lt slow slow.log</p>
+</li>
+<li><p>General log: mysqlsla ­lt general general.log</p>
+</li>
+<li><p>Binary log: mysqlbinlog bin.log | mysqlsla ­lt binary ­</p>
+</li>
+</ul>
+<h2 id="mysqlsla安装">mysqlsla安装</h2>
+<hr>
+<ol>
+<li>Download mysqlsla­2.03.tar.gz</li>
+<li>tar -xvfz mysqlsla­2.03.tar.gz </li>
+<li>cd mysqlsla­2.03</li>
+<li>perl Makefile.PL</li>
+<li>make</li>
+<li>make install</li>
+</ol>
+<h2 id="mysqlsla的基本使用">mysqlsla的基本使用</h2>
+<hr>
+<ul>
+<li><strong>.mysqlsla Config File</strong></li>
+</ul>
+<p>~.mysqlsla 这个文件，类似Mysql 里面的配置文件.cnf。 mysqlsla 启动都会读取这个全局配置文件。如：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">atomic­-statements </div><div class="line">statement­-filter=+<span class="operator"><span class="keyword">UPDATE</span>,<span class="keyword">INSERT</span></span></div></pre></td></tr></table></figure>
+
+<p>注意点： 这里的参数，不能加 — 或者 -</p>
+<ul>
+<li><strong>基本命令和使用</strong></li>
+</ul>
+<p>这里罗列一下在Mysql工作中最最最常用的命令，使用率在80%</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div></pre></td><td class="code"><pre><div class="line">* ­­<span class="comment">--log­-type (-­lt) TYPE LOGS</span></div><div class="line">	用于指定解析的是什么类型的日志，不过放心，即便你不指定，它默认也会自动去判断基本的日志，slow，general，binary，msl or udl。</div><div class="line"></div><div class="line">* ­­<span class="comment">--db-­inheritance</span></div><div class="line">	这个参数还是通过源码发现的，之前没认真读文档。这个参数十分重要，之前对这个参数用的不多，但是如果你不指定，解析出来的日志中，很有可能对应的SQL语句，找不到database来源。</div><div class="line">	</div><div class="line">* ­­<span class="comment">--explain (­-ex)	</span></div><div class="line">	默认是disable的，并且必须report格式为standard。作用就是对每一条uniq的SQL进行<span class="operator"><span class="keyword">explain</span>分析，非常实用。</span></div><div class="line">	</div><div class="line">* <span class="comment">--­­grep PATTERN</span></div><div class="line">	正则匹配功能。您可以对你的report做任意的正则匹配。比如：我想查关于‘table_lc’,<span class="string">'table_cl'</span>这两张表的所有分析结果。</div><div class="line">	普通的方式，是没有办法查到的，但是您可以这样做：</div><div class="line">	mysqlsla <span class="comment">--grep '(\btable_lc\b)|(\btable_cl\b)'  db10-037.log</span></div><div class="line">	</div><div class="line">* <span class="comment">--­­meta-­filter (­-mf) CONDTIONS</span></div><div class="line">	这是filter中的一种，这里简单介绍，详细介绍看filter章节。</div><div class="line">	这里的meta，指的是meta-property，meta-property后面介绍。典型的就是：c_sum，指的是<span class="keyword">SQL</span>数量的总和。</div><div class="line">	基本使用情况： [meta][op][<span class="keyword">value</span>]</div><div class="line">	特别要注意这里的op， 没有别的，就三种， &gt;,&lt;,=. 之前自以为事，&gt;=，死活得不到自己想要的结果。</div><div class="line">	这里[op]有个特殊用法：t_sum <span class="keyword">between</span> <span class="number">10</span> <span class="keyword">and</span> <span class="number">100</span> ， 可以这样写： <span class="string">'t_sum&gt;10,t_sum&lt;100'</span></div><div class="line">	举例说明： 我想查看ark_db的所有结果</div><div class="line">		mysqlsla -mf <span class="string">'db=ark_db'</span> <span class="comment">--top 100 slow_1.log slow_2.log</span></div><div class="line">		</div><div class="line">­­* <span class="comment">--statement-­filter (­-sf) CONDTIONS</span></div><div class="line">	这是filter中的另一种</div><div class="line">	别的不说，直接看使用形式：[+-][type],[type]</div><div class="line">	[TYPE] 的值就是 :<span class="keyword">SELECT</span>,<span class="keyword">CREATE</span>,<span class="keyword">DROP</span>,<span class="keyword">UPDATE</span>,<span class="keyword">INSERT</span>,etc.</div><div class="line">	举例说明：如果我只想查看<span class="keyword">select</span>，<span class="keyword">create</span>类型的<span class="keyword">SQL</span>。</div><div class="line">		mysqsla -sf <span class="string">'+SELECT,CREATE'</span> slow.<span class="keyword">log</span></div><div class="line">	举例说明：如果我想查看除了<span class="keyword">select</span>以外的所有结果。</div><div class="line">		mysqlsla -sf <span class="string">'-SELECT'</span> 类型的<span class="keyword">SQL</span>。</div><div class="line">		</div><div class="line">* <span class="comment">--top N</span></div><div class="line">	显示默认降序的top N， <span class="keyword">default</span> 为<span class="number">10.</span></div><div class="line">	</div><div class="line">* <span class="comment">--sort META</span></div><div class="line">	根据Meta的值，进行排序。默认slow <span class="keyword">log</span>的meta 为t_sum，至于t_sum是什么，请看filter章节。</div><div class="line">	</div><div class="line">* ­­<span class="comment">--report-­format (-­rf) FILE</span></div><div class="line">	这里可以自定义报表。但是必须按照固定的格式，以便mysqlsla来解析。</div><div class="line">	如：</div><div class="line">	(extra command line options)</div><div class="line">	 HEADER</div><div class="line">	(header line <span class="keyword">format</span>) </div><div class="line">	(header line <span class="keyword">values</span>)</div><div class="line">	REPORT</div><div class="line">	report line <span class="keyword">format</span> </div><div class="line">	report line <span class="keyword">values</span></div><div class="line">	这个非常有用，尤其是后期可以用脚本来处理自己自定义的报表，非常方便。这也是其强大功能的一个体现。</div><div class="line"></div><div class="line">* ­­<span class="comment">--reports (­-R) REPORTS</span></div><div class="line">	可以指定以某种格式进行输出报表。</div><div class="line">	固定报表形式有：standard,<span class="keyword">time</span>-­<span class="keyword">all</span>,print-­<span class="keyword">unique</span>,print-­<span class="keyword">all</span>,dump</div><div class="line">	必须注意的地方：如果你选择的是<span class="keyword">time</span>-­<span class="keyword">all</span>，<span class="keyword">time</span>­-<span class="keyword">each</span>­-<span class="keyword">query</span>，这里会默认是safetySQL statement filter <span class="keyword">of</span><span class="string">"+SELECT,USE"</span>。</div><div class="line">	但是，如果你自定义了-statment-fileter，那么这些dml语句就会在生产环境中真实的执行，会污染线上的数据，非常危险，请特别注意和小心。</div><div class="line">	</div><div class="line">* <span class="comment">--­­udl­-format (­-uf) FILE</span></div><div class="line">	可以自定义<span class="keyword">log</span>，让mysqlsla来解析。这个比较复杂，在后面的章节讲。</div><div class="line">	</div><div class="line">* ­­<span class="comment">--replay FILE</span></div><div class="line">	可以重新replay file里面的<span class="keyword">SQL</span>。实用，但是我一般不会用，担心数据安全。</div><div class="line">	</div><div class="line">总结： 基本上，以上的命令，可以解决你<span class="number">50</span>%的需求，而且是非常常用的功能，自己去试试吧。</div><div class="line">这里可以简单举几个例子：</div><div class="line"></div><div class="line"><span class="number">1</span>）列出以用户是usr_rx，含有ac_开头的，非<span class="keyword">SELECT</span>类型的 前<span class="number">100000</span>条记录。 <span class="comment">--默认m/P/io 大小写敏感</span></div><div class="line">	mysqlsla <span class="comment">--grep '\bac_.*\b' -mf user='usr_rx' -sf '-SELECT' --top 100000  slow.log</span></div><div class="line">	</div><div class="line"><span class="number">2</span>) 列出含有broker_system_messages_bj 或者 broker_system_messages_oth的记录. <span class="comment">--关键是需要打上括号。</span></div><div class="line">	mysqlsla <span class="comment">--grep '(\bbroker_system_messages_bj\b)|(\bbroker_system_messages_oth.*\b)'  slow.log</span></div><div class="line"></div><div class="line"><span class="number">3</span>) 列出ajk_propertys的所有查询，且按照<span class="keyword">SQL</span>的rows_exam排序。</div><div class="line">	mysqlsla <span class="comment">--grep '\bajk_propertys\b' -sf '+SELECT'  --sort='re_sum'  --db-inheritance slow.log</span></div></pre></td></tr></table></figure>
+
+<h2 id="mysqlsla的核心功能之filter">mysqlsla的核心功能之filter</h2>
+<hr>
+<p>filter 分为两种：</p>
+<pre><code>* meta-<span class="keyword">property</span> <span class="built_in">filter</span>
+* statment <span class="built_in">filter</span>
+</code></pre><p>statment ， 上面已经详细介绍过，这里详细介绍meta-property filter。<br>[meta][op][value] ， 这里详细介绍什么是meta,meta有哪些值。<br>由于种类实在是太多，所以这里也只会列出工作中，最最最常用的meta参数，基本可以解决99%的需求。</p>
+<table>
+<thead>
+<tr>
+<th>log类型</th>
+<th>meta</th>
+<th>解释</th>
+<th>限制</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>all</td>
+<td>c_sum</td>
+<td>SQL次数总和</td>
+<td>无</td>
+</tr>
+<tr>
+<td>all</td>
+<td>db</td>
+<td>db名称</td>
+<td>只能用作meta-filter，不能用作sort</td>
+</tr>
+<tr>
+<td>all</td>
+<td>exec</td>
+<td>真实执行时间</td>
+<td>只能用做sort，不能filter</td>
+</tr>
+<tr>
+<td>all</td>
+<td>exec_sum</td>
+<td>c_sum*exec</td>
+<td>只能作用sort，不能filter</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>host</td>
+<td>主机名</td>
+<td>只能用作meta-filter，不能用作sort</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>ip</td>
+<td>ip地址</td>
+<td>只能用作meta-filter，不能用作sort</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>l_avg</td>
+<td>锁的平均等待时间</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>re_sum</td>
+<td>rows_examined的总和</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>re_avg</td>
+<td>rows_examined的平均值</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>rs_sum</td>
+<td>rows_sent的总和</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>rs_avg</td>
+<td>rows_sent的平均值</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>t_sum</td>
+<td>SQL执行时间的总和</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>t_avg</td>
+<td>SQL执行时间的平均值</td>
+<td>无</td>
+</tr>
+<tr>
+<td>slow</td>
+<td>user</td>
+<td>用户名</td>
+<td>无</td>
+</tr>
+<tr>
+<td>general</td>
+<td>cid</td>
+<td>连接id</td>
+<td>无</td>
+</tr>
+<tr>
+<td>general</td>
+<td>host</td>
+<td>主机名</td>
+<td>无</td>
+</tr>
+<tr>
+<td>general</td>
+<td>user</td>
+<td>用户名</td>
+<td>无</td>
+</tr>
+<tr>
+<td>binary</td>
+<td>ext</td>
+<td>执行时间</td>
+<td>无</td>
+</tr>
+<tr>
+<td>udl</td>
+<td>无</td>
+<td>无</td>
+<td>无</td>
+</tr>
+</tbody>
+</table>
+<p>详细过滤的过程，请参考 MySQL::Log::ParseFilter 模块。<br>上列出的meta-property name，不仅仅用于filter，更加可以用于sort，所以sort我就不重复，使用规则请参考filter。</p>
+<h2 id="mysqlsla的核心功能之report">mysqlsla的核心功能之report</h2>
+<hr>
+<p>基本格式为：standard，但是你可以自己覆盖掉standard格式输出。这里的report format，为了兼容所有人，这里都是用sprintf 进行输出，而不是用perl 自己的格式，所以通用性非常的强。</p>
+<p>比如用—report-­format （-rf）FILE 可以替换。    </p>
+<p>然后基本模板如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">(extra <span class="keyword">command</span> <span class="built_in">line</span> <span class="keyword">options</span>)</div><div class="line"> HEADER</div><div class="line">(header <span class="built_in">line</span> format) </div><div class="line">(header <span class="built_in">line</span> <span class="built_in">values</span>)</div><div class="line">REPORT</div><div class="line">report <span class="built_in">line</span> format </div><div class="line">report <span class="built_in">line</span> <span class="built_in">values</span></div></pre></td></tr></table></figure>
+
+<p>一个自定义的slow标准模板</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line">-nthp</div><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">Grand Totals: Time <span class="variable">%s</span> s, Lock <span class="variable">%s</span> s, Rows sent <span class="variable">%s</span>, Rows Examined <span class="variable">%s</span></div><div class="line">gt_t:short gt_l:short gt_rs:short gt_re:short</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count         : <span class="variable">%s</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Time          : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">t_sum:micro t_avg:micro t_min:micro t_max:micro t_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Time : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op t_sum_nthp:micro t_avg_nthp:micro t_min_nthp:micro t_max_nthp:micro</div><div class="line">? Distribution : <span class="variable">%s</span></div><div class="line">t_dist</div><div class="line">Lock Time (s) : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">l_sum:micro l_avg:micro l_min:micro l_max:micro l_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Lock : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op l_sum_nthp:micro l_avg_nthp:micro l_min_nthp:micro l_max_nthp:micro</div><div class="line">Rows sent     : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">rs_avg:short rs_min:short rs_max:short rs_sum_p</div><div class="line">Rows examined : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">re_avg:short re_min:short re_max:short re_sum_p</div><div class="line">Database      : <span class="variable">%s</span></div><div class="line">db</div><div class="line">Users         : <span class="variable">%s</span></div><div class="line">users</div><div class="line">?Table:#rows   : <span class="variable">%s</span></div><div class="line">tcount</div><div class="line">?Table schemas : <span class="variable">%s</span></div><div class="line">tschema</div><div class="line">?EXPLAIN       : <span class="variable">%s</span></div><div class="line">explain</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<p>一个自定义的general log标准模板</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count         : <span class="variable">%s</span> (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Connection ID : <span class="variable">%d</span></div><div class="line">cid</div><div class="line">Database      : <span class="variable">%s</span></div><div class="line">db</div><div class="line">Users         : <span class="variable">%s</span></div><div class="line">users</div><div class="line">?Table:#rows   : <span class="variable">%s</span></div><div class="line">tcount</div><div class="line">?Table schemas : <span class="variable">%s</span></div><div class="line">tschema</div><div class="line">?EXPLAIN       : <span class="variable">%s</span></div><div class="line">explain</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<p>一个自定义的binary log标准模板</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div></pre></td><td class="code"><pre><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count             : <span class="variable">%s</span> (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Connection ID     : <span class="variable">%d</span></div><div class="line">cid</div><div class="line">Server ID         : <span class="variable">%d</span></div><div class="line">sid</div><div class="line">Error code        : <span class="variable">%d</span></div><div class="line">err</div><div class="line">Execution Time (s): <span class="variable">%d</span> total, <span class="variable">%d</span> avg, <span class="variable">%d</span> to <span class="variable">%d</span> <span class="keyword">max</span></div><div class="line">ext_sum ext_avg ext_min ext_max</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Ex Time: <span class="variable">%d</span> total, <span class="variable">%d</span> avg, <span class="variable">%d</span> to <span class="variable">%d</span> <span class="keyword">max</span></div><div class="line">nthp:op ext_sum_nthp ext_avg_nthp ext_min_nthp ext_max_nthp</div><div class="line">Database          : <span class="variable">%s</span></div><div class="line">db</div><div class="line">Users             : <span class="variable">%s</span></div><div class="line">users</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<p>一个自定义的msl log标准模板</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div></pre></td><td class="code"><pre><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">Grand Totals: Time <span class="variable">%.</span><span class="number">3</span>f s, Lock <span class="variable">%.</span><span class="number">3</span>f s, Rows sent <span class="variable">%s</span>, Rows Examined <span class="variable">%s</span></div><div class="line">gt_t gt_l gt_rs:short gt_re:short</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count         : <span class="variable">%s</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Time          : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">t_sum:micro t_avg:micro t_min:micro t_max:micro t_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Time : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op t_sum_nthp:micro t_avg_nthp:micro t_min_nthp:micro t_max_nthp:micro</div><div class="line">Lock Time     : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">l_sum:micro l_avg:micro l_min:micro l_max:micro l_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Lock : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op l_sum_nthp:micro l_avg_nthp:micro l_min_nthp:micro l_max_nthp:micro</div><div class="line">Rows sent     : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">rs_avg:short rs_min:short rs_max:short  rs_sum_p</div><div class="line">Rows examined : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">re_avg:short re_min:short re_max:short  re_sum_p</div><div class="line">Database      : <span class="variable">%s</span></div><div class="line">db</div><div class="line">Users         : <span class="variable">%s</span></div><div class="line">users</div><div class="line">?Table:#rows   : <span class="variable">%s</span></div><div class="line">tcount</div><div class="line">?Table schemas : <span class="variable">%s</span></div><div class="line">tschema</div><div class="line">?EXPLAIN       : <span class="variable">%s</span></div><div class="line">explain</div><div class="line">?QC hit        : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">qchit_t_p qchit_t</div><div class="line">?Full scan     : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">fullscan_t_p fullscan_t</div><div class="line">?Full join     : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">fulljoin_t_p fulljoin_t</div><div class="line">?Tmp table     : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">tmptable_t_p tmptable_t</div><div class="line">?Disk tmp table: <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">disktmptable_t_p disktmptable_t</div><div class="line">?Filesort      : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">filesort_t_p filesort_t</div><div class="line">?Disk filesort : <span class="variable">%d</span><span class="variable">%%</span> (<span class="variable">%d</span>)</div><div class="line">diskfilesort_t_p diskfilesort_t</div><div class="line">?Merge passes  : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">merge_sum:short  merge_avg:short merge_min:short merge_max:short</div><div class="line">?IO r ops      : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">iorops_sum:short iorops_avg:short iorops_min:short iorops_max:short iorops_sum_p</div><div class="line">?IO r bytes    : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">iorbytes_sum:short iorbytes_avg:short iorbytes_min:short iorbytes_max:short iorbytes_sum_p</div><div class="line">?IO r wait     : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">iorwait_sum:micro iorwait_avg:micro iorwait_min:micro iorwait_max:micro iorwait_sum_p</div><div class="line">?Rec lock wait : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">reclwait_sum:micro reclwait_avg:micro reclwait_min:micro reclwait_max:micro reclwait_sum_p</div><div class="line">?Queue wait    : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">qwait_sum:micro qwait_avg:micro qwait_min:micro qwait_max:micro qwait_sum_p</div><div class="line">?Pages distinct: <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">pages_sum:short pages_avg:short pages_min:short pages_max:short pages_sum_p</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<p>一个自定义的udl log标准模板</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count         : <span class="variable">%s</span> (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Database      : <span class="variable">%s</span></div><div class="line">db</div><div class="line">?Table:#rows   : <span class="variable">%s</span></div><div class="line">tcount</div><div class="line">?Table schemas : <span class="variable">%s</span></div><div class="line">tschema</div><div class="line">?EXPLAIN       : <span class="variable">%s</span></div><div class="line">explain</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<p>这也就是平时看到的默认格式。个人觉得这个功能非常好用，当然标准格式就已经满足90%的需求，当然对于比较特殊的需求，可以做特殊的格式化输出。<br>非常强大，谁用谁知道。</p>
+<h2 id="mysqlsla的其他高级功能：_replay，user-defined-logs">mysqlsla的其他高级功能： replay，user-defined-logs</h2>
+<hr>
+<p>这些高级功能，我用的比较少，所以这里不多介绍。如果大家实在想用，可以参考官方文档。</p>
+<h2 id="最后">最后</h2>
+<hr>
+<p>这里，基本上已经将mysqlsla的使用都介绍了一遍，如果你还没有使用，那就赶紧使用吧。<br>如果还想知道更多的内如：</p>
+<p>1）mysqlsla 是如何进行filter的？</p>
+<p>2）mysqlsla 是如何进行abstract-in SQL的？</p>
+<p>3）mysqlsla 是如何进行SQL解析的？</p>
+<p>4）mysqlsla 的内部工作流程和原理？</p>
+<p>5）mysqlsla 的bug list，以及如何修复？</p>
+<p>敬请关注下一节<a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_source_read.md" target="_blank" rel="external">mysqlsla源码分析</a>。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-SYS-toolkit/">MySQL SYS toolkit</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/07/15/mysqsla/" data-title="mysql日志分析神器之mysqlsla | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/07/15/mysqlsla_source_read/" title="">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  (no title)</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2015/07/14/mysql_group_order_limit/"  title="Mysql 5.6 执行计划错误案例分析">
+ <strong>NEXT:</strong><br/> 
+ <span>Mysql 5.6 执行计划错误案例分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/07/15/mysqsla/" data-title="mysql日志分析神器之mysqlsla" data-url="https://Keithlan.github.io/2015/07/15/mysqsla/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:lanowen};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla介绍"><span class="toc-number">2.</span> <span class="toc-text">mysqlsla介绍</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla安装"><span class="toc-number">3.</span> <span class="toc-text">mysqlsla安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的基本使用"><span class="toc-number">4.</span> <span class="toc-text">mysqlsla的基本使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的核心功能之filter"><span class="toc-number">5.</span> <span class="toc-text">mysqlsla的核心功能之filter</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的核心功能之report"><span class="toc-number">6.</span> <span class="toc-text">mysqlsla的核心功能之report</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#mysqlsla的其他高级功能：_replay，user-defined-logs"><span class="toc-number">7.</span> <span class="toc-text">mysqlsla的其他高级功能： replay，user-defined-logs</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">8.</span> <span class="toc-text">最后</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福不在于得到的多，而在于计较的少</p>
+		
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>9</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"lanowen"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

@@ -1,0 +1,919 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="mysqlsla 源码解析
+&amp;gt;mysqlsla: parse, filter, analyze and sort MySQL logshttp://hackmysql.com/mysqlsla.Copyright 2007-2008 Daniel Nichter.This program is">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/07/15/mysqlsla_source_read/" title="" itemprop="url"></a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-07-15T07:33:46.000Z" itemprop="datePublished">Jul 15 2015</time>
+    Updated:<time datetime="2015-05-25T06:21:51.000Z" itemprop="dateModified">May 25 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysqlsla_源码解析"><span class="toc-number">1.</span> <span class="toc-text">mysqlsla 源码解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">1.2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">1.3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">1.4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">1.5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol></li></ol>
+		</div>
+		
+		<h1 id="mysqlsla_源码解析">mysqlsla 源码解析</h1>
+<p>&gt;<br>mysqlsla: parse, filter, analyze and sort MySQL logs<br><a href="http://hackmysql.com/mysqlsla" target="_blank" rel="external">http://hackmysql.com/mysqlsla</a>.<br>Copyright 2007-2008 Daniel Nichter.<br>This program is free software; you can redistribute it and/or<br>modify it under the terms of the GNU General Public License<br>as published by the Free Software Foundation; either version 2<br>of the License, or (at your option) any later version.<br>This program is distributed in the hope that it will be useful,<br>but WITHOUT ANY WARRANTY; without even the implied warranty of<br>MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the<br>GNU General Public License for more details.<br>The GNU General Public License is available at:<br><a href="http://www.gnu.org/copyleft/gpl.html" target="_blank" rel="external">http://www.gnu.org/copyleft/gpl.html</a></p>
+<h2 id="知识结构">知识结构</h2>
+<hr>
+<ul>
+<li><p><strong>目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制</strong></p>
+</li>
+<li><p><strong>mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么</strong></p>
+</li>
+<li><p><strong>分析 main 函数，一步步了解主要流程</strong></p>
+</li>
+<li><p><strong>针对一条线进行分析，比如slow log 的解析</strong></p>
+</li>
+</ul>
+<h2 id="Packages">Packages</h2>
+<hr>
+<ul>
+<li><strong>(MySQL::Log::)ParseFilter</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>get_meta_filter</td>
+<td>获取meta fileter</td>
+<td></td>
+</tr>
+<tr>
+<td>get_statement_filter</td>
+<td>获取statement fileter</td>
+<td></td>
+</tr>
+<tr>
+<td>set_save_meta_values</td>
+<td>设置meta</td>
+</tr>
+<tr>
+<td>set_save_all_values</td>
+<td>设置所有</td>
+</tr>
+<tr>
+<td>set_IN_abstraction</td>
+<td>设置是否IN_abstraction</td>
+</tr>
+<tr>
+<td>set_VALUES_abstraction</td>
+<td>设置是否VALUES_abstraction</td>
+</tr>
+<tr>
+<td>set_atomic_statements</td>
+<td>没用过</td>
+</tr>
+<tr>
+<td>set_db_inheritance</td>
+<td>DB 继承</td>
+</tr>
+<tr>
+<td>set_grep</td>
+<td>设置是否grep</td>
+</tr>
+<tr>
+<td>set_meta_filter</td>
+<td>-mf，设置过滤meta</td>
+</tr>
+<tr>
+<td>set_statement_filter</td>
+<td>-sf，设置过滤sql</td>
+</tr>
+<tr>
+<td>set_udl_format</td>
+<td>设置自定义格式</td>
+</tr>
+<tr>
+<td>parse_binary_logs</td>
+<td>解析binary日志</td>
+</tr>
+<tr>
+<td>parse_general_logs</td>
+<td>解析general日志</td>
+</tr>
+<tr>
+<td>parse_slow_logs</td>
+<td>解析slow 日志</td>
+</tr>
+<tr>
+<td>parse_udl_logs</td>
+<td>解析udl 日志</td>
+</tr>
+<tr>
+<td>check_stmt</td>
+<td>检查stamt合法性，规范化stmt</td>
+</tr>
+<tr>
+<td>abstract_stmt</td>
+<td>抽象stmt</td>
+</tr>
+<tr>
+<td>compact_IN</td>
+<td>对In 做特殊处理</td>
+</tr>
+<tr>
+<td>compact_VALUES</td>
+<td>对values 做特殊处理</td>
+</tr>
+<tr>
+<td>passes_statement_filter</td>
+<td>判断是否sf</td>
+</tr>
+<tr>
+<td>passes_meta_filter</td>
+<td>判断是否mf</td>
+</tr>
+<tr>
+<td>calc_final_values</td>
+<td>计算最终的value</td>
+</tr>
+<tr>
+<td>apply_final_meta_filters</td>
+<td>应用最后的mf</td>
+</tr>
+<tr>
+<td>set_debug</td>
+<td>是否debug</td>
+</tr>
+<tr>
+<td>_d</td>
+<td>debug日志</td>
+</tr>
+<tr>
+<td>_p</td>
+<td>百分比</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>ReportFormats</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>get_report_format</td>
+<td>获取log type</td>
+</tr>
+<tr>
+<td>report_formats{slow}</td>
+<td>slow 报表</td>
+</tr>
+<tr>
+<td>report_formats{general}</td>
+<td>general 报表</td>
+</tr>
+<tr>
+<td>report_formats{binary}</td>
+<td>binary 报表</td>
+</tr>
+<tr>
+<td>report_formats{msl}</td>
+<td>msl 报表</td>
+</tr>
+<tr>
+<td>report_formats{udl}</td>
+<td>udl 报表</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>LogType</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>new</td>
+<td>new 对象</td>
+</tr>
+<tr>
+<td>get_log_type</td>
+<td>得到日志类型</td>
+</tr>
+<tr>
+<td>lines_match_log_type</td>
+<td>得到日志类型2</td>
+</tr>
+<tr>
+<td>name_for</td>
+<td>得到日志类型3</td>
+</tr>
+<tr>
+<td>_d</td>
+<td>debug</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>QueryRewriter</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>new</td>
+<td>new 对象</td>
+</tr>
+<tr>
+<td>strip_comments</td>
+<td>没用到</td>
+</tr>
+<tr>
+<td>fingerprint</td>
+<td>SQL指纹，没用到</td>
+</tr>
+<tr>
+<td>convert_to_select</td>
+<td>转换select</td>
+</tr>
+<tr>
+<td>convert_select_list</td>
+<td>转换select list</td>
+</tr>
+<tr>
+<td>__delete_to_select</td>
+<td>dml -&gt; select</td>
+</tr>
+<tr>
+<td>__insert_to_select</td>
+<td>dml -&gt; select</td>
+</tr>
+<tr>
+<td>__update_to_select</td>
+<td>dml -&gt; select</td>
+</tr>
+<tr>
+<td>wrap_in_derived</td>
+<td>没用到</td>
+</tr>
+<tr>
+<td>_d</td>
+<td>debug</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>main</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>函数名</th>
+<th>功能简介</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>help_and_exit</td>
+<td>查看帮助</td>
+</tr>
+<tr>
+<td>read_mycnf</td>
+<td>读取mysql 配置文件</td>
+</tr>
+<tr>
+<td>read_dot_mysqlsla</td>
+<td>读取mysqlsla 配置文件</td>
+</tr>
+<tr>
+<td>connect_to_MySQL</td>
+<td>连接mysql</td>
+</tr>
+<tr>
+<td>parse_logs</td>
+<td>解析日志</td>
+</tr>
+<tr>
+<td>refilter_replay</td>
+<td>replay 功能</td>
+</tr>
+<tr>
+<td>calc_nthp</td>
+<td>统计nthp</td>
+</tr>
+<tr>
+<td>calc_dist</td>
+<td>统计百分比</td>
+</tr>
+<tr>
+<td>EXPLAIN_queries</td>
+<td>explain 功能</td>
+</tr>
+<tr>
+<td>get_create_table</td>
+<td>得到create table</td>
+</tr>
+<tr>
+<td>get_row_count</td>
+<td>得到rc</td>
+</tr>
+<tr>
+<td>parse_table_aliases</td>
+<td>解析表别名</td>
+</tr>
+<tr>
+<td>get_table_ref</td>
+<td>得到表的reference</td>
+</tr>
+<tr>
+<td>time_each_query</td>
+<td>-report-file 的一种</td>
+</tr>
+<tr>
+<td>time_profile</td>
+<td>没用到</td>
+</tr>
+<tr>
+<td>calc_rows_read</td>
+<td>统计有多少行被读取过</td>
+</tr>
+<tr>
+<td>sort_and_prune</td>
+<td>排序和统计</td>
+</tr>
+<tr>
+<td>make_reports</td>
+<td>制作报表的入口函数</td>
+</tr>
+<tr>
+<td>standard_report</td>
+<td>标准report</td>
+</tr>
+<tr>
+<td>dump_report</td>
+<td>dump report</td>
+</tr>
+<tr>
+<td>time_all_report</td>
+<td>time_all report</td>
+</tr>
+<tr>
+<td>print_all_report</td>
+<td>print——unique 的变相report</td>
+</tr>
+<tr>
+<td>print_unique_report</td>
+<td>print-uniq 的report</td>
+</tr>
+<tr>
+<td>resolve_coded_value</td>
+<td>转换code value</td>
+</tr>
+<tr>
+<td>parse_report_format</td>
+<td>解析报表format</td>
+</tr>
+<tr>
+<td>save_replay</td>
+<td>保持replay结果</td>
+</tr>
+<tr>
+<td>beautify</td>
+<td>美化</td>
+</tr>
+<tr>
+<td>stmt_users_summary</td>
+<td>统计users特殊变量，主要用于标准格式报表</td>
+</tr>
+<tr>
+<td>EXPLAIN_summary</td>
+<td>expplian的统计</td>
+</tr>
+<tr>
+<td>schema_summary</td>
+<td>结构的统计</td>
+</tr>
+<tr>
+<td>avg</td>
+<td>平均值</td>
+</tr>
+<tr>
+<td>p</td>
+<td>百分比</td>
+</tr>
+<tr>
+<td>format_u_time</td>
+<td>格式化u time</td>
+</tr>
+<tr>
+<td>make_short</td>
+<td>简单模式</td>
+</tr>
+<tr>
+<td>d</td>
+<td>debug</td>
+</tr>
+<tr>
+<td>get_options</td>
+<td>获取命令行参数</td>
+</tr>
+<tr>
+<td>set_MySQL_reserved_words</td>
+<td>设置保留字</td>
+</tr>
+</tbody>
+</table>
+<h2 id="main_主要流程图">main 主要流程图</h2>
+<hr>
+<p> <img src="image/mysqlsla_main.png" alt="test" title="test"></p>
+<h2 id="以slow_log_分析为导火线">以slow log 分析为导火线</h2>
+<hr>
+<ul>
+<li><strong>先设置各种变量，判断操作系统，读取mysql 配置文件</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">use</span> strict;</div><div class="line"><span class="keyword">use</span> English <span class="string">qw(-no_match_vars)</span>;</div><div class="line"><span class="keyword">use</span> Time::HiRes <span class="string">qw(gettimeofday tv_interval)</span>;</div><div class="line"><span class="keyword">use</span> File::Temp <span class="string">qw(tempfile)</span>;</div><div class="line"><span class="keyword">use</span> Data::Dumper;</div><div class="line"><span class="keyword">use</span> DBI;</div><div class="line"><span class="keyword">use</span> Getopt::Long;</div><div class="line"><span class="keyword">use</span> Storable;</div><div class="line"><span class="keyword">eval</span> { <span class="keyword">require</span> Term::ReadKey; };</div><div class="line"><span class="keyword">my</span> <span class="variable">$RK</span> = (<span class="variable">$@</span> ? <span class="number">0</span> : <span class="number">1</span>);</div><div class="line"></div><div class="line"><span class="keyword">our</span> <span class="variable">$VERSION</span> = <span class="string">'2.03'</span>;</div><div class="line"></div><div class="line"><span class="keyword">my</span> <span class="variable">$WIN</span> = (<span class="variable">$^O</span> eq <span class="string">'MSWin32'</span> ? <span class="number">1</span> : <span class="number">0</span>);</div><div class="line"><span class="keyword">my</span> <span class="variable">%op</span>;</div><div class="line"><span class="keyword">my</span> <span class="variable">%mycnf</span>; <span class="comment"># ~/.my.cnf</span></div><div class="line"><span class="keyword">my</span> (<span class="variable">$dbh</span>, <span class="variable">$query</span>, <span class="variable">$MySQL_connected</span>);</div><div class="line"><span class="keyword">my</span> (<span class="variable">$q_h</span>, <span class="variable">%queries</span>, <span class="variable">%u_h</span>, <span class="variable">$q_a</span>, <span class="variable">@all_queries</span>, <span class="variable">%g_t</span>);</div><div class="line"><span class="keyword">my</span> <span class="variable">$total_queries</span>;</div><div class="line"><span class="keyword">my</span> <span class="variable">$total_unique_queries</span>;</div><div class="line"><span class="keyword">my</span> <span class="variable">$total_unique_users</span>;</div><div class="line"><span class="keyword">my</span> <span class="variable">$u</span> = <span class="keyword">chr</span>((<span class="variable">$WIN</span> ? <span class="number">230</span> : <span class="number">181</span>)) . <span class="string">'s'</span>; <span class="comment"># micro symbol</span></div><div class="line"><span class="keyword">my</span> <span class="variable">%params</span>;</div><div class="line"><span class="keyword">my</span> <span class="variable">%MySQL_reserved_words</span>; <span class="comment"># used by beautify()</span></div><div class="line"><span class="keyword">my</span> <span class="variable">%db</span>; <span class="comment"># --databases</span></div><div class="line"><span class="keyword">my</span> <span class="variable">%af</span>; <span class="comment"># --analysis-filter</span></div><div class="line"><span class="keyword">my</span> <span class="variable">%r</span>;  <span class="comment"># --reports</span></div><div class="line"><span class="keyword">my</span> (<span class="variable">@headers</span>, <span class="variable">@header_vals</span>);  <span class="comment">#</span></div><div class="line"><span class="keyword">my</span> (<span class="variable">@formats</span>, <span class="variable">@format_vals</span>);  <span class="comment"># standard report</span></div><div class="line"><span class="keyword">my</span> <span class="variable">%conditional_formats</span>;      <span class="comment">#</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>读取mysqlsla 自己的内部初始化文件 ./mysqlsla</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">read_dot_mysqlsla();</div><div class="line"></div><div class="line">  <span class="keyword">open</span> MYSQLSLA, <span class="string">"&lt; <span class="variable">$ENV</span>{HOME}/.mysqlsla"</span> <span class="keyword">or</span> <span class="keyword">return</span>;</div><div class="line"></div><div class="line">   <span class="keyword">while</span>(&lt;MYSQLSLA&gt;)</div><div class="line">   {</div><div class="line">      <span class="keyword">next</span> <span class="keyword">if</span> /^<span class="variable">$/</span>;</div><div class="line">      <span class="keyword">next</span> <span class="keyword">if</span> /^<span class="comment">#/;</span></div><div class="line">      <span class="variable">$op</span>{<span class="variable">$1</span>} = <span class="variable">$2</span>, <span class="keyword">next</span> <span class="keyword">if</span> /^(\S+)\<span class="keyword">s</span>*=\<span class="keyword">s</span>*(\S+)/;</div><div class="line">      <span class="variable">$op</span>{<span class="variable">$1</span>} = <span class="number">1</span>,  <span class="keyword">next</span> <span class="keyword">if</span> /^(\S+)/;</div><div class="line">   }</div><div class="line"></div><div class="line">   <span class="keyword">close</span> MYSQLSLA;</div><div class="line">   </div><div class="line">* 根据代码可以看到，配置文件中不能对参数加前导符号，如： -， -- 等，这里是没有办法匹配的。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>接下来就是将命令行的参数读取进来，并且覆盖掉~/.mysqlsla中的参数</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div></pre></td><td class="code"><pre><div class="line">$ops_ok = GetOptions(</div><div class="line">      \%op,</div><div class="line">      "user=s",</div><div class="line">      "password:s",</div><div class="line">      "host=s",</div><div class="line">      "port=s",</div><div class="line">      "socket=s",</div><div class="line">      "no-mycnf",</div><div class="line">      "mycnf=s",</div><div class="line">      "db|D|databases=s",</div><div class="line">      "<span class="operator"><span class="keyword">help</span>|?<span class="string">",</span></span></div><div class="line">      "lt|<span class="keyword">log</span>-type=s<span class="string">", </span></div><div class="line">      "uf|udl-<span class="keyword">format</span>=s<span class="string">",</span></div><div class="line">      "sort=s<span class="string">",</span></div><div class="line">      "<span class="keyword">flush</span>-qc<span class="string">",</span></div><div class="line">      "<span class="keyword">avg</span>|n=i<span class="string">",</span></div><div class="line">      "percent<span class="string">",</span></div><div class="line">      "top=n<span class="string">",</span></div><div class="line">      "mf|meta-filter=s<span class="string">",</span></div><div class="line">      "sf|statement-filter=s<span class="string">",</span></div><div class="line">      "grep=s<span class="string">",</span></div><div class="line">      "dist<span class="string">",</span></div><div class="line">      "dmin|dist-<span class="keyword">min</span>-percent=i<span class="string">",</span></div><div class="line">      "dtop|dist-top=i<span class="string">",</span></div><div class="line">      "nthp|nth-percent:i<span class="string">",</span></div><div class="line">      "nthpm|nthp-<span class="keyword">min</span>-<span class="keyword">values</span>=i<span class="string">",</span></div><div class="line">      "ex|<span class="keyword">explain</span><span class="string">",</span></div><div class="line">      "te|<span class="keyword">time</span>-<span class="keyword">each</span>-<span class="keyword">query</span><span class="string">",</span></div><div class="line">      "rf|report-<span class="keyword">format</span>=s<span class="string">",</span></div><div class="line">      "reports|R=s<span class="string">",</span></div><div class="line">      "silent<span class="string">",</span></div><div class="line">      "post-<span class="keyword">parse</span>-replay=s<span class="string">",</span></div><div class="line">      "post-analyses-replay=s<span class="string">",</span></div><div class="line">      "post-sort-replay=s<span class="string">",</span></div><div class="line">      "replay=s<span class="string">",</span></div><div class="line">      "Av|abstract-<span class="keyword">values</span><span class="string">",</span></div><div class="line">      "Ai|abstract-<span class="keyword">in</span>=i<span class="string">",</span></div><div class="line">      "atomic-statements<span class="string">",</span></div><div class="line">      "dont-save-meta-<span class="keyword">values</span><span class="string">",</span></div><div class="line">      "save-<span class="keyword">all</span>-<span class="keyword">values</span><span class="string">",</span></div><div class="line">      "db-inheritance<span class="string">",</span></div><div class="line">      "<span class="keyword">microsecond</span>-symbol|us=s<span class="string">",</span></div><div class="line">      "debug<span class="string">",</span></div><div class="line">      "extra|x=s<span class="string">",</span></div><div class="line">   );</div><div class="line">   </div><div class="line"> * 这基本上就是所有的命令行对应的参数。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>然后，参数读取到之后，就开始解析参数。 当然，第一个肯定就是判断日志类型了。</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> ( !<span class="variable">$op</span><span class="string">{lt}</span> ) {</div><div class="line">   <span class="keyword">my</span> <span class="variable">$lt</span> = new LogType;</div><div class="line">   <span class="keyword">my</span> <span class="variable">$log_type</span> = <span class="variable">$lt</span>-&gt;get_log_type(<span class="variable">$ARGV</span>[<span class="number">0</span>]);</div><div class="line">   <span class="keyword">die</span> <span class="string">'Cannot auto-detect log type. Use option --log-type.'</span> <span class="keyword">if</span> !<span class="variable">$log_type</span>;</div><div class="line">   <span class="variable">$op</span><span class="string">{lt}</span> = <span class="variable">$lt</span>-&gt;name_for(<span class="variable">$log_type</span>);</div><div class="line">   <span class="keyword">print</span> <span class="string">"Auto-detected logs as <span class="variable">$op</span>{lt} logs\n"</span>;</div><div class="line">}</div><div class="line"></div><div class="line"></div><div class="line"><span class="sub"><span class="keyword">sub</span> get_log_type {</span></div><div class="line">   <span class="keyword">my</span> ( <span class="variable">$self</span>, <span class="variable">$log_file</span> ) = <span class="variable">@_</span>;</div><div class="line">   <span class="variable">$log_file</span> ||= <span class="string">''</span>;</div><div class="line">   MKDEBUG && _d(<span class="string">"Detecting log type for <span class="variable">$log_file</span>"</span>);</div><div class="line">   <span class="keyword">return</span> LOG_TYPE_UNKNOWN <span class="keyword">if</span> !<span class="variable">$log_file</span>;</div><div class="line">   </div><div class="line">   <span class="keyword">my</span> <span class="variable">$log_fh</span>;</div><div class="line">   <span class="keyword">if</span> ( !<span class="keyword">open</span> <span class="variable">$log_fh</span>, <span class="string">'&lt;'</span>, <span class="variable">$log_file</span> ) {</div><div class="line">      MKDEBUG && _d(<span class="string">"Failed to open <span class="variable">$log_file</span>: <span class="variable">$OS_ERROR</span>"</span>);</div><div class="line">      <span class="keyword">return</span> LOG_TYPE_UNKNOWN;</div><div class="line">   }</div><div class="line"></div><div class="line">   <span class="keyword">my</span> <span class="variable">@lines</span>   = ();</div><div class="line">   <span class="keyword">my</span> <span class="variable">$n_lines</span> = <span class="number">0</span>;</div><div class="line">   <span class="keyword">while</span> ( (<span class="variable">$n_lines</span>++ &lt; <span class="variable">$self</span>-&gt;{sample_size}) && (<span class="keyword">my</span> <span class="variable">$line</span> = &lt;<span class="variable">$log_fh</span>&gt;) ) {</div><div class="line">      <span class="keyword">push</span> <span class="variable">@lines</span>, <span class="variable">$line</span>;</div><div class="line">   }</div><div class="line">   <span class="keyword">close</span> <span class="variable">$log_fh</span>;</div><div class="line"></div><div class="line">   <span class="keyword">foreach</span> <span class="keyword">my</span> <span class="variable">$log_type</span> ( @{ <span class="variable">$self</span>-&gt;{detection_order} } ) {</div><div class="line">      <span class="keyword">if</span> ( <span class="variable">$self</span>-&gt;lines_match_log_type(\<span class="variable">@lines</span>, <span class="variable">$log_type</span>) ) {</div><div class="line">         MKDEBUG && _d(<span class="string">"Log is type <span class="variable">$log_type</span>"</span>);</div><div class="line">         <span class="keyword">return</span> <span class="variable">$log_type</span>;</div><div class="line">      }</div><div class="line">   }</div><div class="line"></div><div class="line">   MKDEBUG && _d(<span class="string">"Log type is unknown"</span>);</div><div class="line">   <span class="keyword">return</span> LOG_TYPE_UNKNOWN;</div><div class="line">}</div><div class="line"></div><div class="line"><span class="sub"><span class="keyword">sub</span> lines_match_log_type {</span></div><div class="line">   <span class="keyword">my</span> ( <span class="variable">$self</span>, <span class="variable">$lines</span>, <span class="variable">$log_type</span> ) = <span class="variable">@_</span>;</div><div class="line">   <span class="keyword">return</span> <span class="number">0</span> <span class="keyword">if</span> ( !<span class="keyword">ref</span> <span class="variable">$lines</span> || <span class="keyword">scalar</span> <span class="variable">@$</span>lines == <span class="number">0</span> );</div><div class="line">   <span class="keyword">foreach</span> <span class="keyword">my</span> <span class="variable">$pattern</span> ( @{ <span class="variable">$patterns_for</span>{<span class="variable">$log_type</span>} } ) {</div><div class="line">      <span class="keyword">foreach</span> <span class="keyword">my</span> <span class="variable">$line</span>  ( <span class="variable">@$</span>lines ) {</div><div class="line">         <span class="keyword">if</span> ( <span class="variable">$line</span> =~ <span class="regexp">m/$pattern/</span> ) {</div><div class="line">            MKDEBUG && _d(<span class="string">"Log type <span class="variable">$log_type</span> pattern <span class="variable">$pattern</span> matches <span class="variable">$line</span>"</span>);</div><div class="line">            <span class="keyword">return</span> <span class="number">1</span>;</div><div class="line">         }</div><div class="line">      }</div><div class="line">   }</div><div class="line">   <span class="keyword">return</span> <span class="number">0</span>;</div><div class="line">}</div><div class="line"></div><div class="line"><span class="keyword">my</span> <span class="variable">%patterns_for</span> = (</div><div class="line">   LogType::<span class="string">LOG_TYPE_SLOW    =&gt;</span> [</div><div class="line">      <span class="regexp">qr/^# User\@Host:/</span>,</div><div class="line">   ],</div><div class="line">   LogType::<span class="string">LOG_TYPE_GENERAL =&gt;</span> [</div><div class="line">      <span class="regexp">qr/^\d{6}\s+\d\d:\d\d:\d\d/</span>,</div><div class="line">      <span class="regexp">qr/^\s+\d+\s+[A-Z][a-z]+\s+/</span>,</div><div class="line">   ],</div><div class="line">   LogType::<span class="string">LOG_TYPE_BINARY  =&gt;</span> [</div><div class="line">      <span class="regexp">qr/^.*?server id \d+\s+end_log_pos/</span>,</div><div class="line">   ],</div><div class="line">);</div><div class="line"></div><div class="line"></div><div class="line">* 通过以上代码，发现如果有指定日志类型，mysqlsla就会用指定类型的日志去解析。</div><div class="line">* 如果没有指定类型，那么会自动判断。它究竟是如何自动判断呢？根据文件名？扩展名？还是？</div><div class="line">get_log_type -&gt; lines_match_log_type -&gt; patterns_for , 代码结构是这样。</div><div class="line">匹配模式分为几种： 判断slow，主要是这个正则表达式qr/^<span class="comment"># User\@Host:/。  如果遇到 # User@Host ，那么程序会判断为slow类型</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>接下来开始判断 数据格式</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">parse_report_format(<span class="variable">$op</span><span class="string">{rf}</span>,</div><div class="line">                    \<span class="variable">@headers</span>, \<span class="variable">@header_vals</span>,</div><div class="line">                    \<span class="variable">@formats</span>, \<span class="variable">@format_vals</span>,</div><div class="line">                    \<span class="variable">%conditional_formats</span>) <span class="keyword">if</span> <span class="keyword">exists</span> <span class="variable">$r</span><span class="string">{standard}</span>;</div><div class="line"></div><div class="line">* 根据指定的rf 文件来report，如果没有，则认为是标准模式standard。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>接下来读取 mycnf 文件，并且用 命令行参数接收到的value 直接覆盖掉 mycnf变量</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">read</span>_mycnf() unless <span class="variable">$op</span>{<span class="string">'no-mycnf'</span>};  <span class="comment"># read ~/.my.cnf or $op{mycnf}</span></div><div class="line"></div><div class="line"><span class="comment"># Command line options override ~/.my.cnf</span></div><div class="line"><span class="variable">$mycnf</span>{host}   = <span class="variable">$op</span>{host}   <span class="keyword">if</span> <span class="variable">$op</span>{host};</div><div class="line"><span class="variable">$mycnf</span>{port}   = <span class="variable">$op</span>{port}   <span class="keyword">if</span> <span class="variable">$op</span>{port};</div><div class="line"><span class="variable">$mycnf</span>{socket} = <span class="variable">$op</span>{socket} <span class="keyword">if</span> <span class="variable">$op</span>{socket};</div><div class="line"><span class="variable">$mycnf</span>{user}   = <span class="variable">$op</span>{user}   <span class="keyword">if</span> <span class="variable">$op</span>{user};</div><div class="line"></div><div class="line"><span class="variable">$mycnf</span>{user} ||= <span class="variable">$ENV</span>{USER};</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>设置一些重要的meta 值</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">ParseFilter::<span class="keyword">set</span>_save_meta_values(<span class="number">0</span>)      <span class="keyword">if</span> <span class="variable">$op</span>{<span class="string">'dont-save-meta-values'</span>};</div><div class="line">ParseFilter::<span class="keyword">set</span>_save_all_values(<span class="number">1</span>)       <span class="keyword">if</span> <span class="variable">$op</span>{<span class="string">'save-all-values'</span>};</div><div class="line">ParseFilter::<span class="keyword">set</span>_IN_abstraction(<span class="variable">$op</span>{Ai})  <span class="keyword">if</span> <span class="variable">$op</span>{Ai};</div><div class="line">ParseFilter::<span class="keyword">set</span>_VALUES_abstraction(<span class="number">1</span>)    <span class="keyword">if</span> <span class="variable">$op</span>{Av};</div><div class="line">ParseFilter::<span class="keyword">set</span>_atomic_statements(<span class="number">1</span>)     <span class="keyword">if</span> <span class="variable">$op</span>{<span class="string">'atomic-statements'</span>};</div><div class="line">ParseFilter::<span class="keyword">set</span>_db_inheritance(<span class="number">1</span>)        <span class="keyword">if</span> <span class="variable">$op</span>{<span class="string">'db-inheritance'</span>};</div><div class="line">ParseFilter::<span class="keyword">set</span>_grep(<span class="variable">$op</span>{grep})          <span class="keyword">if</span> <span class="variable">$op</span>{grep};</div><div class="line">ParseFilter::<span class="keyword">set</span>_debug(<span class="number">1</span>)                 <span class="keyword">if</span> <span class="variable">$op</span>{debug};</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>当我们调用set_statement_filter前，必须检查的一个参数 -r，即 —reports </strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span>((<span class="variable">$op</span><span class="string">{te}</span> || <span class="keyword">exists</span> <span class="variable">$r</span>{<span class="string">'time-all'</span>}))</div><div class="line">{</div><div class="line">   <span class="keyword">if</span>(!<span class="variable">$op</span><span class="string">{sf}</span>)</div><div class="line">   {</div><div class="line">      <span class="keyword">print</span> STDERR <span class="string">"Safety for time-each/time-all is enabled (statement-filter='+SELECT,USE')\n"</span>;</div><div class="line">      <span class="variable">$op</span><span class="string">{sf}</span> = <span class="string">"+SELECT,USE"</span>;</div><div class="line">   }</div><div class="line">   <span class="keyword">else</span></div><div class="line">   {</div><div class="line">      <span class="keyword">print</span> STDERR <span class="string">"Safety for time-each/time-all is DISABLED!\n"</span>;</div><div class="line">   }</div><div class="line">}</div><div class="line"></div><div class="line">* 意思就是：如果设置了--reports=‘<span class="keyword">time</span>-all’，且没有设置-sf参数，那么mysqlsla会自动设置sf值为：<span class="variable">$op</span><span class="string">{sf}</span> = <span class="string">"+SELECT,USE"</span>; 如果自己显示的指定了-sf参数，那么mysqlsla会告诉用户Safety <span class="keyword">for</span> <span class="keyword">time</span>-<span class="keyword">each</span>/<span class="keyword">time</span>-all is DISABLED!</div><div class="line"></div><div class="line">* 为什么会这样呢？因为这个参数会真正的在mysql中执行，也就是说如果是DML语句，一不小心会污染线上环境，导致不可预期的错误。所以，在使用--reports = ‘-<span class="keyword">time</span>-all’的时候，要特别特别小心，这种参数，我基本上不会使用。但是特殊情况下，我们还是会使用的。比如：压力测试，还原线上执行过的SQL 等等。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>接下来开始日志parsing 阶段,调用的是：parse_slow_logs 这个函数。 这里重点讲解slow 是如何解析的</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">parse_logs() <span class="keyword">if</span> <span class="variable">@ARGV</span>;</div><div class="line"></div><div class="line">由于代码比较多，这里我拿重点的出来讲：</div><div class="line"></div><div class="line"><span class="keyword">foreach</span> <span class="variable">$log</span> (<span class="variable">@$</span>logs)  <span class="comment"># 由于参数中可以接很多日志文件，所以日志必须循环，然后一个个日志解析。</span></div><div class="line"></div><div class="line"><span class="keyword">next</span> <span class="keyword">until</span> <span class="variable">$line</span> =~ <span class="regexp">/^# User/</span>;  <span class="comment"># 这是第一个头，当mysqlsla 碰到 # User ，那么一个日志解析开始。</span></div><div class="line"></div><div class="line">(<span class="variable">$user</span>, <span class="variable">$host</span>, <span class="variable">$IP</span>) = <span class="variable">$line</span> =~</div><div class="line">            <span class="regexp">/^# User\@Host: (.+?) \@ (.*?) \[(.*?)\]/</span> ? (<span class="variable">$1</span>,<span class="variable">$2</span>,<span class="variable">$3</span>) : (<span class="string">''</span>,<span class="string">''</span>,<span class="string">''</span>); <span class="comment"># 获取user，host，ip</span></div><div class="line">            </div><div class="line">  <span class="keyword">next</span> <span class="keyword">if</span> (<span class="keyword">exists</span> <span class="variable">$mf</span><span class="string">{user}</span> && !passes_meta_filter(<span class="string">'user'</span>, <span class="variable">$user</span>, <span class="string">'s'</span>));</div><div class="line">         <span class="keyword">next</span> <span class="keyword">if</span> (<span class="keyword">exists</span> <span class="variable">$mf</span><span class="string">{host}</span> && !passes_meta_filter(<span class="string">'host'</span>, <span class="variable">$host</span>, <span class="string">'s'</span>));</div><div class="line">         <span class="keyword">next</span> <span class="keyword">if</span> (<span class="keyword">exists</span> <span class="variable">$mf</span><span class="string">{ip}</span>   && !passes_meta_filter(<span class="string">'ip'</span>,   <span class="variable">$IP</span>,   <span class="string">'s'</span>)); <span class="comment">## 还记得我们有mf参数么，如果mf没有，及可以跳过。</span></div><div class="line">         </div><div class="line">接下来就是<span class="keyword">read</span> statament的部分代码：</div><div class="line"></div><div class="line">         READ_STATEMENTS:</div><div class="line">         <span class="keyword">while</span>(<span class="variable">$line</span> = &lt;LOG&gt;)</div><div class="line">         {</div><div class="line">            <span class="keyword">last</span> <span class="keyword">if</span> <span class="variable">$line</span> =~ <span class="regexp">/^#(?! administrator )/</span>; <span class="comment"># stop at next stmt but not administrator commands</span></div><div class="line">            <span class="keyword">last</span> <span class="keyword">if</span> <span class="variable">$line</span> =~ <span class="regexp">/^\/(?![\*\/]+)/</span>;        <span class="comment"># stop at log header lines but not SQL comment lines</span></div><div class="line">            <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$line</span> =~ <span class="regexp">/^\s*$/</span>;</div><div class="line">   </div><div class="line">            <span class="variable">$stmt</span> .= <span class="variable">$line</span>;</div><div class="line">         }</div><div class="line">         <span class="variable">$valid_stmt</span> = check_stmt(\<span class="variable">$stmt</span>, \<span class="variable">$use_db</span>);  <span class="comment"># 这里是用于拼接statment 语句，判断其合法性</span></div><div class="line">		  <span class="variable">$q</span> = abstract_stmt(<span class="variable">$stmt</span>);                  <span class="comment">#  这里是重点，抽象valid SQL。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>check_stmt: 用于检测statment合法性，并且合并SQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">比如：slow 日志如下</div><div class="line"></div><div class="line"># Time: 141128 23:59:22</div><div class="line"># User@Host: readonly_v2[readonly_v2] @  [10.10.3.139]</div><div class="line"># Query_time: 0.636455  Lock_time: 0.000064 Rows_sent: 3  Rows_examined: 184547</div><div class="line"><span class="operator"><span class="keyword">use</span> anjuke_db;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">timestamp</span>=<span class="number">1417190361</span>;</span></div><div class="line"><span class="operator"><span class="keyword">SELECT</span>    <span class="keyword">md5</span>,    Width,    Height,    <span class="keyword">Size</span>,    UploadTime   <span class="keyword">FROM</span>    commpic_base_info   <span class="keyword">WHERE</span> <span class="keyword">md5</span> <span class="keyword">in</span>   (<span class="string">'421a656739c63f2c7e1587d213e7585a'</span>,<span class="string">'8a3ed632211cf72bb3a9720f5c025ce9'</span>,<span class="string">'c6fd1d939f0640d70cb3fec46da1fa2b'</span>) ;</span></div><div class="line"></div><div class="line">check_stmt 会将下面三种语句进行合并，然后变成一条。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>abstract_stmt: 抽象化SQL，我个人感觉这是slow 分析的最最最重要的地方</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="sub"><span class="keyword">sub</span> abstract_stmt</span></div><div class="line">{</div><div class="line">   <span class="keyword">my</span> <span class="variable">$q</span> = <span class="keyword">lc</span> <span class="keyword">shift</span>;  <span class="comment"># scalar having statement to abstract</span></div><div class="line"></div><div class="line">   <span class="keyword">my</span> <span class="variable">$t</span>;  <span class="comment"># position in q while compacting IN and VALUES</span></div><div class="line"></div><div class="line">   <span class="comment"># --- Regex copied from mysqldumpslow</span></div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/\b\d+\b/N/go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/\b0x[0-9A-Fa-f]+\b/N/go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/''/'S'/go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/""/"S"/go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/(\\')//go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/(\\")//go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/'[^']+'/'S'/go</span>;</div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/"[^"]+"/"S"/go</span>;</div><div class="line">   <span class="comment"># ---</span></div><div class="line"></div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/^\s+//go</span>;      <span class="comment"># remove leading blank space</span></div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/\s{2,}/ /go</span>;   <span class="comment"># compact 2 or more blank spaces to 1</span></div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/\n/ /go</span>;       <span class="comment"># remove newlines</span></div><div class="line">   <span class="variable">$q</span> =~ <span class="regexp">s/`//go</span>;         <span class="comment"># remove graves/backticks</span></div><div class="line"></div><div class="line">   <span class="comment"># compact IN clauses: (N, N, N) --&gt; (N3)</span></div><div class="line">   <span class="keyword">while</span> (<span class="variable">$q</span> =~ <span class="regexp">m/( in\s?)/go</span>)</div><div class="line">   {</div><div class="line">      <span class="variable">$t</span> = <span class="keyword">pos</span>(<span class="variable">$q</span>);</div><div class="line">      <span class="variable">$q</span> =~ <span class="regexp">s/\G\((?=(?:N|'S'))(.+?)\)/compact_IN($1)/e</span>;</div><div class="line">      <span class="keyword">pos</span>(<span class="variable">$q</span>) = <span class="variable">$t</span>;</div><div class="line">   }</div><div class="line"></div><div class="line">   <span class="comment"># compact VALUES clauses: (NULL, 'S'), (NULL, 'S') --&gt; (NULL, 'S')2</span></div><div class="line">   <span class="keyword">while</span> (<span class="variable">$q</span> =~ <span class="regexp">m/( values\s?)/go</span>)</div><div class="line">   {</div><div class="line">      <span class="variable">$t</span> = <span class="keyword">pos</span>(<span class="variable">$q</span>);</div><div class="line">      <span class="variable">$q</span> =~ <span class="regexp">s/\G(.+?)(\s?)(;|on|\z)/compact_VALUES($1)."$2$3"/e</span>;</div><div class="line">      <span class="keyword">pos</span>(<span class="variable">$q</span>) = <span class="variable">$t</span>;</div><div class="line">   }</div><div class="line"></div><div class="line">   <span class="keyword">return</span> <span class="variable">$q</span>;  <span class="comment"># abstracted form of stmt</span></div><div class="line">}</div><div class="line"></div><div class="line">* 第一步就是将原始SQL做各种替换，即将参数全部替换成S，N。 并且将一些特殊空格，字符全部替换掉。替换表达式均来自官方的mysqldumpslow。</div><div class="line">* 第二步就是将 IN clauses: (N, N, N) --&gt; (N3) </div><div class="line">* 第三步就是将 VALUES clauses: (NULL, <span class="string">'S'</span>), (NULL, <span class="string">'S'</span>) --&gt; (NULL, <span class="string">'S'</span>)<span class="number">2</span></div><div class="line"></div><div class="line">这就是bug存在的地方，后续会讲如何改进。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>统计grand 值，用于report</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$total_queries</span> = ParseFilter::calc_final_values(<span class="variable">%params</span>, \<span class="variable">%g_t</span>);</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>最后作meta 过滤</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">ParseFilter<span class="tag">::apply_final_meta_filters</span>(<span class="subst">%</span><span class="keyword">params</span>, <span class="subst">\</span><span class="variable">$total_queries</span>) <span class="keyword">if</span> <span class="variable">$op</span>{mf};</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>之后进入 分析阶段,主要是统计百分比，应用日志阶段</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">calc_nthp(<span class="variable">$q_h</span>)         <span class="keyword">if</span> <span class="keyword">exists</span> <span class="variable">$op</span><span class="string">{nthp}</span>;</div><div class="line">calc_dist(<span class="variable">$q_h</span>)         <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{dist}</span>;</div><div class="line">time_each_query(<span class="variable">$q_h</span>)   <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{te}</span>;</div></pre></td></tr></table></figure>
+
+<ul>
+<li><p><strong>然后进入 report 阶段，包括排序，explain，制作报表</strong></p>
+</li>
+<li><p><strong>sort_and_prune()</strong></p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="sub"><span class="keyword">sub</span> sort_and_prune</span></div><div class="line">{</div><div class="line">   <span class="keyword">my</span> <span class="variable">$top</span>;</div><div class="line">   <span class="keyword">my</span> <span class="variable">$sort</span>;</div><div class="line">   <span class="variable">$op</span><span class="string">{top}</span>  ||= <span class="number">10</span>;</div><div class="line">   <span class="variable">$op</span><span class="string">{sort}</span> ||=(<span class="variable">$op</span><span class="string">{lt}</span> eq <span class="string">'slow'</span> || <span class="variable">$op</span><span class="string">{lt}</span> eq <span class="string">'msl'</span> ? <span class="string">'t_sum'</span> : <span class="string">'c_sum'</span>);</div><div class="line">   <span class="variable">$top</span> = <span class="variable">$op</span><span class="string">{top}</span>;</div><div class="line">   d(<span class="string">"sort_and_prune: top <span class="variable">$op</span>{top} sort <span class="variable">$op</span>{sort}\n"</span>) <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{debug}</span>;</div><div class="line">   <span class="keyword">foreach</span> (<span class="keyword">sort</span> { <span class="variable">$$</span>q_h{<span class="variable">$b</span>}-&gt;{<span class="variable">$op</span><span class="string">{sort}</span>} &lt;=&gt; <span class="variable">$$</span>q_h{<span class="variable">$a</span>}-&gt;{<span class="variable">$op</span><span class="string">{sort}</span>} } <span class="keyword">keys</span>(<span class="variable">%$</span>q_h))</div><div class="line">   {</div><div class="line">      <span class="variable">$$</span>q_h{<span class="variable">$_</span>}-&gt;{sort_rank} = (<span class="variable">$op</span><span class="string">{top}</span> - <span class="variable">$top</span> + <span class="number">1</span>);</div><div class="line">      <span class="keyword">last</span> <span class="keyword">if</span> !--<span class="variable">$top</span>;</div><div class="line">   }</div><div class="line">   <span class="keyword">foreach</span>(<span class="keyword">keys</span> <span class="variable">%$</span>q_h) { <span class="keyword">delete</span> <span class="variable">$$</span>q_h{<span class="variable">$_</span>} <span class="keyword">if</span> !<span class="keyword">exists</span> <span class="variable">$$</span>q_h{<span class="variable">$_</span>}-&gt;{sort_rank}; }</div><div class="line">}</div><div class="line"></div><div class="line">* 默认的展示只有 <span class="variable">$op</span><span class="string">{top}</span>  ||= <span class="number">10</span>; 所以如果想要更多，请手动 --top=N</div><div class="line">* 如果日志类型为slow，默认<span class="keyword">sort</span>是根据t_sum,如果是msl，则是 c_sum</div><div class="line">	<span class="variable">$op</span><span class="string">{sort}</span> ||=(<span class="variable">$op</span><span class="string">{lt}</span> eq <span class="string">'slow'</span> || <span class="variable">$op</span><span class="string">{lt}</span> eq <span class="string">'msl'</span> ? <span class="string">'t_sum'</span> : <span class="string">'c_sum'</span>);</div><div class="line">* 然后偶根据制定的参数，进行<span class="keyword">sort</span> 与 合并。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>EXPLAIN_queries</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div></pre></td><td class="code"><pre><div class="line"><span class="sub"><span class="keyword">sub</span> EXPLAIN_queries</span></div><div class="line">{</div><div class="line">   d(<span class="string">"EXPLAIN_queries\n"</span>) <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{debug}</span>;</div><div class="line"></div><div class="line">   <span class="keyword">my</span> <span class="variable">$q_h</span> = <span class="keyword">shift</span>;  <span class="comment"># reference to hash with queries</span></div><div class="line"></div><div class="line">   <span class="keyword">my</span> <span class="variable">$row</span>;</div><div class="line">   <span class="keyword">my</span> <span class="variable">@rows</span>;</div><div class="line">   <span class="keyword">my</span> <span class="variable">$col</span>;</div><div class="line">   <span class="keyword">my</span> (<span class="variable">$x</span>, <span class="variable">$q</span>);</div><div class="line">   <span class="keyword">my</span> (<span class="variable">$i</span>, <span class="variable">$j</span>);</div><div class="line">   <span class="keyword">my</span> <span class="variable">$select_query</span>;</div><div class="line"></div><div class="line">   connect_to_MySQL();  <span class="comment"># safe to call multiple times; it will just return</span></div><div class="line">                        <span class="comment"># if we're already connected to the MySQL server</span></div><div class="line"></div><div class="line">   <span class="keyword">foreach</span> <span class="variable">$q</span> (<span class="keyword">keys</span> <span class="variable">%$</span>q_h)</div><div class="line">   {</div><div class="line">      <span class="variable">$x</span> = <span class="variable">$$</span>q_h{<span class="variable">$q</span>};</div><div class="line"></div><div class="line">      <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="number">0</span>;</div><div class="line">      <span class="variable">$x</span>-&gt;{rp} = -<span class="number">1</span>;</div><div class="line">      <span class="variable">$x</span>-&gt;{rr} = -<span class="number">1</span>;</div><div class="line"></div><div class="line">      <span class="keyword">if</span>(<span class="variable">$x</span>-&gt;{sample} !~ <span class="regexp">/^SELECT/i</span>)</div><div class="line">      {</div><div class="line">         <span class="keyword">my</span> <span class="variable">$qr</span> = new QueryRewriter;</div><div class="line">         <span class="variable">$select_query</span> = <span class="variable">$qr</span>-&gt;convert_to_select(<span class="variable">$x</span>-&gt;{sample});</div><div class="line">         <span class="keyword">if</span> ( <span class="variable">$select_query</span> !~ <span class="regexp">/^SELECT/i</span> ) {</div><div class="line">            <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="string">"Cannot convert to a SELECT statement"</span>;</div><div class="line">            <span class="keyword">next</span>;</div><div class="line">         }</div><div class="line">      }</div><div class="line">      <span class="keyword">else</span> {</div><div class="line">         <span class="variable">$select_query</span> = <span class="variable">$x</span>-&gt;{sample};</div><div class="line">      }</div><div class="line"></div><div class="line">      <span class="keyword">if</span>(!<span class="variable">$x</span>-&gt;{db})</div><div class="line">      {</div><div class="line">         <span class="keyword">if</span>(!<span class="variable">$op</span><span class="string">{db}</span>)</div><div class="line">         {</div><div class="line">            <span class="comment"># See if query has qualified table names which will allow it</span></div><div class="line">            <span class="comment"># to be EXPLAINed without setting the db</span></div><div class="line">            <span class="keyword">eval</span> {</div><div class="line">               <span class="variable">$query</span> = <span class="variable">$dbh</span>-&gt;prepare(<span class="string">"EXPLAIN <span class="variable">$select_query</span>"</span>);</div><div class="line">               <span class="variable">$query</span>-&gt;execute();</div><div class="line">            };</div><div class="line">            <span class="keyword">if</span> ( <span class="variable">$EVAL_ERROR</span> ) {</div><div class="line">               <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="string">"Unknown database and no qualified table names"</span>;</div><div class="line">               <span class="keyword">next</span>;</div><div class="line">            }</div><div class="line">            <span class="keyword">else</span> {</div><div class="line">               <span class="keyword">goto</span> PARSE_EXPLAIN;</div><div class="line">            }</div><div class="line">         }</div><div class="line">         <span class="keyword">else</span></div><div class="line">         {</div><div class="line">            <span class="keyword">foreach</span>(<span class="keyword">keys</span> <span class="variable">%db</span>)</div><div class="line">            {</div><div class="line">               <span class="variable">$dbh</span>-&gt;<span class="keyword">do</span>(<span class="string">"USE <span class="variable">$_</span>;"</span>);</div><div class="line">               <span class="variable">$query</span> = <span class="variable">$dbh</span>-&gt;prepare(<span class="string">"EXPLAIN <span class="variable">$select_query</span>"</span>);</div><div class="line">               <span class="variable">$query</span>-&gt;execute();</div><div class="line">               <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$DBI::err</span>;</div><div class="line"></div><div class="line">               <span class="variable">$x</span>-&gt;{db} = <span class="variable">$_</span>;</div><div class="line">               <span class="keyword">last</span>;</div><div class="line">            }</div><div class="line"></div><div class="line">            <span class="keyword">if</span>(!<span class="variable">$x</span>-&gt;{db})</div><div class="line">            {</div><div class="line">               <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="string">"Unknown database and no given databases work"</span>;</div><div class="line">               <span class="keyword">next</span>;</div><div class="line">            }</div><div class="line">         }</div><div class="line">      }</div><div class="line"></div><div class="line">      <span class="variable">$query</span> = <span class="variable">$dbh</span>-&gt;prepare(<span class="string">"USE <span class="variable">$x</span>-&gt;{db};"</span>);</div><div class="line">      <span class="variable">$query</span>-&gt;execute();</div><div class="line">      <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="variable">$DBI::errstr</span> <span class="keyword">and</span> <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$DBI::err</span>;</div><div class="line"></div><div class="line">      <span class="variable">$query</span> = <span class="variable">$dbh</span>-&gt;prepare(<span class="string">"EXPLAIN <span class="variable">$select_query</span>"</span>);</div><div class="line">      <span class="variable">$query</span>-&gt;execute();</div><div class="line">      <span class="variable">$x</span>-&gt;{EXPLAIN_err} = <span class="variable">$DBI::errstr</span> <span class="keyword">and</span> <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$DBI::err</span>;</div><div class="line"></div><div class="line">      PARSE_EXPLAIN:</div><div class="line">      </div><div class="line">      <span class="variable">$x</span>-&gt;{EXPLAIN} = [] <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{ex}</span>;</div><div class="line">      <span class="variable">$x</span>-&gt;{tcount}  = <span class="string">''</span> <span class="keyword">if</span> <span class="variable">$extras</span><span class="string">{tcount}</span>;</div><div class="line">      <span class="variable">$x</span>-&gt;{TSCHEMA} = [] <span class="keyword">if</span> <span class="variable">$extras</span><span class="string">{tschema}</span>;</div><div class="line"></div><div class="line">      <span class="keyword">while</span>(<span class="variable">$row</span> = <span class="variable">$query</span>-&gt;fetchrow_hashref())</div><div class="line">      {</div><div class="line">         <span class="keyword">push</span> <span class="variable">@rows</span>, (<span class="variable">$row</span>-&gt;{rows} ? <span class="variable">$row</span>-&gt;{rows} : <span class="number">0</span>)</div><div class="line">            <span class="keyword">if</span> <span class="variable">$op</span><span class="string">{ex}</span>;</div><div class="line"></div><div class="line">         <span class="keyword">for</span>(<span class="variable">$j</span> = <span class="number">0</span>; <span class="variable">$j</span> &lt; <span class="variable">$query</span>-&gt;{NUM_OF_FIELDS}; <span class="variable">$j</span>++)</div><div class="line">         {</div><div class="line">            <span class="variable">$col</span> = <span class="variable">$query</span>-&gt;{NAME}-&gt;[<span class="variable">$j</span>];</div><div class="line"></div><div class="line">            <span class="keyword">if</span> ( <span class="variable">$op</span><span class="string">{ex}</span> ) {</div><div class="line">               <span class="keyword">push</span> @{<span class="variable">$x</span>-&gt;{EXPLAIN}}, <span class="variable">$col</span>;</div><div class="line">               <span class="keyword">push</span> @{<span class="variable">$x</span>-&gt;{EXPLAIN}}, (<span class="variable">$row</span>-&gt;{<span class="variable">$col</span>} ? <span class="variable">$row</span>-&gt;{<span class="variable">$col</span>} : <span class="string">''</span>);</div><div class="line">            }</div><div class="line"></div><div class="line">         }</div><div class="line">      }</div><div class="line"></div><div class="line">      <span class="keyword">if</span> ( <span class="variable">$op</span><span class="string">{ex}</span> ) {</div><div class="line">         <span class="keyword">for</span>(<span class="variable">$i</span> = <span class="number">0</span>, <span class="variable">$j</span> = <span class="number">1</span>; <span class="variable">$i</span> &lt; <span class="variable">$query</span>-&gt;rows; <span class="variable">$i</span>++) { <span class="variable">$j</span> *= <span class="variable">$rows</span>[<span class="variable">$i</span>]; }</div><div class="line">         <span class="variable">$x</span>-&gt;{rp} = <span class="variable">$j</span>; <span class="comment"># Rows produced</span></div><div class="line">         <span class="variable">$x</span>-&gt;{rr} = calc_rows_read(\<span class="variable">@rows</span>);</div><div class="line">      }</div><div class="line"></div><div class="line">      <span class="keyword">if</span> ( <span class="variable">$extras</span><span class="string">{tcount}</span> || <span class="variable">$extras</span><span class="string">{tschema}</span> ) {</div><div class="line">         <span class="keyword">my</span> <span class="variable">$tbls</span> = parse_table_aliases(get_table_ref(<span class="variable">$select_query</span>));</div><div class="line">         <span class="keyword">foreach</span> <span class="keyword">my</span> <span class="variable">$tbl</span> ( <span class="keyword">keys</span> <span class="variable">%$</span>tbls ) {</div><div class="line">            <span class="keyword">next</span> <span class="keyword">if</span> <span class="variable">$tbl</span> eq <span class="string">'DATABASE'</span>;</div><div class="line">            <span class="keyword">my</span> <span class="variable">$db</span> = <span class="variable">$x</span>-&gt;{db};</div><div class="line">            <span class="keyword">if</span> (    <span class="keyword">exists</span> <span class="variable">$tbls</span>-&gt;{DATABASE}</div><div class="line">                 && <span class="keyword">exists</span> <span class="variable">$tbls</span>-&gt;{DATABASE}-&gt;{<span class="variable">$tbl</span>} ) {</div><div class="line">               <span class="variable">$db</span> = <span class="variable">$tbls</span>-&gt;{DATABASE}-&gt;{<span class="variable">$tbl</span>};</div><div class="line">            }</div><div class="line"></div><div class="line">            <span class="keyword">if</span> ( <span class="variable">$extras</span><span class="string">{tcount}</span> ) {</div><div class="line">               <span class="keyword">my</span> <span class="variable">$n</span> = make_short(get_row_count(<span class="variable">$dbh</span>, <span class="variable">$db</span>, <span class="variable">$tbls</span>-&gt;{<span class="variable">$tbl</span>}));</div><div class="line">               <span class="variable">$x</span>-&gt;{tcount} .= <span class="string">"<span class="variable">$tbls</span>-&gt;{<span class="variable">$tbl</span>}:<span class="variable">$n</span> "</span>;</div><div class="line">            }</div><div class="line">            <span class="keyword">if</span> ( <span class="variable">$extras</span><span class="string">{tschema}</span> ) {</div><div class="line">               <span class="keyword">my</span> <span class="variable">$ddl</span> = get_create_table(<span class="variable">$dbh</span>, <span class="variable">$db</span>, <span class="variable">$tbls</span>-&gt;{<span class="variable">$tbl</span>});</div><div class="line">               <span class="keyword">if</span> ( <span class="variable">$ddl</span> ) {</div><div class="line">                  <span class="keyword">push</span> @{<span class="variable">$x</span>-&gt;{TSCHEMA}},</div><div class="line">                     (<span class="variable">$ddl</span>-&gt;[<span class="number">0</span>] eq <span class="string">'view'</span> ? <span class="string">'(VIEW) '</span> : <span class="string">''</span>)</div><div class="line">                     . <span class="variable">$ddl</span>-&gt;[<span class="number">1</span>];</div><div class="line">               }</div><div class="line">               <span class="keyword">else</span> {</div><div class="line">                  <span class="variable">$x</span>-&gt;{TSCHEMA} = <span class="string">'Could not get table schemas'</span>;</div><div class="line">               }</div><div class="line">            }</div><div class="line">         }</div><div class="line">      }</div><div class="line"></div><div class="line">   }</div><div class="line">}</div><div class="line"></div><div class="line">* 这里，如果指定了-ex，那么mysqlsla 会主动连接mysql，用户名，密码，主机当然都是你提供的。然后重写SQL语句QueryRewriter，将非<span class="keyword">select</span>语句，全部转换成SELECT子句。并且根据explain的结果进行分析，最终report到client。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>最后一步，产生报表</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div></pre></td><td class="code"><pre><div class="line">make_reports() -&gt;  standard_report(\<span class="variable">@headers</span>, \<span class="variable">@header_vals</span>, \<span class="variable">@formats</span>, \<span class="variable">@format_vals</span>)</div><div class="line">                         <span class="keyword">if</span> <span class="keyword">exists</span> <span class="variable">$r</span>{standard};</div><div class="line">                         </div><div class="line">* 基本格式为：</div><div class="line"></div><div class="line">     HEADER</div><div class="line">    (header line <span class="keyword">format</span>) </div><div class="line">    (header line values)</div><div class="line">    REPORT</div><div class="line">    report line <span class="keyword">format</span> </div><div class="line">    report line values</div><div class="line">    </div><div class="line">    主要分两部分：HEADER ， REPORT。</div><div class="line">    根据不同的key，得到不同的value。 </div><div class="line">    </div><div class="line">这里简单介绍一下slow 的默认格式作为参考：</div><div class="line"></div><div class="line">-nthp</div><div class="line">HEADER</div><div class="line">Report <span class="keyword">for</span> <span class="variable">%s</span> logs: <span class="variable">%s</span></div><div class="line">lt:op logs</div><div class="line"><span class="variable">%s</span> queries total, <span class="variable">%s</span> unique</div><div class="line">total_queries:short total_unique_queries:short</div><div class="line">Sorted by <span class="string">'%s'</span></div><div class="line"><span class="keyword">sort</span>:op</div><div class="line">Grand Totals: Time <span class="variable">%s</span> s, Lock <span class="variable">%s</span> s, Rows sent <span class="variable">%s</span>, Rows Examined <span class="variable">%s</span></div><div class="line">gt_t:short gt_l:short gt_rs:short gt_re:short</div><div class="line">REPORT</div><div class="line">______________________________________________________________________ <span class="variable">%03d</span> ___</div><div class="line">sort_rank</div><div class="line">Count         : <span class="variable">%s</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">c_sum:short c_sum_p</div><div class="line">Time          : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">t_sum:micro t_avg:micro t_min:micro t_max:micro t_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Time : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op t_sum_nthp:micro t_avg_nthp:micro t_min_nthp:micro t_max_nthp:micro</div><div class="line">? Distribution : <span class="variable">%s</span></div><div class="line">t_dist</div><div class="line">Lock Time (s) : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">l_sum:micro l_avg:micro l_min:micro l_max:micro l_sum_p</div><div class="line">? <span class="variable">%3s</span><span class="variable">%%</span> of Lock : <span class="variable">%s</span> total, <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span></div><div class="line">nthp:op l_sum_nthp:micro l_avg_nthp:micro l_min_nthp:micro l_max_nthp:micro</div><div class="line">Rows sent     : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">rs_avg:short rs_min:short rs_max:short rs_sum_p</div><div class="line">Rows examined : <span class="variable">%s</span> avg, <span class="variable">%s</span> to <span class="variable">%s</span> <span class="keyword">max</span>  (<span class="variable">%.</span><span class="number">2</span>f<span class="variable">%%</span>)</div><div class="line">re_avg:short re_min:short re_max:short re_sum_p</div><div class="line">Database      : <span class="variable">%s</span></div><div class="line">db</div><div class="line">Users         : <span class="variable">%s</span></div><div class="line">users</div><div class="line">?Table:#rows   : <span class="variable">%s</span></div><div class="line">tcount</div><div class="line">?Table schemas : <span class="variable">%s</span></div><div class="line">tschema</div><div class="line">?EXPLAIN       : <span class="variable">%s</span></div><div class="line">explain</div><div class="line">Query abstract:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">query:cap</div><div class="line">Query sample:</div><div class="line">_</div><div class="line"><span class="variable">%s</span></div><div class="line">sample</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>以上，就是slow log分析的全部过程，其他的日志分析和slow 基本上差不多，所以不做多讲</strong></li>
+</ul>
+<h2 id="已知的bug_list_以及_Bug_修复">已知的bug list 以及 Bug 修复</h2>
+<hr>
+<ul>
+<li><strong>select xx from table where id in (N,N,N) 这种类似的语句，没有办法归类，主要会影响slow的排序。</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">症状：这种SQL语句，会严重干扰抽象语句的统计和排序，对于之后的slow 分析诸多不便。</div><div class="line">解决方案： <span class="operator"><span class="keyword">select</span> xx <span class="keyword">from</span> <span class="keyword">table</span> <span class="keyword">where</span> id <span class="keyword">in</span> (N,N,N) -&gt; <span class="keyword">select</span> xx <span class="keyword">from</span> <span class="keyword">table</span> <span class="keyword">where</span> id <span class="keyword">in</span> (N) 即可。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>特殊格式的SQL 抽象解析有误</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">SQL1: <span class="operator"><span class="keyword">SELECT</span> * <span class="keyword">FROM</span> zx_article_attributes <span class="keyword">WHERE</span>  <span class="string">`column_id`</span> <span class="keyword">IN</span> (     <span class="string">'4'</span>,<span class="string">'5'</span>,<span class="string">'6'</span>,<span class="string">'7'</span>,<span class="string">'8'</span>,<span class="string">'9'</span>,<span class="string">'12'</span>,<span class="string">'15'</span>,<span class="string">'18'</span>,<span class="string">'19'</span>)  <span class="keyword">ORDER</span> <span class="keyword">BY</span> created <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">3</span> OFFSET <span class="number">0</span></span></div><div class="line"></div><div class="line">SQL2: <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> zx_article_attributes <span class="keyword">WHERE</span>  <span class="string">`column_id`</span> <span class="keyword">IN</span> (<span class="string">'4'</span>,<span class="string">'5'</span>,<span class="string">'6'</span>,<span class="string">'7'</span>,<span class="string">'8'</span>,<span class="string">'9'</span>,<span class="string">'12'</span>,<span class="string">'15'</span>,<span class="string">'18'</span>,<span class="string">'19'</span>)  <span class="keyword">ORDER</span> <span class="keyword">BY</span> created <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">3</span> OFFSET <span class="number">0</span></div><div class="line"></div><div class="line">以上这两种语句在抽象的时候，会得到不同的结果。 在<span class="keyword">IN</span> 中，括号后面不能有空格，如果有，就不能被统一抽象化，但其实他们是同一类<span class="keyword">SQL</span>。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>insert into xx values(‘s’),(‘s’)…..(‘s’) 会导致SQL 没办法分类</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">症状： 这种SQL语句，会严重干扰抽象语句的统计和排序，对于之后的slow 分析诸多不便。</div><div class="line">解决方案： insert into xx values<span class="function"><span class="params">(<span class="string">'s'</span>)</span>,<span class="params">(<span class="string">'s'</span>)</span>.....<span class="params">(<span class="string">'s'</span>)</span>  -&gt;</span> insert into xx values(<span class="string">'s'</span>) 即可</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>原始SQL 语句的注释会干扰 slow分析</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">症状： SQL1 #from api-<span class="keyword">lc</span> 和 SQL1 #from api-<span class="keyword">lc</span>  这里面，SQL1 都是同样的SQL，但是统计就会出错。</div><div class="line">解决方案：将注释不作为统计的条件，即可。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>meta-property filter 无法精准过滤</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">症状：-mf 中的op 条件只能是三种，且&gt;,=,&lt; 。 字符串只能是 =</div><div class="line"><span class="input"><span class="prompt">解决方案： 我个人认为在统计中 &gt;</span> 和 &gt;= 没多少区别，也没必要这些统计。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>新功能的添加</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) 之前有的时候，发现slow 语句中并没有来自哪个<span class="pseudo">DB</span>，比较郁闷。现在源码中看到，<span class="pseudo">db</span>-inheritance 可以解决这个问题，很好用</div><div class="line"><span class="number">2</span>）修改slow standard report ，  所有slow， 新增 <span class="literal">ip</span> sum 这一属性，方便日后解析统计。</div><div class="line"><span class="number">3</span>) mysqlsla_lc_v2<span class="string">.0</span> 新增对mysql5<span class="string">.6</span> binlog 的解析支持。</div></pre></td></tr></table></figure>
+
+<p>以上的改动，均在新的mysqlsla 版本中修复。详细内容，请看修复后的代码。</p>
+<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla" target="_blank" rel="external">老的mysqlsla源码</a></p>
+<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_lc" target="_blank" rel="external">修改后的mysqlsla源码</a></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/07/15/mysqlsla_source_read/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/07/15/mysqsla/"  title="mysql日志分析神器之mysqlsla">
+ <strong>NEXT:</strong><br/> 
+ <span>mysql日志分析神器之mysqlsla
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/07/15/mysqlsla_source_read/" data-title="" data-url="https://Keithlan.github.io/2015/07/15/mysqlsla_source_read/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:lanowen};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysqlsla_源码解析"><span class="toc-number">1.</span> <span class="toc-text">mysqlsla 源码解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">1.2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">1.3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">1.4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">1.5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福不在于得到的多，而在于计较的少</p>
+		
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>9</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">10</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"lanowen"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
