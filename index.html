@@ -68,21 +68,27 @@
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/15/mysqlsla_source_read/" title="" itemprop="url">
+        <a href="/2015/07/15/mysqsla/" title="mysql日志分析神器之mysqlsla" itemprop="url">
       
-        
+        mysql日志分析神器之mysqlsla
       </a>
     </h1>
     
      
-           <p itemprop="description" >mysqlsla 源码解析
-&amp;gt;mysqlsla: parse, filter, analyze and sort MySQL logshttp://hackmysql.com/mysqlsla.Copyright 2007-2008 Daniel Nichter.This </p>
-        
+       <p itemprop="description" >hack mysqlsla 文档
+背景
+
+什么是mysqlsla？
+  Mysqlsla 是daniel-nichter 用perl 写的一个脚本，专门用于处理分析Mysql的日志而存在。 
+
+mysqlsla 能解决什么问题？
+  作为一名Mysql DBA，日常工作中处理日志</p>
+      
     
     <p class="article-more-link">
-      <time datetime="2015-07-15T07:33:46.000Z" itemprop="datePublished">Jul 15 2015</time>
+      <time datetime="2015-07-15T03:32:24.000Z" itemprop="datePublished">Jul 15 2015</time>
       
-          <a href="/2015/07/15/mysqlsla_source_read/">阅读更多&raquo;</a>
+          <a href="/2015/07/15/mysqsla/">阅读更多&raquo;</a>
       
     </p>
 
@@ -93,27 +99,29 @@
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/15/mysqsla/" title="mysql日志分析神器之mysqlsla" itemprop="url">
+        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
       
-        mysql日志分析神器之mysqlsla
+        mysqlsla 源码解析
       </a>
     </h1>
     
      
-           <p itemprop="description" >hack mysqlsla 文档
-背景
+       <p itemprop="description" >知识结构
 
-什么是mysqlsla？
-  Mysqlsla 是daniel-nichter 用perl 写的一个脚本，专门用于处理分析Mysql的日志而存在。 
 
-mysqlsla 能解决什么问题？
-  作为一名Mysql DBA，日常工作中处理日志</p>
-        
+目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
+
+mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
+
+分析 main 函数，一步步了解主要流程
+
+针对一条线进行分析，比如slow lo</p>
+      
     
     <p class="article-more-link">
-      <time datetime="2015-07-15T03:32:24.000Z" itemprop="datePublished">Jul 15 2015</time>
+      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/15/mysqsla/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
       
     </p>
 
@@ -369,7 +377,7 @@ The server stops accepting new</p>
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>9</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>10</sup></a></li>
 		
 		</ul>
 </div>
@@ -389,7 +397,7 @@ The server stops accepting new</p>
 		
 			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
 		
-			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>1</sup></a></li>
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		
 		</ul>
 </div>

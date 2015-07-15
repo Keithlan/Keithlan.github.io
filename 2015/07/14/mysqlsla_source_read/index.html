@@ -4,13 +4,21 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Focus on MySQL,Focus on Focus</title>
+    <title>mysqlsla 源码解析 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="mysqlsla 源码解析
-&amp;gt;mysqlsla: parse, filter, analyze and sort MySQL logshttp://hackmysql.com/mysqlsla.Copyright 2007-2008 Daniel Nichter.This program is">
+    <meta name="description" content="知识结构
+
+
+目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
+
+mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
+
+分析 main 函数，一步步了解主要流程
+
+针对一条线进行分析，比如slow log 的解析">
     
     
     
@@ -70,15 +78,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/07/15/mysqlsla_source_read/" title="" itemprop="url"></a>
+      <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">mysqlsla 源码解析</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-07-15T07:33:46.000Z" itemprop="datePublished">Jul 15 2015</time>
-    Updated:<time datetime="2015-05-25T06:21:51.000Z" itemprop="dateModified">May 25 2015</time>
+    <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+    Updated:<time datetime="2015-07-15T07:40:11.000Z" itemprop="dateModified">Jul 15 2015</time>
     
   </p>
 </header>
@@ -87,12 +95,10 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysqlsla_源码解析"><span class="toc-number">1.</span> <span class="toc-text">mysqlsla 源码解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">1.2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">1.3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">1.4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">1.5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol>
 		</div>
 		
-		<h1 id="mysqlsla_源码解析">mysqlsla 源码解析</h1>
-<p>&gt;<br>mysqlsla: parse, filter, analyze and sort MySQL logs<br><a href="http://hackmysql.com/mysqlsla" target="_blank" rel="external">http://hackmysql.com/mysqlsla</a>.<br>Copyright 2007-2008 Daniel Nichter.<br>This program is free software; you can redistribute it and/or<br>modify it under the terms of the GNU General Public License<br>as published by the Free Software Foundation; either version 2<br>of the License, or (at your option) any later version.<br>This program is distributed in the hope that it will be useful,<br>but WITHOUT ANY WARRANTY; without even the implied warranty of<br>MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the<br>GNU General Public License for more details.<br>The GNU General Public License is available at:<br><a href="http://www.gnu.org/copyleft/gpl.html" target="_blank" rel="external">http://www.gnu.org/copyleft/gpl.html</a></p>
-<h2 id="知识结构">知识结构</h2>
+		<h2 id="知识结构">知识结构</h2>
 <hr>
 <ul>
 <li><p><strong>目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制</strong></p>
@@ -104,6 +110,7 @@
 <li><p><strong>针对一条线进行分析，比如slow log 的解析</strong></p>
 </li>
 </ul>
+<p><a id="more"></a></p>
 <h2 id="Packages">Packages</h2>
 <hr>
 <ul>
@@ -643,17 +650,27 @@
 
 <p>以上的改动，均在新的mysqlsla 版本中修复。详细内容，请看修复后的代码。</p>
 <p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla" target="_blank" rel="external">老的mysqlsla源码</a></p>
-<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_lc" target="_blank" rel="external">修改后的mysqlsla源码</a></p>
+<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_lc_v2.0" target="_blank" rel="external">修改后的mysqlsla源码</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
 
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-SYS-toolkit/">MySQL SYS toolkit</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/07/15/mysqlsla_source_read/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2015/07/14/mysqlsla_source_read/" data-title="mysqlsla 源码解析 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -662,11 +679,19 @@
 	
 <nav class="article-nav clearfix">
  
+ <div class="prev" >
+ <a href="/2015/07/15/mysqsla/" title="mysql日志分析神器之mysqlsla">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  mysql日志分析神器之mysqlsla</span>
+</a>
+</div>
+
 
 <div class="next">
-<a href="/2015/07/15/mysqsla/"  title="mysql日志分析神器之mysqlsla">
+<a href="/2015/07/14/mysql_group_order_limit/"  title="Mysql 5.6 执行计划错误案例分析">
  <strong>NEXT:</strong><br/> 
- <span>mysql日志分析神器之mysqlsla
+ <span>Mysql 5.6 执行计划错误案例分析
 </span>
 </a>
 </div>
@@ -676,7 +701,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/07/15/mysqlsla_source_read/" data-title="" data-url="https://Keithlan.github.io/2015/07/15/mysqlsla_source_read/"></div>
+<div class="ds-thread" data-thread-key="/2015/07/14/mysqlsla_source_read/" data-title="mysqlsla 源码解析" data-url="https://Keithlan.github.io/2015/07/14/mysqlsla_source_read/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -697,7 +722,7 @@ var duoshuoQuery = {short_name:lanowen};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#mysqlsla_源码解析"><span class="toc-number">1.</span> <span class="toc-text">mysqlsla 源码解析</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">1.2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">1.3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">1.4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">1.5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识结构"><span class="toc-number">1.</span> <span class="toc-text">知识结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Packages"><span class="toc-number">2.</span> <span class="toc-text">Packages</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#main_主要流程图"><span class="toc-number">3.</span> <span class="toc-text">main 主要流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#以slow_log_分析为导火线"><span class="toc-number">4.</span> <span class="toc-text">以slow log 分析为导火线</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#已知的bug_list_以及_Bug_修复"><span class="toc-number">5.</span> <span class="toc-text">已知的bug list 以及 Bug 修复</span></a></li></ol>
   </div>
 
 <div id="asidepart">
@@ -732,7 +757,7 @@ var duoshuoQuery = {short_name:lanowen};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>9</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>10</sup></a></li>
 		
 		</ul>
 </div>
@@ -752,7 +777,7 @@ var duoshuoQuery = {short_name:lanowen};
 		
 			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
 		
-			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>1</sup></a></li>
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		
 		</ul>
 </div>
