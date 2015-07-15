@@ -3,34 +3,28 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>Mysql 复制过滤详解 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Mysql 复制过滤详解
-
-背景
+  <meta name="description" content="背景
 如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。
 理由
-为了搭建这一套环境（只">
+为了搭建这一套环境（只复制master的B，C库）">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="Mysql 复制过滤详解">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_replicate_rule/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="Mysql 复制过滤详解
-
-背景
+<meta property="og:description" content="背景
 如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。
 理由
-为了搭建这一套环境（只">
+为了搭建这一套环境（只复制master的B，C库）">
 <meta property="og:image" content="image/rpl_db_level.png">
 <meta property="og:image" content="image/rpl_tb_level.png">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="Mysql 复制过滤详解
-
-背景
+<meta name="twitter:title" content="Mysql 复制过滤详解">
+<meta name="twitter:description" content="背景
 如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。
 理由
-为了搭建这一套环境（只">
+为了搭建这一套环境（只复制master的B，C库）">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -81,18 +75,30 @@
         <section id="main"><article id="post-mysql_replicate_rule" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_replicate_rule/" class="article-date">
-  <time datetime="2015-07-14T11:30:10.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      Mysql 复制过滤详解
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="Mysql_复制过滤详解">Mysql 复制过滤详解</h1>
-<hr>
-<h2 id="背景">背景</h2>
+        <h2 id="背景">背景</h2>
 <p>如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。</p>
 <h2 id="理由">理由</h2>
 <p>为了搭建这一套环境（只复制master的B，C库），部分人会在my.cnf中这样配置：</p>
@@ -100,6 +106,8 @@
 
 
 <p>当然，按照大家的惯性思维，认为这样是没有错的。不幸的是，灾难已经来临。</p>
+<a id="more"></a>
+
 <p>官方文档：</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Warning</div><div class="line">To specify multiple databases you must <span class="operator"><span class="keyword">use</span> multiple instances <span class="keyword">of</span> this <span class="keyword">option</span>. Because <span class="keyword">database</span> <span class="keyword">names</span> can contain commas, <span class="keyword">if</span> you supply a comma separated list <span class="keyword">then</span> the list will be treated <span class="keyword">as</span> the name <span class="keyword">of</span> a single <span class="keyword">database</span>.</span></div></pre></td></tr></table></figure>
 
@@ -170,17 +178,19 @@
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_replicate_rule/" data-id="od2vrseulhusa873" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
     
 <nav id="article-nav">
   
-    <a href="/2015/07/14/mysql_ulimit/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_shutdown_err/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          (no title)
+          mysql shutdown 异常处理和分析
         
       </div>
     </a>
@@ -188,7 +198,7 @@
   
     <a href="/2015/07/14/mysql_recovery_myisam_slave/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title"></div>
+      <div class="article-nav-title">特殊场景下的slave重构</div>
     </a>
   
 </nav>
@@ -224,7 +234,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -233,7 +243,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -263,23 +273,23 @@
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>

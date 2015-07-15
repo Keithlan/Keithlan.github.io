@@ -3,38 +3,20 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>MySQL 5.6 中 In 优化的那些事 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="MySQL 5.6 中 In 优化的那些事
-
-背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？
-案例一， 组合条件
-
-
-表结构">
+  <meta name="description" content="背景
+这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="MySQL 5.6 中 In 优化的那些事">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="MySQL 5.6 中 In 优化的那些事
-
-背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？
-案例一， 组合条件
-
-
-表结构">
+<meta property="og:description" content="背景
+这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="MySQL 5.6 中 In 优化的那些事
-
-背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？
-案例一， 组合条件
-
-
-表结构">
+<meta name="twitter:title" content="MySQL 5.6 中 In 优化的那些事">
+<meta name="twitter:description" content="背景
+这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -85,19 +67,32 @@
         <section id="main"><article id="post-mysql_in" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_in/" class="article-date">
-  <time datetime="2015-07-14T11:30:10.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      MySQL 5.6 中 In 优化的那些事
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="MySQL_5-6_中_In_优化的那些事">MySQL 5.6 中 In 优化的那些事</h1>
-<hr>
-<h2 id="背景">背景</h2>
+        <h2 id="背景">背景</h2>
 <p>这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？</p>
+<p><a id="more"></a></p>
 <h2 id="案例一，_组合条件">案例一， 组合条件</h2>
 <hr>
 <ul>
@@ -160,6 +155,8 @@
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/" data-id="7wmi76av30k1ymfw" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
@@ -170,15 +167,15 @@
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          (no title)
+          特殊场景下的slave重构
         
       </div>
     </a>
   
   
-    <a href="/2015/07/14/mysql_error_1293/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_error_1048/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">深入浅出timestamp</div>
+      <div class="article-nav-title">Mysql Error 1048 奇遇记</div>
     </a>
   
 </nav>
@@ -214,7 +211,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -223,7 +220,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -253,23 +250,23 @@
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>

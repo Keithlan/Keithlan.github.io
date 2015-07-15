@@ -63,6 +63,384 @@
       <div class="outer">
         <section id="main">
   
+    <article id="post-mysql_ulimit" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_ulimit/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="背景">背景</h2>
+<blockquote>
+<p>前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable<br>然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。<br>虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
+</blockquote>
+<h2 id="ulimit_-u_&amp;_ulimit_-n_区别？">ulimit -u &amp; ulimit -n 区别？</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">这里先弄清楚一个概念：</div><div class="line"></div><div class="line"><span class="keyword">open</span> <span class="keyword">files</span>                      (-<span class="keyword">n</span>) <span class="number">40000</span> ： 最大文件打开数</div><div class="line"></div><div class="line"><span class="built_in">max</span> user processes              (-<span class="keyword">u</span>) <span class="number">8092</span> ：  最大用户进程数</div></pre></td></tr></table></figure>
+
+<h2 id="如何有效的设置ulimit_-u_？">如何有效的设置ulimit -u ？</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">这里有一篇淘宝褚霸的blog, 请参考：http://blog.yufeng.info/archives/<span class="number">2568</span></div><div class="line"></div><div class="line">简单总结：</div><div class="line"></div><div class="line">ulimit -u</div><div class="line"></div><div class="line"><span class="number">1</span>）先读取/etc/security/limits.conf，如果有/etc/security/limits.d/<span class="number">90</span>-nproc.conf存在，会覆盖掉/etc/security/limits.conf 的设置（<span class="type">RHEL6</span>）。 如果没有，则使用limits.conf（<span class="type">RHEL5</span>）。</div><div class="line"></div><div class="line"><span class="number">2</span>）如果注释掉/etc/security/limits.d/<span class="number">90</span>-nproc.conf 里面的内容，那么ulimit -u 的值由内核决定：</div><div class="line"></div><div class="line">$ cat /<span class="keyword">proc</span>/meminfo |grep <span class="type">MemTotal</span></div><div class="line"><span class="type">MemTotal</span>:       <span class="number">65858988</span> kB</div><div class="line">$ echo <span class="string">"65858988 / 128"</span>| bc </div><div class="line"><span class="number">514523</span></div><div class="line">$ ulimit -u</div><div class="line"><span class="number">514523</span></div></pre></td></tr></table></figure>
+
+<h2 id="如何有效的设置ulimit_-n">如何有效的设置ulimit -n</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>） 直接修改/etc/security/limits.<span class="keyword">conf</span> ， 只能修改非root用户</div><div class="line"><span class="number">2</span>） 对于root用户，可以在/etc/<span class="keyword">profile</span> 中设置ulimit -HSn <span class="number">65535</span></div></pre></td></tr></table></figure>
+
+<h2 id="mysqld_safe_的相关知识">mysqld_safe 的相关知识</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">在root用户下，虽然这样启动mysq：</span> <span class="comment">mysqld_safe</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user=mysql</span> <span class="comment">&</span> <span class="comment">，</span> <span class="comment">mysqld</span> <span class="comment">虽然是用mysql用户启动的，但是它使用的环境变量如（ulimit</span> <span class="literal">-</span><span class="comment">u</span> <span class="comment">&</span> <span class="comment">ulimit</span> <span class="literal">-</span><span class="comment">n</span> <span class="comment">）都是root下的。</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">谨记</span></div></pre></td></tr></table></figure>
+
+<h2 id="ulimit_-u_和_mysql的纠缠">ulimit -u  和 mysql的纠缠</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line">既然知道了ulimit -u 是设置的mysql的最大进程数，那我们就来测试一把。</div><div class="line"></div><div class="line">先考虑一个问题： mysql是单进程多线程，那么为啥会超过max值呢？</div><div class="line"></div><div class="line">不管，先测。。。</div><div class="line"></div><div class="line">[root<span class="variable">@db10</span>-091 ~]<span class="comment"># cat /etc/security/limits.d/90-nproc.conf</span></div><div class="line">mysql       soft    nproc     <span class="number">40</span></div><div class="line"></div><div class="line">[mysql<span class="variable">@db10</span>-091 ~]$ ulimit -u</div><div class="line"><span class="number">40</span></div><div class="line"></div><div class="line">[root<span class="variable">@db10</span>-091 ~]<span class="comment"># lsof -u mysql | grep pipe | wc -l</span></div><div class="line"><span class="number">2</span></div><div class="line"></div><div class="line">循环<span class="number">40</span>次后：</div><div class="line">	mysql -ubackup -pbackup -e <span class="string">'select 1,sleep(60)'</span></div><div class="line">	</div><div class="line">[root<span class="variable">@db10</span>-091 ~]<span class="comment"># lsof -u mysql | grep pipe | wc -l</span></div><div class="line"><span class="number">72</span></div><div class="line"></div><div class="line">报错：</div><div class="line">	-bash: <span class="keyword">fork</span>: retry: Resource temporarily unavailable</div><div class="line">	-bash: <span class="keyword">fork</span>: retry: Resource temporarily unavailable</div><div class="line">	-bash: <span class="keyword">fork</span>: retry: Resource temporarily unavailable</div><div class="line">	</div><div class="line">所以，mysql的链接数会占用mysql的nproc，当超过max值后，会导致以上错误。</div></pre></td></tr></table></figure>
+
+<h2 id="ulimit_-n_和_mysql的纠缠">ulimit -n  和 mysql的纠缠</h2>
+<hr>
+<ul>
+<li><strong>innodb_open_files &amp; open_files_limit</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">解释来自官方文档：</div><div class="line"></div><div class="line"><span class="number">1</span>) innodb_open_files:</div><div class="line">It specifies <span class="operator">the</span> maximum <span class="built_in">number</span> <span class="operator">of</span> .ibd <span class="built_in">files</span> that MySQL can keep <span class="built_in">open</span> <span class="keyword">at</span> <span class="constant">one</span> <span class="built_in">time</span></div><div class="line"></div><div class="line">表示mysql能够同时打开的innoDB的表的数量。</div><div class="line"></div><div class="line"><span class="number">2</span>）open_files_limit</div><div class="line">Changes <span class="operator">the</span> <span class="built_in">number</span> <span class="operator">of</span> <span class="built_in">file</span> descriptors available <span class="built_in">to</span> mysqld.</div><div class="line"></div><div class="line">mysql 能够打开的文件描述符数量。</div><div class="line"></div><div class="line">PS： 一个表，不一定只打开一个文件描述符。计算方法请参照官方文档。</div><div class="line"></div><div class="line">问题：如果超过了innodb_open_files的大小会怎么样？</div><div class="line">答： mysql会将之前的表关闭，然后重启开启新的表。</div><div class="line"></div><div class="line">问题：如果超过了open_files_limit的大小会怎么样？</div><div class="line">答： 报错。 too many <span class="built_in">files</span> 等</div></pre></td></tr></table></figure>
+
+<h2 id="如何有效的设置open_files_limit">如何有效的设置open_files_limit</h2>
+<p>以下测试的前提条件是 : RHEL6.4, mysql 5.6.16 , 以root用户启动mysqld_safe . —至于区别，之前已经提到过。</p>
+<p>至于以mysql用户启动mysqld_safe ， 请自行测试。</p>
+<ul>
+<li><strong>mysql配置文件中设置了open_files_limit</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div></pre></td><td class="code"><pre><div class="line">cat /etc/my.cnf | grep limit</div><div class="line">open-files-limit = 3000</div><div class="line"></div><div class="line">[root@db10-091 ~]# ulimit -n</div><div class="line">40000</div><div class="line"></div><div class="line"></div><div class="line">场景一：</div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%max_connections%';</span></div><div class="line">+-----------------+-------+</div><div class="line"><span class="header">| Variable_name   | Value |</span></div><div class="line">+-----------------+-------+</div><div class="line"><span class="header">| max_connections | 1000  |</span></div><div class="line">+-----------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%open_files_limit%';</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| Variable_name    | Value |</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| open_files_limit | 5000  |</span></div><div class="line">+------------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">场景二：</div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%max_conn%';</span></div><div class="line">+--------------------+-------+</div><div class="line"><span class="header">| Variable_name      | Value |</span></div><div class="line">+--------------------+-------+</div><div class="line"><span class="header">| max_connections    | 100   |</span></div><div class="line">+--------------------+-------+</div><div class="line">1 rows in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%open_files_limit%';</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| Variable_name    | Value |</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| open_files_limit | 3000  |</span></div><div class="line">+------------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">结果是：   open<span class="emphasis">_files_</span>limit = 5000.</div><div class="line">计算方式： 当open<span class="emphasis">_file_</span>limit被配置的时候，比较open<span class="emphasis">_files_</span>limit和max<span class="emphasis">_connections*5的值，哪个大用哪个</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>mysql配置文件没有设置open_files_limit</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">cat /etc/my.cnf | grep limit  --没有设置open<span class="emphasis">_files_</span>limit</div><div class="line"># open-files-limit = 3000</div><div class="line"></div><div class="line">[root@db10-091 ~]# ulimit -n  --为什么看root用户的ulimit，之前已经讲过原因。</div><div class="line">40000</div><div class="line"></div><div class="line">场景一：</div><div class="line"></div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%max_conn%';</span></div><div class="line">+--------------------+-------+</div><div class="line"><span class="header">| Variable_name      | Value |</span></div><div class="line">+--------------------+-------+</div><div class="line"><span class="header">| max_connections    | 100   |</span></div><div class="line">+--------------------+-------+</div><div class="line">1 rows in set (0.01 sec)</div><div class="line"></div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%open_files_limit%';</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| Variable_name    | Value |</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| open_files_limit | 40000 |</span></div><div class="line">+------------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">场景二：</div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%max_connection%';</span></div><div class="line">+-----------------+-------+</div><div class="line"><span class="header">| Variable_name   | Value |</span></div><div class="line">+-----------------+-------+</div><div class="line"><span class="header">| max_connections | 10000 |</span></div><div class="line">+-----------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dbadmin:(none)&gt; show global variables like '%open_files_limit%';</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| Variable_name    | Value |</span></div><div class="line">+------------------+-------+</div><div class="line"><span class="header">| open_files_limit | 50000 |</span></div><div class="line">+------------------+-------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">结果是：   open<span class="emphasis">_files_</span>limit=50000</div><div class="line">计算方式： 当open<span class="emphasis">_files_</span>limit没有被配置的时候，比较max<span class="emphasis">_connections*5和ulimit -n的值，哪个大用哪个</span></div></pre></td></tr></table></figure>
+
+
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_ulimit/" data-id="6x3glojv266mdnob" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
+    <article id="post-mysql_shutdown_err" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_shutdown_err/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="先了解一下mysql的shutdown流程">先了解一下mysql的shutdown流程</h2>
+<hr>
+<ol>
+<li>The shutdown process is initiated.</li>
+<li>The server creates a shutdown thread if necessary.</li>
+<li>The server stops accepting new connections.</li>
+<li>The server terminates current activity.</li>
+<li>The server shuts down or closes storage engines.</li>
+<li>The server exits.</li>
+</ol>
+<p>以上只是官方文档中介绍的一些基本的关机流程,正确的关机命令当然是mysqladmin -xx  shutdown 。接下来，我们来关注一下我们的问题</p>
+<h2 id="问题描述">问题描述</h2>
+<hr>
+<p><strong>mysqladmin shutdown 不但没有关闭掉，反而会restart</strong></p>
+<p>提示信息如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">150105 14<span class="pseudo">:50</span><span class="pseudo">:47</span> <span class="tag">mysqld_safe</span> <span class="tag">Number</span> <span class="tag">of</span> <span class="tag">processes</span> <span class="tag">running</span> <span class="tag">now</span>: 0</div><div class="line">150105 14<span class="pseudo">:50</span><span class="pseudo">:47</span> <span class="tag">mysqld_safe</span> <span class="tag">mysqld</span> <span class="tag">restarted</span></div></pre></td></tr></table></figure>
+
+<p>齐了个怪了，我的参数明明是shutdown ，为什么提示信息是 restart呢？ 错误日志中也无明显错误， 程序Bug了？</p>
+<p>唯一能关闭的方法就是： kill ， 这是非法的，我们当然不能这样做。</p>
+<p>于是尝试了N种方法</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>可能是/usr/local/mysql/data/xxxx.pid文件没有写的权限</div><div class="line"><span class="bullet">* </span>可能进程里已经存在mysql进程</div><div class="line"><span class="bullet">* </span>可能是第二次在机器上安装mysql，有残余数据影响了服务的启动。</div><div class="line"><span class="bullet">* </span>mysql在启动时没有指定配置文件时会使用/etc/my.cnf配置文件，请打开这个文件查看在[mysqld]节下有没有指定数据目录(datadir)。</div><div class="line"><span class="bullet">* </span>skip-federated字段问题</div><div class="line"><span class="bullet">* </span>错误日志目录不存在</div><div class="line"><span class="bullet">* </span>selinux惹的祸，如果是centos系统，默认会开启selinux</div></pre></td></tr></table></figure>
+
+<p>很不幸的是，都不是上述问题造成。既然google也找不到，那只能看源码了。</p>
+<p>大家都知道，mysqld_safe 是 启动mysql的守护进程，我想89不离10，应该是由它重启的，那就一窥究竟吧。</p>
+<p>源码文件如下： <a href="https://github.com/Keithlan/Keithlan.github.io/blob/master/github_md/Mysql/ERROR_HANDLE/mysql_shutdown/mysql_shutdown_err.md" target="_blank" rel="external">mysqld_safe</a></p>
+<p>下面是部分重要的部分，特拿出来分析,其中添加了一些注释和一些方便调试的断点代码（add by keithlan）。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># 后面就是用它启动的mysqld，通过logging变量区分记录日志的类型，分错误日志和系统日志syslog两种</span></div><div class="line"><span class="comment"># 最后的eval命令会解析 $cmd 中的值并执行命令</span></div><div class="line"><span class="function"><span class="title">eval_log_error</span></span> () {</div><div class="line">  cmd=<span class="string">"<span class="variable">$1</span>"</span></div><div class="line">  <span class="keyword">case</span> <span class="variable">$logging</span> <span class="keyword">in</span></div><div class="line">    file) cmd=<span class="string">"<span class="variable">$cmd</span> &gt;&gt; "</span>`shell_quote_string <span class="string">"<span class="variable">$err_log</span>"</span>`<span class="string">" 2&gt;&1"</span> ;;</div><div class="line">    syslog)</div><div class="line">      <span class="comment"># mysqld often prefixes its messages with a timestamp, which is</span></div><div class="line">      <span class="comment"># redundant when logging to syslog (which adds its own timestamp)</span></div><div class="line">      <span class="comment"># However, we don't strip the timestamp with sed here, because</span></div><div class="line">      <span class="comment"># sed buffers output (only GNU sed supports a -u (unbuffered) option)</span></div><div class="line">      <span class="comment"># which means that messages may not get sent to syslog until the</span></div><div class="line">      <span class="comment"># mysqld process quits.</span></div><div class="line">      cmd=<span class="string">"<span class="variable">$cmd</span> 2&gt;&1 | logger -t '<span class="variable">$syslog_tag_mysqld</span>' -p daemon.error"</span></div><div class="line">      ;;</div><div class="line">    *)</div><div class="line">      <span class="built_in">echo</span> <span class="string">"Internal program error (non-fatal):"</span> \</div><div class="line">           <span class="string">" unknown logging method '<span class="variable">$logging</span>'"</span> &gt;&<span class="number">2</span></div><div class="line">      ;;</div><div class="line">  <span class="keyword">esac</span></div><div class="line"></div><div class="line">  <span class="built_in">echo</span> <span class="string">"Running mysqld: [<span class="variable">$cmd</span>]"</span>   --add by Keithlan</div><div class="line">  <span class="built_in">eval</span> <span class="string">"<span class="variable">$cmd</span>"</span></div><div class="line">}</div><div class="line"></div><div class="line"><span class="comment"># 后台循环 执行mysqld</span></div><div class="line">log_notice <span class="string">"Starting <span class="variable">$MYSQLD</span> daemon with databases from <span class="variable">$DATADIR</span>"</span></div><div class="line"><span class="keyword">while</span> <span class="literal">true</span></div><div class="line"><span class="keyword">do</span></div><div class="line">  rm <span class="operator">-f</span> <span class="variable">$safe_mysql_unix_port</span> <span class="string">"<span class="variable">$pid_file</span>"</span>       <span class="comment"># Some extra safety # 保险起见，又删除了一次pid文件</span></div><div class="line">  log_notice <span class="string">"rm -f <span class="variable">$safe_mysql_unix_port</span> <span class="variable">$pid_file</span> !"</span>  <span class="comment">#add by Keithlan</span></div><div class="line"></div><div class="line">  <span class="built_in">eval</span>_log_error <span class="string">"<span class="variable">$cmd</span>"</span></div><div class="line">  log_notice <span class="string">" after running mysql "</span>                     <span class="comment">#add by Keithlan</span></div><div class="line">  last_pid=`ls <span class="operator">-l</span> /usr/local/mysql/var/`      <span class="comment">#add by Keithlan</span></div><div class="line">  log_notice <span class="string">" last_pid = <span class="variable">$last_pid</span> !!"</span>       <span class="comment">#add by Keithlan</span></div><div class="line"></div><div class="line">  <span class="comment"># 正常的shutdown 会删除pid文件，如果没有pid文件，会正常退出，如果有，则继续。</span></div><div class="line">  <span class="comment"># 可想而知，这是唯一跳出循环的地方，这里一定有猫腻。</span></div><div class="line">  <span class="keyword">if</span> test ! <span class="operator">-f</span> <span class="string">"<span class="variable">$pid_file</span>"</span>              <span class="comment"># This is removed if normal shutdown  </span></div><div class="line">  <span class="keyword">then</span></div><div class="line">    log_notice <span class="string">"<span class="variable">$pid_file</span>"</span>             <span class="comment">#add by Keithlan</span></div><div class="line">    <span class="keyword">break</span></div><div class="line">  <span class="keyword">fi</span></div><div class="line"></div><div class="line"><span class="comment"># mysqld_safe已经启动的处理方法，保证只有一个mysqld_safe程序启动</span></div><div class="line">  <span class="keyword">if</span> <span class="literal">true</span> && test <span class="variable">$KILL_MYSQLD</span> <span class="operator">-eq</span> <span class="number">1</span></div><div class="line">  <span class="keyword">then</span></div><div class="line">    <span class="comment"># Test if one process was hanging.</span></div><div class="line">    <span class="comment"># This is only a fix for Linux (running as base 3 mysqld processes)</span></div><div class="line">    <span class="comment"># but should work for the rest of the servers.</span></div><div class="line">    <span class="comment"># The only thing is ps x =&gt; redhat 5 gives warnings when using ps -x.</span></div><div class="line">    <span class="comment"># kill -9 is used or the process won't react on the kill.</span></div><div class="line">    <span class="comment"># 统计启动的mysqld进程的数目</span></div><div class="line">    numofproces=`ps xaww | grep -v <span class="string">"grep"</span> | grep <span class="string">"<span class="variable">$ledir</span>/<span class="variable">$MYSQLD</span>\&gt;"</span> | grep -c <span class="string">"pid-file=<span class="variable">$pid_file</span>"</span>`</div><div class="line"></div><div class="line">    log_notice <span class="string">"Number of processes running now: <span class="variable">$numofproces</span>"</span></div><div class="line">    I=<span class="number">1</span></div><div class="line">    <span class="keyword">while</span> test <span class="string">"<span class="variable">$I</span>"</span> -le <span class="string">"<span class="variable">$numofproces</span>"</span></div><div class="line">    <span class="keyword">do</span></div><div class="line">      <span class="comment"># 这个PROC的数据即是ps mysqld_safe程序的输出 第一个数字即为进程ID</span></div><div class="line">      PROC=`ps xaww | grep <span class="string">"<span class="variable">$ledir</span>/<span class="variable">$MYSQLD</span>\&gt;"</span> | grep -v <span class="string">"grep"</span> | grep <span class="string">"pid-file=<span class="variable">$pid_file</span>"</span> | sed -n <span class="string">'$p'</span>`</div><div class="line">	  <span class="comment"># 使用T来获取进程ID</span></div><div class="line">      <span class="keyword">for</span> T <span class="keyword">in</span> <span class="variable">$PROC</span></div><div class="line">      <span class="keyword">do</span></div><div class="line">        <span class="keyword">break</span></div><div class="line">      <span class="keyword">done</span></div><div class="line">      <span class="comment">#    echo "TEST $I - $T **"</span></div><div class="line">      <span class="comment"># kill掉该个mysqld_safe程序</span></div><div class="line">      <span class="keyword">if</span> kill -<span class="number">9</span> <span class="variable">$T</span></div><div class="line">      <span class="keyword">then</span></div><div class="line">        log_error <span class="string">"<span class="variable">$MYSQLD</span> process hanging, pid <span class="variable">$T</span> - killed"</span></div><div class="line">      <span class="keyword">else</span></div><div class="line">        <span class="keyword">break</span></div><div class="line">      <span class="keyword">fi</span></div><div class="line">      <span class="comment"># 每干掉一个mysqld_safe就把I加一，这样没有多余的mysqld_safe时就可以跳出循环了</span></div><div class="line">      I=`expr <span class="variable">$I</span> + <span class="number">1</span>`</div><div class="line">    <span class="keyword">done</span></div><div class="line">  <span class="keyword">fi</span></div><div class="line">  log_notice <span class="string">"mysqld restarted"</span></div><div class="line">  log_notice <span class="string">"Keithlan"</span></div><div class="line"></div><div class="line"><span class="keyword">done</span></div><div class="line"></div><div class="line"><span class="comment">#mysql shutdown 成功，打印pid文件</span></div><div class="line">log_notice <span class="string">"mysqld from pid file <span class="variable">$pid_file</span> ended"</span></div></pre></td></tr></table></figure>
+
+<p>简单描述一下过程就是：myqsld_safe 会用eval去启动mysqld，再后台运行，知道接受到kill 命令，或者shutdown 进程来kill掉它。<br>如果是非正常kill，mysqld_safe 会一直监控，将mysqld进程 restart起来。</p>
+<p>经过调试后，手动去rm -f 掉pid文件， 然后再mysqladmin shutdown，是可以正常关闭的，很明显，就能定位到问题就出在pid上。为什么mysqladmin 进程shutdown的时候没有删除掉pid文件呢？ 首先可以排除掉权限等问题，因为既然能够create pid，当然可以delete pid咯。问题一定是mysqladmin 哪个地方出问题了，果然，根据线索找到mysqladmin 代码中断言出现问题Failing assertion: UT_LIST_GET_LEN(rseg-&gt;update_undo_list) == 0，网上搜了一堆的bug。 后来，想想，是不是表空间出了问题,mysql shutdown的时候回去回收表空间记录，如果回收不成功，导致不能normal shutdown，导致无法删除掉pid文件。 于是，将表空间重建后，问题消失。</p>
+<h2 id="总结">总结</h2>
+<hr>
+<p>由于时间成本的问题，没能去详细了解mysqladmin 和 table space 的关系，但是却对mysql 的shutdown 流程有了进一步的认识，总算对自己有了一点交代。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_shutdown_err/" data-id="qb3be99ay6ooxsd0" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
+    <article id="post-mysql_replicate_rule" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_replicate_rule/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="背景">背景</h2>
+<p>如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。</p>
+<h2 id="理由">理由</h2>
+<p>为了搭建这一套环境（只复制master的B，C库），部分人会在my.cnf中这样配置：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db=<span class="constant">B</span>,<span class="constant">C</span></span></div></pre></td></tr></table></figure>
+
+
+<p>当然，按照大家的惯性思维，认为这样是没有错的。不幸的是，灾难已经来临。</p>
+
+        
+          <p class="article-more-link">
+            <a href="/2015/07/14/mysql_replicate_rule/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_replicate_rule/" data-id="od2vrseulhusa873" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
+    <article id="post-mysql_recovery_myisam_slave" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_recovery_myisam_slave/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_recovery_myisam_slave/">特殊场景下的slave重构</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p><a href="http://dev.mysql.com/doc/refman/5.6/en/backup-and-recovery.html" target="_blank" rel="external">Mysql Backup and Recovery</a></p>
+<h2 id="背景说明">背景说明</h2>
+<hr>
+<p>备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF <a href="https://github.com/Keithlan/Keithlan.github.io/tree/master/github_md/Mysql/BACKUP_RECOVERY" target="_blank" rel="external">Mysql Backup and Recovery 分享</a> 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？</p>
+
+        
+          <p class="article-more-link">
+            <a href="/2015/07/14/mysql_recovery_myisam_slave/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_recovery_myisam_slave/" data-id="8a34hqvrmjw5wrsw" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
+    <article id="post-mysql_in" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_in/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_in/">MySQL 5.6 中 In 优化的那些事</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h2 id="背景">背景</h2>
+<p>这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？</p>
+<p>
+        
+          <p class="article-more-link">
+            <a href="/2015/07/14/mysql_in/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/" data-id="7wmi76av30k1ymfw" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
+    <article id="post-mysql_group_order_limit" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2015/07/14/mysql_group_order_limit/" class="article-date">
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p><a href="http://dev.mysql.com/doc/refman/5.5/en/execution-plan-information.html" target="_blank" rel="external">Understanding the Query Execution Plan</a></p>
+
+        
+          <p class="article-more-link">
+            <a href="/2015/07/14/mysql_group_order_limit/#more">Read More</a>
+          </p>
+        
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_group_order_limit/" data-id="vbz00bxhg5jk5alj" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
+    </footer>
+  </div>
+  
+</article>
+
+
+
+
+
+  
     <article id="post-mysql_error_1293" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_error_1293/" class="article-date">
@@ -182,7 +560,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -191,7 +569,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -221,23 +599,23 @@
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>

@@ -3,23 +3,26 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>特殊场景下的slave重构 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="特殊场景下的slave重构
+  <meta name="description" content="Mysql Backup and Recovery
+背景说明
 
-It is important to back up your databases so that you can recover your data and be up and running again in case problems occur, such as system crashes, hardware failures, or users delet">
+备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF Mysql Backup and Recovery 分享 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="特殊场景下的slave重构">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_recovery_myisam_slave/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="特殊场景下的slave重构
+<meta property="og:description" content="Mysql Backup and Recovery
+背景说明
 
-It is important to back up your databases so that you can recover your data and be up and running again in case problems occur, such as system crashes, hardware failures, or users delet">
+备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF Mysql Backup and Recovery 分享 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="特殊场景下的slave重构
+<meta name="twitter:title" content="特殊场景下的slave重构">
+<meta name="twitter:description" content="Mysql Backup and Recovery
+背景说明
 
-It is important to back up your databases so that you can recover your data and be up and running again in case problems occur, such as system crashes, hardware failures, or users delet">
+备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF Mysql Backup and Recovery 分享 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -70,23 +73,35 @@ It is important to back up your databases so that you can recover your data and 
         <section id="main"><article id="post-mysql_recovery_myisam_slave" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_recovery_myisam_slave/" class="article-date">
-  <time datetime="2015-07-14T11:30:10.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      特殊场景下的slave重构
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="特殊场景下的slave重构">特殊场景下的slave重构</h1>
-<blockquote>
-<p>It is important to back up your databases so that you can recover your data and be up and running again in case problems occur, such as system crashes, hardware failures, or users deleting data by mistake. Backups are also essential as a safeguard before upgrading a MySQL installation, and they can be used to transfer a MySQL installation to another system or to set up replication slave servers.</p>
-</blockquote>
-<p><a href="http://dev.mysql.com/doc/refman/5.6/en/backup-and-recovery.html" target="_blank" rel="external">Mysql Backup and Recovery</a></p>
+        <p><a href="http://dev.mysql.com/doc/refman/5.6/en/backup-and-recovery.html" target="_blank" rel="external">Mysql Backup and Recovery</a></p>
 <h2 id="背景说明">背景说明</h2>
 <hr>
 <p>备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF <a href="https://github.com/Keithlan/Keithlan.github.io/tree/master/github_md/Mysql/BACKUP_RECOVERY" target="_blank" rel="external">Mysql Backup and Recovery 分享</a> 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？</p>
+<a id="more"></a>
+
 <h2 id="前提">前提</h2>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">* Master</div><div class="line">	1. Myisam 引擎</div><div class="line">	2. 无全量备份</div><div class="line">	3. 有最近2天的binlog</div><div class="line">	4. SQL语句特点： 全是insert</div><div class="line">	5. 每个表都有主键id，并且auto increment </div><div class="line">* Master 上的table</div><div class="line">	1. table1_YYYMM (按月分表)</div><div class="line">	2. table2_YYYMMDD (按天分表)</div><div class="line">	3. table3 (整张表)</div></pre></td></tr></table></figure>
 
@@ -122,6 +137,8 @@ It is important to back up your databases so that you can recover your data and 
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_recovery_myisam_slave/" data-id="8a34hqvrmjw5wrsw" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
@@ -132,7 +149,7 @@ It is important to back up your databases so that you can recover your data and 
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          (no title)
+          Mysql 复制过滤详解
         
       </div>
     </a>
@@ -140,7 +157,7 @@ It is important to back up your databases so that you can recover your data and 
   
     <a href="/2015/07/14/mysql_in/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title"></div>
+      <div class="article-nav-title">MySQL 5.6 中 In 优化的那些事</div>
     </a>
   
 </nav>
@@ -176,7 +193,7 @@ It is important to back up your databases so that you can recover your data and 
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -185,7 +202,7 @@ It is important to back up your databases so that you can recover your data and 
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -215,23 +232,23 @@ It is important to back up your databases so that you can recover your data and 
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>

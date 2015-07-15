@@ -3,32 +3,32 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>ulimit 和 mysql 的故事 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="ulimit 和 mysql 的故事
+  <meta name="description" content="背景
 
-背景
-&gt;前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+
 ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚">
+12345这里先弄清楚一个概念：open files">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="ulimit 和 mysql 的故事">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_ulimit/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="ulimit 和 mysql 的故事
+<meta property="og:description" content="背景
 
-背景
-&gt;前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+
 ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚">
+12345这里先弄清楚一个概念：open files">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="ulimit 和 mysql 的故事
+<meta name="twitter:title" content="ulimit 和 mysql 的故事">
+<meta name="twitter:description" content="背景
 
-背景
-&gt;前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
+
 ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚">
+12345这里先弄清楚一个概念：open files">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -79,19 +79,33 @@ ulimit -u &amp; ulimit -n 区别？
         <section id="main"><article id="post-mysql_ulimit" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_ulimit/" class="article-date">
-  <time datetime="2015-07-14T11:30:10.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      ulimit 和 mysql 的故事
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="ulimit_和_mysql_的故事">ulimit 和 mysql 的故事</h1>
-<hr>
-<h2 id="背景">背景</h2>
-<p>&gt;<br>前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable<br>然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。<br>虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
+        <h2 id="背景">背景</h2>
+<blockquote>
+<p>前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable<br>然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。<br>虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
+</blockquote>
 <h2 id="ulimit_-u_&amp;_ulimit_-n_区别？">ulimit -u &amp; ulimit -n 区别？</h2>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">这里先弄清楚一个概念：</div><div class="line"></div><div class="line"><span class="keyword">open</span> <span class="keyword">files</span>                      (-<span class="keyword">n</span>) <span class="number">40000</span> ： 最大文件打开数</div><div class="line"></div><div class="line"><span class="built_in">max</span> user processes              (-<span class="keyword">u</span>) <span class="number">8092</span> ：  最大用户进程数</div></pre></td></tr></table></figure>
 
@@ -135,25 +149,27 @@ ulimit -u &amp; ulimit -n 区别？
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_ulimit/" data-id="6x3glojv266mdnob" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
     
 <nav id="article-nav">
   
-    <a href="/2015/07/14/mysql_shutdown_err/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_error_1293/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          (no title)
+          深入浅出timestamp
         
       </div>
     </a>
   
   
-    <a href="/2015/07/14/mysql_replicate_rule/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_shutdown_err/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title"></div>
+      <div class="article-nav-title">mysql shutdown 异常处理和分析</div>
     </a>
   
 </nav>
@@ -189,7 +205,7 @@ ulimit -u &amp; ulimit -n 区别？
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -198,7 +214,7 @@ ulimit -u &amp; ulimit -n 区别？
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -228,23 +244,23 @@ ulimit -u &amp; ulimit -n 区别？
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>

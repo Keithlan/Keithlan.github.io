@@ -3,44 +3,38 @@
 <head>
   <meta charset="utf-8">
   
-  <title>Focus on Mysql,Focus on DB,Focus on Focus</title>
+  <title>mysql shutdown 异常处理和分析 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="mysql shutdown 异常处理和分析
-
-任何东西都有结束的一天，当初分析过linux的开机与关机流程。现在遇到了mysql关机异常，顺便了解一下mysql的关机流程。
-
-先了解一下mysql的shutdown流程
+  <meta name="description" content="先了解一下mysql的shutdown流程
 
 
 The shutdown process is initiated.
 The server creates a shutdown thread if necessary.
-T">
+The server stops accepting new connections.
+The server terminates current activity.
+The se">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
+<meta property="og:title" content="mysql shutdown 异常处理和分析">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_shutdown_err/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="mysql shutdown 异常处理和分析
-
-任何东西都有结束的一天，当初分析过linux的开机与关机流程。现在遇到了mysql关机异常，顺便了解一下mysql的关机流程。
-
-先了解一下mysql的shutdown流程
+<meta property="og:description" content="先了解一下mysql的shutdown流程
 
 
 The shutdown process is initiated.
 The server creates a shutdown thread if necessary.
-T">
+The server stops accepting new connections.
+The server terminates current activity.
+The se">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta name="twitter:description" content="mysql shutdown 异常处理和分析
-
-任何东西都有结束的一天，当初分析过linux的开机与关机流程。现在遇到了mysql关机异常，顺便了解一下mysql的关机流程。
-
-先了解一下mysql的shutdown流程
+<meta name="twitter:title" content="mysql shutdown 异常处理和分析">
+<meta name="twitter:description" content="先了解一下mysql的shutdown流程
 
 
 The shutdown process is initiated.
 The server creates a shutdown thread if necessary.
-T">
+The server stops accepting new connections.
+The server terminates current activity.
+The se">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -91,20 +85,30 @@ T">
         <section id="main"><article id="post-mysql_shutdown_err" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/2015/07/14/mysql_shutdown_err/" class="article-date">
-  <time datetime="2015-07-14T11:30:34.000Z" itemprop="datePublished">Jul 14 2015</time>
+  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
 </a>
     
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  </div>
+
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      mysql shutdown 异常处理和分析
+    </h1>
+  
+
+      </header>
+    
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="mysql_shutdown_异常处理和分析">mysql shutdown 异常处理和分析</h1>
-<blockquote>
-<p>任何东西都有结束的一天，当初分析过linux的开机与关机流程。现在遇到了mysql关机异常，顺便了解一下mysql的关机流程。</p>
-</blockquote>
-<h2 id="先了解一下mysql的shutdown流程">先了解一下mysql的shutdown流程</h2>
+        <h2 id="先了解一下mysql的shutdown流程">先了解一下mysql的shutdown流程</h2>
 <hr>
 <ol>
 <li>The shutdown process is initiated.</li>
@@ -144,25 +148,27 @@ T">
       <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_shutdown_err/" data-id="qb3be99ay6ooxsd0" class="article-share-link">Share</a>
       
       
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
+
     </footer>
   </div>
   
     
 <nav id="article-nav">
   
-    <a href="/2015/07/14/mysql_group_order_limit/" id="article-nav-newer" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_ulimit/" id="article-nav-newer" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Newer</strong>
       <div class="article-nav-title">
         
-          (no title)
+          ulimit 和 mysql 的故事
         
       </div>
     </a>
   
   
-    <a href="/2015/07/14/mysql_ulimit/" id="article-nav-older" class="article-nav-link-wrap">
+    <a href="/2015/07/14/mysql_replicate_rule/" id="article-nav-older" class="article-nav-link-wrap">
       <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title"></div>
+      <div class="article-nav-title">Mysql 复制过滤详解</div>
     </a>
   
 </nav>
@@ -198,7 +204,7 @@ T">
   <div class="widget-wrap">
     <h3 class="widget-title">Categories</h3>
     <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">2</span></li></ul>
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -207,7 +213,7 @@ T">
   <div class="widget-wrap">
     <h3 class="widget-title">Tags</h3>
     <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">2</span></li></ul>
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
     </div>
   </div>
 
@@ -237,23 +243,23 @@ T">
       <ul>
         
           <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">(no title)</a>
+            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">(no title)</a>
+            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_ulimit/">(no title)</a>
+            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">(no title)</a>
+            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
           </li>
         
           <li>
-            <a href="/2015/07/14/mysql_recovery_myisam_slave/">(no title)</a>
+            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
           </li>
         
       </ul>
