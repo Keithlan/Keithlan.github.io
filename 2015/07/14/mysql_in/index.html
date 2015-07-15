@@ -1,96 +1,100 @@
-<!DOCTYPE html>
-<html>
+
+ <!DOCTYPE HTML>
+<html >
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   
-  <title>MySQL 5.6 中 In 优化的那些事 | Focus on Mysql,Focus on DB,Focus on Focus</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="背景
+    <title>MySQL 5.6 中 In 优化的那些事 | Focus on Mysql,Focus on DB,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="John Doe">
+    
+    <meta name="description" content="背景
 这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
-<meta property="og:type" content="article">
-<meta property="og:title" content="MySQL 5.6 中 In 优化的那些事">
-<meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/">
-<meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
-<meta property="og:description" content="背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="MySQL 5.6 中 In 优化的那些事">
-<meta name="twitter:description" content="背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/favicon.ico">
+    
+    
+    <link rel="apple-touch-icon" href="/img/Tinny.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/Tinny.jpg">
+    
 
-  
-    <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
-  
-  
-    <link rel="icon" href="/favicon.png">
-  
-  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
-  <link rel="stylesheet" href="/css/style.css" type="text/css">
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
 
-  
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
 
 </head>
-<body>
-  <div id="container">
-    <div id="wrap">
-      <header id="header">
-  <div id="banner"></div>
-  <div id="header-outer" class="outer">
-    <div id="header-title" class="inner">
-      <h1 id="logo-wrap">
-        <a href="/" id="logo">Focus on Mysql,Focus on DB,Focus on Focus</a>
-      </h1>
-      
-    </div>
-    <div id="header-inner" class="inner">
-      <nav id="main-nav">
-        <a id="main-nav-toggle" class="nav-icon"></a>
-        
-          <a class="main-nav-link" href="/">Home</a>
-        
-          <a class="main-nav-link" href="/archives">Archives</a>
-        
-      </nav>
-      <nav id="sub-nav">
-        
-          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
-        
-        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
-      </nav>
-      <div id="search-form-wrap">
-        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><input type="submit" value="&#xF002;" class="search-form-submit"><input type="hidden" name="q" value="site:https://github.com/Keithlan/Keithlan.github.io"></form>
-      </div>
-    </div>
-  </div>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on Mysql,Focus on DB,Focus on Focus">Focus on Mysql,Focus on DB,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://www.cnblogs.com/zhanglun/">博客园</a></li>
+					
+						<li><a href="http://zhanglun.github.io/">Page</a></li>
+					
+						<li><a href="http://ncuey.sinaapp.com/CrispElite/">关于我</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">MySQL 5.6 中 In 优化的那些事</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://github.com/Keithlan/Keithlan.github.io" title="John Doe">John Doe</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+    Updated:<time datetime="2015-07-15T02:28:12.000Z" itemprop="dateModified">Jul 15 2015</time>
+    
+  </p>
 </header>
-      <div class="outer">
-        <section id="main"><article id="post-mysql_in" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/2015/07/14/mysql_in/" class="article-date">
-  <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-</a>
-    
-  <div class="article-category">
-    <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
-  </div>
-
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="article-title" itemprop="name">
-      MySQL 5.6 中 In 优化的那些事
-    </h1>
-  
-
-      </header>
-    
-    <div class="article-entry" itemprop="articleBody">
-      
-        <h2 id="背景">背景</h2>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例一，_组合条件"><span class="toc-number">2.</span> <span class="toc-text">案例一， 组合条件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例二，单一条件"><span class="toc-number">3.</span> <span class="toc-text">案例二，单一条件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">4.</span> <span class="toc-text">分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">5.</span> <span class="toc-text">解决方案</span></a></li></ol>
+		</div>
+		
+		<h2 id="背景">背景</h2>
 <p>这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都rows exam了全表，这又是为什么呢？</p>
 <p><a id="more"></a></p>
 <h2 id="案例一，_组合条件">案例一， 组合条件</h2>
@@ -148,166 +152,261 @@
 </ul>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">dbadmin:(none)&gt; set eq<span class="emphasis">_range_</span>index<span class="emphasis">_dive_</span>limit=200;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">dbadmin:ajk<span class="emphasis">_dw_</span>stats&gt; explain select  <span class="smartquote">`commId` , `spreadPropNum` , `totalVPPV` , `type`  from `ajk_market_analysis_20150212` where `cityId` = '</span>14'  and <span class="smartquote">`type` = '</span>0'  and <span class="smartquote">`scoreRank` in ( '</span>2' , <span class="emphasis">'3'</span> )  and <span class="smartquote">`isY` = '</span>1'  and <span class="smartquote">`commId` in ( '</span>76832' , <span class="emphasis">'76776'</span> , <span class="emphasis">'77562'</span> , <span class="emphasis">'80363'</span> , <span class="emphasis">'121238'</span> , <span class="emphasis">'182922'</span> , <span class="emphasis">'422947'</span> , <span class="emphasis">'51056'</span> , <span class="emphasis">'185557'</span> , <span class="emphasis">'81276'</span> , <span class="emphasis">'80530'</span> , <span class="emphasis">'80534'</span> , <span class="emphasis">'80217'</span> , <span class="emphasis">'76830'</span> , <span class="emphasis">'184396'</span> , <span class="emphasis">'505857'</span> , <span class="emphasis">'567958'</span> , <span class="emphasis">'78911'</span> , <span class="emphasis">'120264'</span> , <span class="emphasis">'122099'</span> , <span class="emphasis">'80401'</span> , <span class="emphasis">'299956'</span> , <span class="emphasis">'430371'</span> , <span class="emphasis">'308830'</span> , <span class="emphasis">'51235'</span> , <span class="emphasis">'81559'</span> , <span class="emphasis">'116149'</span> , <span class="emphasis">'84449'</span> , <span class="emphasis">'656162'</span> , <span class="emphasis">'502933'</span> , <span class="emphasis">'123895'</span> , <span class="emphasis">'50600'</span> , <span class="emphasis">'80535'</span> , <span class="emphasis">'122851'</span> , <span class="emphasis">'246270'</span> , <span class="emphasis">'299003'</span> , <span class="emphasis">'217889'</span> , <span class="emphasis">'186881'</span> , <span class="emphasis">'286019'</span> , <span class="emphasis">'77388'</span> )   #broker-mobiapi: V1<span class="emphasis">_Find_</span>NearbyCommController@HotComm.php (68) 1423704168;</div><div class="line"><span class="code">    -&gt;</span></div><div class="line"><span class="header">    -&gt; ;</span></div><div class="line">+----+-------------+------------------------------+-------+----------------+-----------+---------+------+------+-----------------------+</div><div class="line"><span class="header">| id | select_type | table                        | type  | possible_keys  | key       | key_len | ref  | rows | Extra                 |</span></div><div class="line">+----+-------------+------------------------------+-------+----------------+-----------+---------+------+------+-----------------------+</div><div class="line"><span class="header">|  1 | SIMPLE      | ajk_market_analysis_20150212 | range | idx1,c_t_s_i_c | c_t_s_i_c | 20      | NULL |  104 | Using index condition |</span></div><div class="line">+----+-------------+------------------------------+-------+----------------+-----------+---------+------+------+-----------------------+</div><div class="line">1 row in set (0.06 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dbadmin:ajk_dw_stats&gt; explain SELECT * FROM solly_nh_comm_recomm_lookandlook WHERE `comm_id` IN (228955,252368,228744,249444,237337,237869,236838,236834,250955,211207);</span></div><div class="line">+----+-------------+----------------------------------+-------+---------------+-----------+---------+------+------+-----------------------+</div><div class="line"><span class="header">| id | select_type | table                            | type  | possible_keys | key       | key_len | ref  | rows | Extra                 |</span></div><div class="line">+----+-------------+----------------------------------+-------+---------------+-----------+---------+------+------+-----------------------+</div><div class="line"><span class="header">|  1 | SIMPLE      | solly_nh_comm_recomm_lookandlook | range | NewIndex1     | NewIndex1 | 4       | NULL |  200 | Using index condition |</span></div><div class="line">+----+-------------+----------------------------------+-------+---------------+-----------+---------+------+------+-----------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
 
+  
+	</div>
+		<footer class="article-footer clearfix">
 
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/" data-id="7wmi76av30k1ymfw" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a></li></ul>
-
-    </footer>
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
   </div>
-  
-    
-<nav id="article-nav">
-  
-    <a href="/2015/07/14/mysql_recovery_myisam_slave/" id="article-nav-newer" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Newer</strong>
-      <div class="article-nav-title">
-        
-          特殊场景下的slave重构
-        
-      </div>
-    </a>
-  
-  
-    <a href="/2015/07/14/mysql_error_1048/" id="article-nav-older" class="article-nav-link-wrap">
-      <strong class="article-nav-caption">Older</strong>
-      <div class="article-nav-title">Mysql Error 1048 奇遇记</div>
-    </a>
-  
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_in/" data-title="MySQL 5.6 中 In 优化的那些事 | Focus on Mysql,Focus on DB,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2015/07/14/mysql_recovery_myisam_slave/" title="特殊场景下的slave重构">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  特殊场景下的slave重构</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2015/07/14/mysql_error_1048/"  title="Mysql Error 1048 奇遇记">
+ <strong>NEXT:</strong><br/> 
+ <span>Mysql Error 1048 奇遇记
+</span>
+</a>
+</div>
+
 </nav>
 
-  
-</article>
-
-
-
-
-<section id="comments">
-  <!-- Duoshuo Comment BEGIN -->
-  <div class="ds-thread"></div>
-    <script type="text/javascript">
-      var duoshuoQuery = {short_name:"兰春"};
-        (function() {
-          var ds = document.createElement('script');
-          ds.type = 'text/javascript';ds.async = true;
-          ds.src = 'http://static.duoshuo.com/embed.js';
-          ds.charset = 'UTF-8';
-          (document.getElementsByTagName('head')[0]
-          || document.getElementsByTagName('body')[0]).appendChild(ds);
-        })();
-  </script>
-<!-- Duoshuo Comment END -->
-</section>
-
-</section>
-        
-          <aside id="sidebar">
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Categories</h3>
-    <div class="widget">
-      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/MySQL/">MySQL</a><span class="category-list-count">8</span></li></ul>
-    </div>
+	
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例一，_组合条件"><span class="toc-number">2.</span> <span class="toc-text">案例一， 组合条件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例二，单一条件"><span class="toc-number">3.</span> <span class="toc-text">案例二，单一条件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">4.</span> <span class="toc-text">分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">5.</span> <span class="toc-text">解决方案</span></a></li></ol>
   </div>
 
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Tags</h3>
-    <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/MySQL-Error/">MySQL Error</a><span class="tag-list-count">8</span></li></ul>
-    </div>
-  </div>
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 人穷志短愿望多</p>
+		
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2671026564" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/zhanglun" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
 
   
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Tag Cloud</h3>
-    <div class="widget tagcloud">
-      <a href="/tags/MySQL-Error/" style="font-size: NaNpx;">MySQL Error</a>
-    </div>
-  </div>
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>8</sup></a></li>
+		
+		</ul>
+</div>
+
 
   
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Archives</h3>
-    <div class="widget">
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
       <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
-    </div>
   </div>
 
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">Recents</h3>
-    <div class="widget">
-      <ul>
-        
-          <li>
-            <a href="/2015/07/14/mysql_group_order_limit/">Mysql 5.6 执行计划错误案例分析</a>
-          </li>
-        
-          <li>
-            <a href="/2015/07/14/mysql_error_1293/">深入浅出timestamp</a>
-          </li>
-        
-          <li>
-            <a href="/2015/07/14/mysql_ulimit/">ulimit 和 mysql 的故事</a>
-          </li>
-        
-          <li>
-            <a href="/2015/07/14/mysql_shutdown_err/">mysql shutdown 异常处理和分析</a>
-          </li>
-        
-          <li>
-            <a href="/2015/07/14/mysql_replicate_rule/">Mysql 复制过滤详解</a>
-          </li>
-        
-      </ul>
-    </div>
-  </div>
 
   
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+		</ul>
+</div>
+
+
 </aside>
-        
-      </div>
-      <footer id="footer">
-  
-  <div class="outer">
-    <div id="footer-info" class="inner">
-      &copy; 2015 John Doe<br>
-      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+</div>
     </div>
-  </div>
+    <footer><div id="footer" >
+
+</div>
 </footer>
-    </div>
-    <nav id="mobile-nav">
-  
-    <a href="/" class="mobile-nav-link">Home</a>
-  
-    <a href="/archives" class="mobile-nav-link">Archives</a>
-  
-</nav>
-    
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
 
 
-  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
 
-  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
 
 
 
-<script src="/js/script.js" type="text/javascript"></script>
 
 
-  </div>
-</body>
+  </body>
 </html>
