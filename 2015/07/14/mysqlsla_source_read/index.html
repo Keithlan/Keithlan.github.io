@@ -86,7 +86,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
     </p>
   <p class="article-time">
     <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-    Updated:<time datetime="2015-07-15T07:45:30.000Z" itemprop="dateModified">Jul 15 2015</time>
+    Updated:<time datetime="2015-07-15T07:54:50.000Z" itemprop="dateModified">Jul 15 2015</time>
     
   </p>
 </header>
@@ -649,8 +649,8 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) 之前有的时候，发现slow 语句中并没有来自哪个<span class="pseudo">DB</span>，比较郁闷。现在源码中看到，<span class="pseudo">db</span>-inheritance 可以解决这个问题，很好用</div><div class="line"><span class="number">2</span>）修改slow standard report ，  所有slow， 新增 <span class="literal">ip</span> sum 这一属性，方便日后解析统计。</div><div class="line"><span class="number">3</span>) mysqlsla_lc_v2<span class="string">.0</span> 新增对mysql5<span class="string">.6</span> binlog 的解析支持。</div></pre></td></tr></table></figure>
 
 <p>以上的改动，均在新的mysqlsla 版本中修复。详细内容，请看修复后的代码。</p>
-<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla" target="_blank" rel="external">老的mysqlsla源码</a></p>
-<p><a href="http://gitlab.corp.anjuke.com/_dba/blog/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_lc_v2.0" target="_blank" rel="external">修改后的mysqlsla源码</a></p>
+<p><a href="https://github.com/Keithlan/file_md/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla" target="_blank" rel="external">老的mysqlsla源码</a></p>
+<p><a href="https://github.com/Keithlan/file_md/blob/master/Keithlan/mysql/SYSTEM_TOOLS/tz_slow/mysqlsla_lc_v2.0" target="_blank" rel="external">修改后的mysqlsla源码</a></p>
   
 	</div>
 		<footer class="article-footer clearfix">
