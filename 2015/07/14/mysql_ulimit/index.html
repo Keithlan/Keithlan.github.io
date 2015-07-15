@@ -6,29 +6,17 @@
   <title>ulimit 和 mysql 的故事 | Focus on Mysql,Focus on DB,Focus on Focus</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
   <meta name="description" content="背景
-
-前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
-
-ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚一个概念：open files">
+123前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="ulimit 和 mysql 的故事">
 <meta property="og:url" content="https://github.com/Keithlan/Keithlan.github.io/2015/07/14/mysql_ulimit/">
 <meta property="og:site_name" content="Focus on Mysql,Focus on DB,Focus on Focus">
 <meta property="og:description" content="背景
-
-前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
-
-ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚一个概念：open files">
+123前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="ulimit 和 mysql 的故事">
 <meta name="twitter:description" content="背景
-
-前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。
-
-ulimit -u &amp; ulimit -n 区别？
-12345这里先弄清楚一个概念：open files">
+123前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。">
 
   
     <link rel="alternative" href="/atom.xml" title="Focus on Mysql,Focus on DB,Focus on Focus" type="application/atom+xml">
@@ -103,9 +91,10 @@ ulimit -u &amp; ulimit -n 区别？
     <div class="article-entry" itemprop="articleBody">
       
         <h2 id="背景">背景</h2>
-<blockquote>
-<p>前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable<br>然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。<br>虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
-</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable</div><div class="line">然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。</div><div class="line">虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</div></pre></td></tr></table></figure>
+
+<a id="more"></a>
+
 <h2 id="ulimit_-u_&amp;_ulimit_-n_区别？">ulimit -u &amp; ulimit -n 区别？</h2>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">这里先弄清楚一个概念：</div><div class="line"></div><div class="line"><span class="keyword">open</span> <span class="keyword">files</span>                      (-<span class="keyword">n</span>) <span class="number">40000</span> ： 最大文件打开数</div><div class="line"></div><div class="line"><span class="built_in">max</span> user processes              (-<span class="keyword">u</span>) <span class="number">8092</span> ：  最大用户进程数</div></pre></td></tr></table></figure>
 
