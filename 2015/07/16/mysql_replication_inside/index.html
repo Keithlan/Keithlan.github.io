@@ -4,12 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Focus on MySQL,Focus on Focus</title>
+    <title>mysql replication inside | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="title: “mysql replication inside”date: 2015-07-16 09:32:24tags: [MySQL feature]categories: MySQLdescription: Mysql 之所以能够风靡全球，除了其innoDB 存储引擎外，另一个最为有力的武">
+    <meta name="description" itemprop="description" content="Mysql 之所以能够风靡全球，除了其innoDB 存储引擎外，另一个最为有力的武器就是 Replication。M-M，M-S，M-M-S，M-S-S 等等高扩展性，将其推倒了互联网的风口浪尖。有的人会问：这些特性难道Oracle 没有吗？没错，oracle 也可以这样做，但是这样做的成本非常巨大，每台oracle，都配备EMC存储，IBM的服务器，这样的高额成本，不是一般公司能够支付。so，这里，我们一起来聊聊Mysql 复制的那些事。">
     
     
     
@@ -69,15 +69,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/07/17/mysql_replication_inside/" title="" itemprop="url"></a>
+      <a href="/2015/07/16/mysql_replication_inside/" title="mysql replication inside" itemprop="url">mysql replication inside</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-07-17T08:54:57.000Z" itemprop="datePublished">Jul 17 2015</time>
-    Updated:<time datetime="2015-07-17T08:54:57.000Z" itemprop="dateModified">Jul 17 2015</time>
+    <time datetime="2015-07-16T01:32:24.000Z" itemprop="datePublished">Jul 16 2015</time>
+    Updated:<time datetime="2015-07-17T08:57:09.000Z" itemprop="dateModified">Jul 17 2015</time>
     
   </p>
 </header>
@@ -89,9 +89,7 @@
 		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#主要的大纲"><span class="toc-number">1.</span> <span class="toc-text">主要的大纲</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#classic_replication"><span class="toc-number">2.</span> <span class="toc-text">classic replication</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#复制的历史"><span class="toc-number">2.1.</span> <span class="toc-text">复制的历史</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#复制结构流程图"><span class="toc-number">2.2.</span> <span class="toc-text">复制结构流程图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#show_slave_status"><span class="toc-number">2.3.</span> <span class="toc-text">show slave status</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_状态"><span class="toc-number">2.4.</span> <span class="toc-text">IO_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_状态"><span class="toc-number">2.5.</span> <span class="toc-text">SQL_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_数据格式（5-1）"><span class="toc-number">2.6.</span> <span class="toc-text">IO thread 数据格式（5.1）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_数据格式（5-1）"><span class="toc-number">2.7.</span> <span class="toc-text">SQL thread 数据格式（5.1）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#replication_internal"><span class="toc-number">3.</span> <span class="toc-text">replication internal</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是binlog？"><span class="toc-number">3.1.</span> <span class="toc-text">什么是binlog？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_格式和类型"><span class="toc-number">3.2.</span> <span class="toc-text">binlog 格式和类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_internal"><span class="toc-number">3.3.</span> <span class="toc-text">binlog internal</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_处理流程"><span class="toc-number">3.4.</span> <span class="toc-text">binlog 处理流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#group_commit"><span class="toc-number">3.5.</span> <span class="toc-text">group commit</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-6）"><span class="toc-number">3.6.</span> <span class="toc-text">multi thread slave（5.6）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-7-2）"><span class="toc-number">3.7.</span> <span class="toc-text">multi thread slave（5.7.2）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（MariaDB）"><span class="toc-number">3.8.</span> <span class="toc-text">multi thread slave（MariaDB）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Row-based_Replication_Enhancements"><span class="toc-number">3.9.</span> <span class="toc-text">Row-based Replication Enhancements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#new_replication_GTID"><span class="toc-number">4.</span> <span class="toc-text">new replication GTID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID能解决什么问题"><span class="toc-number">4.1.</span> <span class="toc-text">GTID能解决什么问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是GTID"><span class="toc-number">4.2.</span> <span class="toc-text">什么是GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何配置GTID"><span class="toc-number">4.3.</span> <span class="toc-text">如何配置GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新的复制协议_COM_BINLOG_DUMP_GTID"><span class="toc-number">4.4.</span> <span class="toc-text">新的复制协议 COM_BINLOG_DUMP_GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_的格式"><span class="toc-number">4.5.</span> <span class="toc-text">binlog 的格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_usage"><span class="toc-number">4.6.</span> <span class="toc-text">GTID usage</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Automatic_Positioning"><span class="toc-number">4.7.</span> <span class="toc-text">Automatic Positioning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何skip_transaction"><span class="toc-number">4.8.</span> <span class="toc-text">如何skip transaction</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Purged_and_Executed"><span class="toc-number">4.9.</span> <span class="toc-text">Purged and Executed</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何搭建GTID环境下的slave"><span class="toc-number">4.10.</span> <span class="toc-text">如何搭建GTID环境下的slave</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_major_limitation"><span class="toc-number">4.11.</span> <span class="toc-text">GTID major limitation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-number">5.</span> <span class="toc-text">参考资料</span></a></li></ol>
 		</div>
 		
-		<p>title: “mysql replication inside”<br>date: 2015-07-16 09:32:24<br>tags: [MySQL feature]<br>categories: MySQL<br>description: Mysql 之所以能够风靡全球，除了其innoDB 存储引擎外，另一个最为有力的武器就是 Replication。<br>M-M，M-S，M-M-S，M-S-S 等等高扩展性，将其推倒了互联网的风口浪尖。有的人会问：这些特性难道<br>Oracle 没有吗？没错，oracle 也可以这样做，但是这样做的成本非常巨大，每台oracle，都配备EMC<br>存储，IBM的服务器，这样的高额成本，不是一般公司能够支付。so，这里，我们一起来聊聊Mysql 复制的那些事。</p>
-<hr>
-<h2 id="主要的大纲">主要的大纲</h2>
+		<h2 id="主要的大纲">主要的大纲</h2>
 <ul>
 <li><p><strong>classic replication</strong></p>
 <ul>
@@ -1263,12 +1261,22 @@
 	</div>
 		<footer class="article-footer clearfix">
 
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-feature/">MySQL feature</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/07/17/mysql_replication_inside/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2015/07/16/mysql_replication_inside/" data-title="mysql replication inside | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -1277,11 +1285,19 @@
 	
 <nav class="article-nav clearfix">
  
+ <div class="prev" >
+ <a href="/2015/07/16/ref_56/" title="Mysql5.6 新特性">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  Mysql5.6 新特性</span>
+</a>
+</div>
+
 
 <div class="next">
-<a href="/2015/07/17/22_performance_schema/"  title="Mysql5.6 Performance_schema 深入浅出">
+<a href="/2015/07/15/mysqsla/"  title="mysql日志分析神器之mysqlsla">
  <strong>NEXT:</strong><br/> 
- <span>Mysql5.6 Performance_schema 深入浅出
+ <span>mysql日志分析神器之mysqlsla
 </span>
 </a>
 </div>
@@ -1291,7 +1307,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/07/17/mysql_replication_inside/" data-title="" data-url="https://Keithlan.github.io/2015/07/17/mysql_replication_inside/"></div>
+<div class="ds-thread" data-thread-key="/2015/07/16/mysql_replication_inside/" data-title="mysql replication inside" data-url="https://Keithlan.github.io/2015/07/16/mysql_replication_inside/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -1349,7 +1365,7 @@ var duoshuoQuery = {short_name:keithlan};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>12</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>13</sup></a></li>
 		
 		</ul>
 </div>
@@ -1371,7 +1387,7 @@ var duoshuoQuery = {short_name:keithlan};
 		
 			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		
-			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>2</sup></a></li>
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>3</sup></a></li>
 		
 		</ul>
 </div>
