@@ -1,0 +1,1538 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="title: “mysql replication inside”date: 2015-07-16 09:32:24tags: [MySQL feature]categories: MySQLdescription: Mysql 之所以能够风靡全球，除了其innoDB 存储引擎外，另一个最为有力的武">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/07/17/mysql_replication_inside/" title="" itemprop="url"></a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-07-17T08:54:57.000Z" itemprop="datePublished">Jul 17 2015</time>
+    Updated:<time datetime="2015-07-17T08:54:57.000Z" itemprop="dateModified">Jul 17 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#主要的大纲"><span class="toc-number">1.</span> <span class="toc-text">主要的大纲</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#classic_replication"><span class="toc-number">2.</span> <span class="toc-text">classic replication</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#复制的历史"><span class="toc-number">2.1.</span> <span class="toc-text">复制的历史</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#复制结构流程图"><span class="toc-number">2.2.</span> <span class="toc-text">复制结构流程图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#show_slave_status"><span class="toc-number">2.3.</span> <span class="toc-text">show slave status</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_状态"><span class="toc-number">2.4.</span> <span class="toc-text">IO_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_状态"><span class="toc-number">2.5.</span> <span class="toc-text">SQL_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_数据格式（5-1）"><span class="toc-number">2.6.</span> <span class="toc-text">IO thread 数据格式（5.1）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_数据格式（5-1）"><span class="toc-number">2.7.</span> <span class="toc-text">SQL thread 数据格式（5.1）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#replication_internal"><span class="toc-number">3.</span> <span class="toc-text">replication internal</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是binlog？"><span class="toc-number">3.1.</span> <span class="toc-text">什么是binlog？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_格式和类型"><span class="toc-number">3.2.</span> <span class="toc-text">binlog 格式和类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_internal"><span class="toc-number">3.3.</span> <span class="toc-text">binlog internal</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_处理流程"><span class="toc-number">3.4.</span> <span class="toc-text">binlog 处理流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#group_commit"><span class="toc-number">3.5.</span> <span class="toc-text">group commit</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-6）"><span class="toc-number">3.6.</span> <span class="toc-text">multi thread slave（5.6）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-7-2）"><span class="toc-number">3.7.</span> <span class="toc-text">multi thread slave（5.7.2）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（MariaDB）"><span class="toc-number">3.8.</span> <span class="toc-text">multi thread slave（MariaDB）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Row-based_Replication_Enhancements"><span class="toc-number">3.9.</span> <span class="toc-text">Row-based Replication Enhancements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#new_replication_GTID"><span class="toc-number">4.</span> <span class="toc-text">new replication GTID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID能解决什么问题"><span class="toc-number">4.1.</span> <span class="toc-text">GTID能解决什么问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是GTID"><span class="toc-number">4.2.</span> <span class="toc-text">什么是GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何配置GTID"><span class="toc-number">4.3.</span> <span class="toc-text">如何配置GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新的复制协议_COM_BINLOG_DUMP_GTID"><span class="toc-number">4.4.</span> <span class="toc-text">新的复制协议 COM_BINLOG_DUMP_GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_的格式"><span class="toc-number">4.5.</span> <span class="toc-text">binlog 的格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_usage"><span class="toc-number">4.6.</span> <span class="toc-text">GTID usage</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Automatic_Positioning"><span class="toc-number">4.7.</span> <span class="toc-text">Automatic Positioning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何skip_transaction"><span class="toc-number">4.8.</span> <span class="toc-text">如何skip transaction</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Purged_and_Executed"><span class="toc-number">4.9.</span> <span class="toc-text">Purged and Executed</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何搭建GTID环境下的slave"><span class="toc-number">4.10.</span> <span class="toc-text">如何搭建GTID环境下的slave</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_major_limitation"><span class="toc-number">4.11.</span> <span class="toc-text">GTID major limitation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-number">5.</span> <span class="toc-text">参考资料</span></a></li></ol>
+		</div>
+		
+		<p>title: “mysql replication inside”<br>date: 2015-07-16 09:32:24<br>tags: [MySQL feature]<br>categories: MySQL<br>description: Mysql 之所以能够风靡全球，除了其innoDB 存储引擎外，另一个最为有力的武器就是 Replication。<br>M-M，M-S，M-M-S，M-S-S 等等高扩展性，将其推倒了互联网的风口浪尖。有的人会问：这些特性难道<br>Oracle 没有吗？没错，oracle 也可以这样做，但是这样做的成本非常巨大，每台oracle，都配备EMC<br>存储，IBM的服务器，这样的高额成本，不是一般公司能够支付。so，这里，我们一起来聊聊Mysql 复制的那些事。</p>
+<hr>
+<h2 id="主要的大纲">主要的大纲</h2>
+<ul>
+<li><p><strong>classic replication</strong></p>
+<ul>
+<li>复制架构<ul>
+<li>复制的历史</li>
+<li>复制结构流程图</li>
+<li>show slave status 详解</li>
+<li>IO thread, SQL thread状态变更</li>
+</ul>
+</li>
+<li>复制细节<ul>
+<li>I/O thread数据格式</li>
+<li>SQL thread数据格式</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><p><strong>replication internal</strong></p>
+<ul>
+<li>binlog 详解（classic &amp; GTID）<ul>
+<li>statment</li>
+<li>row</li>
+<li>mixed</li>
+<li>binlog 文件格式，data event 详细描述<ul>
+<li>Tuning and Optimizing Row-based Replication (5.6)</li>
+<li>group commit</li>
+<li>二阶段提交</li>
+<li>binlog 的三段提交</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>innodb日志刷新策略<ul>
+<li>刷新频率</li>
+<li>刷新方式<ul>
+<li>VFS</li>
+</ul>
+</li>
+</ul>
+</li>
+<li>多线程复制（5.6，5.7，mariaDB）<ul>
+<li>5.6 的实现简介</li>
+<li>5.7 的实现简介</li>
+<li>MariaDB 的实现简介</li>
+</ul>
+</li>
+<li>slave-crash-safe（5.6）</li>
+<li>Event Checksums （5.6）</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong>new replication GTID</strong><ul>
+<li>5.6 的 binlog 文件格式详细描述</li>
+<li>GTID 复制原理</li>
+<li>如何 fail over</li>
+<li>GTID 目前的limitation</li>
+</ul>
+</li>
+</ul>
+<h2 id="classic_replication">classic replication</h2>
+<hr>
+<h3 id="复制的历史">复制的历史</h3>
+<p><img src="/image/mysql_ref/replication_history.png" alt="history" title="history"></p>
+<h3 id="复制结构流程图">复制结构流程图</h3>
+<p>先看一个简单一点的流程图</p>
+<p><img src="/image/mysql_ref/repli_simple.png" alt="repli_simple" title="repli_simple"></p>
+<p>接下来就是整个复制的详细流程图</p>
+<p><img src="/image/mysql_ref/repli_struc.png" alt="repli_struc" title="repli_struc"></p>
+<ol>
+<li><p>Master server enables binary log</p>
+</li>
+<li><p>Client commits query to the master</p>
+</li>
+<li>Master executes the query and commits it</li>
+<li>Master stores the query in the binary log as en event</li>
+<li>Master returns to the client with commit confirmation</li>
+<li>Slave server configures replication</li>
+<li>Replication starts mysql&gt; START SLAVE;</li>
+<li>IO thread starts and initiates dump thread on the master</li>
+<li>Dump thread reads events from binary log</li>
+<li>Dump thread sends events to IO thread from the slave</li>
+<li>IO thread writes events into relay log</li>
+<li>IO thread updates master.info file parameters</li>
+<li>SQL thread reads relay log events</li>
+<li>SQL thread executes events on the slave</li>
+<li>SQL thread updates relay-log.info file</li>
+</ol>
+<h3 id="show_slave_status">show slave status</h3>
+<p>如果使用复制，那么show slave status 这条命令就是我们的家常便饭了，我们对它了解的有多少呢？</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line">Server version: 5.1.54-log Source distribution</div><div class="line"></div><div class="line">dbadmin:(none)&gt; show slave status \G</div><div class="line"><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span> 1. row <span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span></div><div class="line">               Slave_IO_State: Waiting for master to send event</div><div class="line">                  Master_Host: 10.10.8.83</div><div class="line">                  Master_User: repl</div><div class="line">                  Master_Port: 3306</div><div class="line">                Connect_Retry: 60</div><div class="line">              Master_Log_File: db10-075.006664</div><div class="line">          Read_Master_Log_Pos: 116188628</div><div class="line">               Relay_Log_File: db10-012-relay-bin.013676</div><div class="line">                Relay_Log_Pos: 116188772</div><div class="line">        Relay_Master_Log_File: db10-075.006664</div><div class="line">             Slave_IO_Running: Yes</div><div class="line">            Slave_SQL_Running: Yes</div><div class="line">              Replicate_Do_DB:</div><div class="line">          Replicate_Ignore_DB: mysql,test</div><div class="line">           Replicate_Do_Table:</div><div class="line">       Replicate_Ignore_Table:</div><div class="line">      Replicate_Wild_Do_Table:</div><div class="line">  Replicate_Wild_Ignore_Table: mysql.%,test.%</div><div class="line">                   Last_Errno: 0</div><div class="line">                   Last_Error:</div><div class="line">                 Skip_Counter: 0</div><div class="line">          Exec_Master_Log_Pos: 116188628</div><div class="line">              Relay_Log_Space: 116188972</div><div class="line">              Until_Condition: None</div><div class="line">               Until_Log_File:</div><div class="line">                Until_Log_Pos: 0</div><div class="line">           Master_SSL_Allowed: No</div><div class="line">           Master_SSL_CA_File:</div><div class="line">           Master_SSL_CA_Path:</div><div class="line">              Master_SSL_Cert:</div><div class="line">            Master_SSL_Cipher:</div><div class="line">               Master_SSL_Key:</div><div class="line">        Seconds_Behind_Master: 0</div><div class="line">Master_SSL_Verify_Server_Cert: No</div><div class="line">                Last_IO_Errno: 0</div><div class="line">                Last_IO_Error:</div><div class="line">               Last_SQL_Errno: 0</div><div class="line">               Last_SQL_Error:</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>下面详细解释一下</p>
+<table>
+<thead>
+<tr>
+<th>字段名</th>
+<th>注释</th>
+<th>可能取值</th>
+<th>取值示例</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Slave_IO_State</td>
+<td>slave状态的文字描述</td>
+<td>slave线程状态（下面会讲）</td>
+<td>Waiting for master to send event </td>
+</tr>
+<tr>
+<td>Master_Host</td>
+<td>master的ip &amp; host</td>
+<td></td>
+<td>10.10.8.83</td>
+</tr>
+<tr>
+<td>Master_User</td>
+<td>连接master使用的用户名</td>
+<td></td>
+<td>repl</td>
+</tr>
+<tr>
+<td>Master_Port</td>
+<td>master使用的端口</td>
+<td></td>
+<td>3306</td>
+</tr>
+<tr>
+<td>Connect_Retry</td>
+<td>重新连接MySQL的重试间隔时间，单位秒</td>
+<td></td>
+<td>60</td>
+</tr>
+<tr>
+<td>Master_Log_File</td>
+<td>IO thread读取到的binlog日志文件</td>
+<td></td>
+<td>db10-075.006664</td>
+</tr>
+<tr>
+<td>Read_Master_Log_Pos</td>
+<td>IO thread读取到的binlog日志文件位置</td>
+<td></td>
+<td>116188628</td>
+</tr>
+<tr>
+<td>Relay_Log_File</td>
+<td>IO thread读取后，slave 在本地缓存的relay 日志的文件名</td>
+<td></td>
+<td>db10-012-relay-bin.013676</td>
+</tr>
+<tr>
+<td>Relay_Log_Pos</td>
+<td>IO thread读取后，slave 在本地缓存的relay 日志的文件位置</td>
+<td></td>
+<td>116188772</td>
+</tr>
+<tr>
+<td>Relay_Master_Log_File</td>
+<td>SQL thread 执行到master的binlog文件名</td>
+<td></td>
+<td>db10-075.006664</td>
+</tr>
+<tr>
+<td>Slave_IO_Running</td>
+<td>IO thread是否正常运行</td>
+<td></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Slave_SQL_Running</td>
+<td>SQL thread是否正常运行</td>
+<td></td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Replicate_Do_DB</td>
+<td>slave上需要执行的schema</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Replicate_Ignore_DB</td>
+<td>slave上需要忽略的schema</td>
+<td></td>
+<td>mysql,test</td>
+</tr>
+<tr>
+<td>Replicate_Do_Table</td>
+<td>slave上需要执行的table</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Replicate_Ignore_Table</td>
+<td>slave上需要忽略的table</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Replicate_Wild_Do_Table</td>
+<td>slave上需要执行的table正则表达式</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Replicate_Wild_Ignore_Table</td>
+<td>slave上需要忽略的table正则表达式</td>
+<td></td>
+<td>mysql.%,test.%</td>
+</tr>
+<tr>
+<td>Last_Errno</td>
+<td>上一次出错的错误号</td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>Last_Error</td>
+<td>上一次出错的错误信息</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Skip_Counter</td>
+<td>还剩下的忽略event次数</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Exec_Master_Log_Pos</td>
+<td>SQL thread 执行到master的binlog文件位置</td>
+<td></td>
+<td>116188628</td>
+</tr>
+<tr>
+<td>Relay_Log_Space</td>
+<td>relay log占用的空间大小</td>
+<td></td>
+<td>116188972</td>
+</tr>
+<tr>
+<td>Until_Condition</td>
+<td>复制until条件，在stop slave,start slave(不带until)或server重启的时候会自动重置</td>
+<td></td>
+<td>None</td>
+</tr>
+<tr>
+<td>Until_Log_File</td>
+<td>复制停止的文件名</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Until_Log_Pos</td>
+<td>复制停止的文件位置</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_Allowed</td>
+<td>是否使用SSL连接master</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_CA_File</td>
+<td>ssl agent文件ca-cert.pem的文件名</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_CA_Path</td>
+<td>ssl agent文件ca-cert.pem的路径名</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_Cert</td>
+<td>ssl授权文件</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_Cipher</td>
+<td>ssl 加密算法</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_Key</td>
+<td>ssl 密钥文件</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Seconds_Behind_Master</td>
+<td>SQL thread相对master的延迟时间（不准）</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Master_SSL_Verify_Server_Cert</td>
+<td>是否检查master的授权文件</td>
+<td></td>
+<td>NO</td>
+</tr>
+<tr>
+<td>Last_IO_Errno</td>
+<td>IO thread的上一次出错的错误号</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Last_IO_Error</td>
+<td>IO thread的上一次出错的错误信息</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Last_SQL_Errno</td>
+<td>SQL thread的上一次出错的错误号</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Last_SQL_Error</td>
+<td>SQL thread的上一次出错的错误信息</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3 id="IO_thread_状态">IO_thread 状态</h3>
+<p>IO线程状态变更,对应show slave status的Slave_IO_State字段</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>状态值</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>wait_master</td>
+<td>Waiting for master update</td>
+<td></td>
+</tr>
+<tr>
+<td>connect_master</td>
+<td>Connecting to master</td>
+<td></td>
+</tr>
+<tr>
+<td>check_master</td>
+<td>Checking master version</td>
+<td></td>
+</tr>
+<tr>
+<td>register_slave</td>
+<td>Registering slave on master</td>
+<td></td>
+</tr>
+<tr>
+<td>request_binlog</td>
+<td>Requesting binlog dump</td>
+<td></td>
+</tr>
+<tr>
+<td>request_wait_reconnect</td>
+<td>Waiting to reconnect after a failed binlog dump request</td>
+<td></td>
+</tr>
+<tr>
+<td>request_reconnecting</td>
+<td>Reconnecting after a failed binlog dump request</td>
+<td></td>
+</tr>
+<tr>
+<td>wait_event</td>
+<td>Waiting for master to send event</td>
+<td></td>
+</tr>
+<tr>
+<td>queue_to_relay_log</td>
+<td>Queueing master event to the relay log</td>
+<td></td>
+</tr>
+<tr>
+<td>read_wait_reconnect</td>
+<td>Waiting to reconnect after a failed master event read</td>
+<td></td>
+</tr>
+<tr>
+<td>read_reconnecting</td>
+<td>Reconnecting after a failed master event read</td>
+<td></td>
+</tr>
+<tr>
+<td>wait_relay_space</td>
+<td>Waiting for the slave SQL thread to free enough relay log space</td>
+<td></td>
+</tr>
+<tr>
+<td>wait_slave_mutex</td>
+<td>Waiting for slave mutex on exit</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>IO Thread 状态变更如下：</p>
+<p><img src="/image/mysql_ref/io_thread.png" alt="io_thread" title="io_thread"> </p>
+<h3 id="SQL_thread_状态">SQL_thread 状态</h3>
+<p>SQL线程状态变更,对应服务器上SQL线程的State字段，通过show processlist查看</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>状态值</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>wait_relay_event</td>
+<td>Waiting for the next event in relay log</td>
+<td></td>
+</tr>
+<tr>
+<td>read_relay</td>
+<td>Reading event from the relay log</td>
+<td></td>
+</tr>
+<tr>
+<td>wait_io_thread</td>
+<td>Has read all relay log; waiting for the slave I/O thread to update it</td>
+<td></td>
+</tr>
+<tr>
+<td>make_temp_file</td>
+<td>Making temp file</td>
+<td></td>
+</tr>
+<tr>
+<td>wait_slave_mutex</td>
+<td>Waiting for slave mutex on exit</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>sql thread 状态变更图    如下</p>
+<p><img src="/image/mysql_ref/sql_thread.png" alt="sql_thread" title="sql_thread"> </p>
+<h3 id="IO_thread_数据格式（5-1）">IO thread 数据格式（5.1）</h3>
+<ul>
+<li><strong>向master注册自己</strong></li>
+</ul>
+<blockquote>
+<p>向主服务器注册自己并不是一个必须的操作，如果没有注册同样可以向主服务器请求数据。如果需要向主服务器注册，那么可以调用mysql.h中的simple_command(mysql,<br>command, arg, length,<br>skip_check)函数，在arg参数中依序填入下述的各个字段，并指定其中的参数command为COM_REGISTER_SLAVE以注册自己。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>server_id</td>
+<td>4</td>
+<td>本MySQL instance的server_id值</td>
+</tr>
+<tr>
+<td>strlen(report_host)</td>
+<td>1 or 2</td>
+<td>标识接下来的report_host的长度，如果长度&lt;251占1个字节，否则占两个字节</td>
+</tr>
+<tr>
+<td>report_host</td>
+<td>Strlen(report_host)</td>
+<td>向主服务器注册的MySQL instance标识</td>
+</tr>
+<tr>
+<td>strlen(report_user)</td>
+<td>1 or 2</td>
+<td>标识接下来的report_user的长度，如果长度&lt;251占1个字节，否则占2个字节</td>
+</tr>
+<tr>
+<td>report_user</td>
+<td>Strlen(report_user)</td>
+<td>向主服务器注册的用户名</td>
+</tr>
+<tr>
+<td>strlen(report_password)</td>
+<td>1 or 2</td>
+<td>标识接下来的report_password的长度，如果长度&lt;251占1个字节，否则占2个字节</td>
+</tr>
+<tr>
+<td>report_password</td>
+<td>Strlen(report_password)</td>
+<td>向主服务器注册的密码</td>
+</tr>
+<tr>
+<td>report_port</td>
+<td>2</td>
+<td>向主服务器注册的端口</td>
+</tr>
+<tr>
+<td>rpl_recovery_rank</td>
+<td>4</td>
+<td>复制的恢复等级</td>
+</tr>
+<tr>
+<td>master_id</td>
+<td>4</td>
+<td>填入0，主服务器将自行填入master_id值</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>向master请求数据</strong></li>
+</ul>
+<blockquote>
+<p>从服务器向主服务器发送了请求数据的命令以后主服务器将根据要求将对应binlog文件的指定位置开始的事件记录发送给从服务器。向主服务器请求数据，可以调用mysql.h中的simple_command(mysql,<br>command, arg, length,<br>skip_check)函数，在arg参数中依序填入下述的各个字段，并指定其中的参数command为COM_BINLOG_DUMP。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>master_log_pos</td>
+<td>4</td>
+<td>请求主服务器发送的事件记录在binlog文件中的偏移量</td>
+</tr>
+<tr>
+<td>binlog_flags</td>
+<td>2</td>
+<td>暂时填0，做扩展用</td>
+</tr>
+<tr>
+<td>server_id</td>
+<td>4</td>
+<td>本MySQL instance的server_id值</td>
+</tr>
+<tr>
+<td>logname</td>
+<td>Strlen(logname)</td>
+<td>请求主服务器发送的binlog文件的文件名</td>
+</tr>
+</tbody>
+</table>
+<p>向主服务器请求了数据以后，从服务器就可以通过cli_safe_read(mysql);获得主服务器发送过来的数据，每次获得一个事件记录的数据。cli_safe_read的返回值标示了从主服务器发送过来的数据的数据字节数。而发送过来的数据保存在mysql-&gt;net-&gt;read_pos数组中。I/O<br>thread模块可以利用MySQL的io_cache将对应事件记录存储到relay-log文件中。</p>
+<h3 id="SQL_thread_数据格式（5-1）">SQL thread 数据格式（5.1）</h3>
+<blockquote>
+<p>由于SQL thread 需要执行从master上发送过来的event，这里牵涉到很多event 格式，在binlog章节一起讲述，这里先略过。</p>
+</blockquote>
+<h2 id="replication_internal">replication internal</h2>
+<hr>
+<h3 id="什么是binlog？">什么是binlog？</h3>
+<blockquote>
+<p>binlog 就是为了复制而存在，将所有数据库更新操作全部记录下来，然后slave可以根据binlog 重演日志，从而保证和master 一致。</p>
+</blockquote>
+<h3 id="binlog_格式和类型">binlog 格式和类型</h3>
+<ul>
+<li><strong>基本结构如下</strong></li>
+</ul>
+<p><img src="/image/mysql_ref/binlog_file.png" alt="binlog_file" title="binlog_file"></p>
+<ul>
+<li><strong>binlog format</strong><ul>
+<li>STATEMENT： 以SQL语句的形式记录</li>
+<li>ROW ： 以数据文件的格式记录</li>
+<li>MIXED： 前两者的结合，默认以statment格式记录，当遇到non-deterministic statements的语句时，自动转换成row模式。</li>
+<li>可以动态调整： SET BINLOG_FORMAT= [ROW|STATEMENT|MIXED]</li>
+</ul>
+</li>
+</ul>
+<ul>
+<li><strong>statement format</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">==特点==</div><div class="line">* 可以方便的显示SQL语句</div><div class="line">* 可以很方便的在slave上re-executed</div><div class="line">* 在语句被executed后，commited前，记录binary log</div><div class="line">* DDL 语句总是被记录成statement，即便你设置的是row模式。</div><div class="line">* 事件类型是：<span class="number">0x02</span> → Query_log_event</div><div class="line">* Unsafe/non-deterministic statements如下：</div><div class="line">	* User-defined functions (UDF)</div><div class="line">	* UUID(), FOUND_ROWS(), RAND(), USER()</div><div class="line">	* Updates using LIMIT</div><div class="line">	* <span class="keyword">...</span></div><div class="line">警告信息：</div><div class="line">￼master&gt; INSERT INTO t1 VALUES (RAND());</div><div class="line">Unsafe statement written to the binary log using statement format since BINLOG_FORMAT = STATEMENT. Statement is unsafe because it uses a system <span class="keyword">function</span> that may <span class="keyword">return</span> a different value on the slave</div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li><strong>row format</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">==特点==</div><div class="line"><span class="bullet">* </span>5.1 之后被引入</div><div class="line"><span class="bullet">* </span>在binlog 中记录的是真实的image</div><div class="line"><span class="bullet">* </span>对于非确定性函数：UUID等，都是安全的。</div><div class="line"><span class="bullet">* </span>可以用于Mysql cluster环境中。</div><div class="line"><span class="bullet">* </span>事件类型为： Table<span class="emphasis">_map, Write_</span>rows, Update<span class="emphasis">_rows, Delete_</span>rows</div><div class="line"><span class="bullet">* </span>只有DML语句才能记录成row</div><div class="line"><span class="bullet">* </span>row模式一般记录的都比较大，尤其是一条语句更新全表的情况。</div><div class="line"><span class="bullet">* </span>row模式，如果没有主键，被发送到slave后，会导致slave hung住。</div></pre></td></tr></table></figure>
+
+<h3 id="binlog_internal">binlog internal</h3>
+<ul>
+<li><strong>binlog 文件组成</strong></li>
+</ul>
+<p><img src="/image/mysql_ref/binlog_event.png" alt="binlog_event" title="binlog_event"></p>
+<ul>
+<li><p><strong>Query_log_event</strong></p>
+<ul>
+<li>A SQL statement is logged</li>
+<li>Support DDL, DML and other SQL statements</li>
+</ul>
+</li>
+<li><p><strong>row event</strong></p>
+<ul>
+<li>Support DML only</li>
+<li>Table_map_log_event<ul>
+<li>Table metadata</li>
+</ul>
+</li>
+<li>Write_rows_log_event：对应insert，只记录After image</li>
+<li>Update_rows_log_event：对应update，前后都记录</li>
+<li>Delete_rows_log_event：对应delete，只记录Before image</li>
+</ul>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/row_event.png" alt="row_event" title="row_event"></p>
+<ul>
+<li><strong>transaction event</strong><ul>
+<li>BEGIN is logged as Query_log_event</li>
+<li>COMMIT is logged as Xid_log_event</li>
+<li>Support DML only</li>
+</ul>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/transaction_event.png" alt="transaction_event" title="transaction_event"></p>
+<ul>
+<li><strong>binlog初始化文件</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BINLOG_MAGIC(即”\xfe\x62\x69\x6e”)</td>
+<td>BIN_LOG_HEADER_SIZE(4)</td>
+<td>Binlog文件的标识值</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>事件头字段描述：各个事件都包括一个事件头</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>when</td>
+<td>4</td>
+<td>事件的创建时间。</td>
+</tr>
+<tr>
+<td>type</td>
+<td>1</td>
+<td>事件的类型</td>
+</tr>
+<tr>
+<td>server_id</td>
+<td>4</td>
+<td>事件发生时所在MySQL的server_id值。</td>
+</tr>
+<tr>
+<td>data_written</td>
+<td>4</td>
+<td>该事件一共占用的字节数，包括事件头的字节数</td>
+</tr>
+<tr>
+<td>log_pos</td>
+<td>4</td>
+<td>下一事件在binlog文件中将要开始的位置，即本事件的结束位置</td>
+</tr>
+<tr>
+<td>Flags</td>
+<td>2</td>
+<td>事件的其他标志位</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>ROTATE_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>pos</td>
+<td>8</td>
+<td>主服务器将要发送的事件记录在binlog文件中的偏移量。一般为从服务器提交的COM_BINLOG_DUMP请求中的偏移量值</td>
+</tr>
+<tr>
+<td>new_log_ident</td>
+<td>strlen(new_log_ident)</td>
+<td>主服务器将要发送的事件记录的binlog文件名。一般为从服务器提交的COM_BINLOG_DUMP请求中的binlog文件名</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>FORMAT_DESCRIPTION_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>binlog_version</td>
+<td>2</td>
+<td>Binlog文件的版本号，这里一般为最新的版本号4</td>
+</tr>
+<tr>
+<td>server_version</td>
+<td>ST_SERVER_VER_LEN（50）</td>
+<td>MySQL的版本号</td>
+</tr>
+<tr>
+<td>Created</td>
+<td>4</td>
+<td>事件创建时间，这里一般和事件头中的when一致</td>
+</tr>
+<tr>
+<td>event_header_len</td>
+<td>1</td>
+<td>一般事件的事件头长度，一般设置为：LOG_EVENT_HEADER_LEN(19)</td>
+</tr>
+<tr>
+<td>post_header_len</td>
+<td>ENUM_END_EVENT-1(26)</td>
+<td>不同事件类型的附加事件头的长度</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>TABLE_MAP_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m_table_id</td>
+<td>6(5.1.4前的版本中为4)</td>
+<td>表的id标识符</td>
+</tr>
+<tr>
+<td>m_flags</td>
+<td>2</td>
+<td>表的各种标志位</td>
+</tr>
+<tr>
+<td>m_dblen</td>
+<td>1</td>
+<td>数据库名的长度</td>
+</tr>
+<tr>
+<td>m_dbnam</td>
+<td>m_dblen+1</td>
+<td>数据库名，以’\0’结尾</td>
+</tr>
+<tr>
+<td>m_tbllen</td>
+<td>1</td>
+<td>表名的长度</td>
+</tr>
+<tr>
+<td>m_tblnam</td>
+<td>m_tbllen+1</td>
+<td>表名，以’\0’结尾</td>
+</tr>
+<tr>
+<td>m_colcnt</td>
+<td>net_field_length()</td>
+<td>表的字段个数，所占字节数根据第一个字节的大小由net_field_length函数确定</td>
+</tr>
+<tr>
+<td>m_coltype</td>
+<td>m_colcnt</td>
+<td>表的各个字段的字段类型</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>WRITE_ROWS_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m_table_id</td>
+<td>6(5.1.4前的版本中为4)</td>
+<td>表的id标识符</td>
+</tr>
+<tr>
+<td>m_flags</td>
+<td>2</td>
+<td>表的各种标志位</td>
+</tr>
+<tr>
+<td>m_width</td>
+<td>net_field_length（）</td>
+<td>表的各列的位图长度，所占字节数根据第一个字节的大小由net_field_length函数确定</td>
+</tr>
+<tr>
+<td>m_cols.bitmap</td>
+<td>(m_width+7)/8</td>
+<td>表的各列的位图，每一位表示m_rows_buf是否包含表中一列的值，如果没有置位表示该列的值没有包含在m_rows_buf中</td>
+</tr>
+<tr>
+<td>m_rows_buf</td>
+<td>剩余字节数(len-已占字节数)</td>
+<td>将要插入到表中的一行数据值</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>UPDATE_ROWS_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m_table_id</td>
+<td>6(5.1.4前的版本中为4)</td>
+<td>表的id标识符</td>
+</tr>
+<tr>
+<td>m_flags</td>
+<td>2</td>
+<td>表的各种标志位</td>
+</tr>
+<tr>
+<td>m_width</td>
+<td>net_field_length（）</td>
+<td>表的各列的位图长度，所占字节数根据第一个字节的大小由net_field_length函数确定</td>
+</tr>
+<tr>
+<td>m_cols.bitmap</td>
+<td>(m_width+7)/8</td>
+<td>表的各列的位图，每一位表示m_rows_buf是否包含表中一列的值，如果没有置位表示该列的值没有包含在m_rows_buf中</td>
+</tr>
+<tr>
+<td>m_cols_ai.bitmap</td>
+<td>(m_width+7)/8</td>
+<td>表中将要更新的行数据的各列的位图，每一位表示m_rows_buf是否包含表中一列的值</td>
+</tr>
+<tr>
+<td>m_rows_buf</td>
+<td>剩余字节数(len-已占字节数)</td>
+<td>将要插入到表中的一行数据值</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>DELETE_ROWS_EVENT事件字段描述</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>m_table_id</td>
+<td>6(5.1.4前的版本中为4)</td>
+<td>表的id标识符</td>
+</tr>
+<tr>
+<td>m_flags</td>
+<td>2</td>
+<td>表的各种标志位</td>
+</tr>
+<tr>
+<td>m_width</td>
+<td>net_field_length（）</td>
+<td>表的各列的位图长度，所占字节数根据第一个字节的大小由net_field_length函数确定</td>
+</tr>
+<tr>
+<td>m_cols.bitmap</td>
+<td>(m_width+7)/8</td>
+<td>表的各列的位图，每一位表示m_rows_buf是否包含表中一列的值，如果没有置位表示该列的值没有包含在m_rows_buf中</td>
+</tr>
+<tr>
+<td>m_rows_buf</td>
+<td>剩余字节数(len-已占字节数)</td>
+<td>将要插入到表中的一行数据值</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>XID_EVENT事件字段描述</strong></li>
+</ul>
+<p>XID_EVENT一般出现在一个事务操作(transaction)之后或者其他语句提交之后。它的主要作用是提交事务操作和把事件刷新至binlog文件中</p>
+<table>
+<thead>
+<tr>
+<th>名称</th>
+<th>字节数</th>
+<th>含义</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>xid</td>
+<td>sizeof(xid)</td>
+<td>commit标识符</td>
+</tr>
+</tbody>
+</table>
+<h3 id="binlog_处理流程">binlog 处理流程</h3>
+<blockquote>
+<p>mysql会将一个事务内的操作都先写到session binlog cache，然后根据sync_binlog的设置flush binlog到file。</p>
+</blockquote>
+<p><img src="/image/mysql_ref/binlog_process.png" alt="binlog_process" title="binlog_process"></p>
+<h3 id="group_commit">group commit</h3>
+<p>InnoDB在每次提交事务时，为了保证数据已经持久化到磁盘（Durable），需要调用一次fsync（或者是fdatasync、或者使用O_DIRECT选项等）来告知文件系统将可能在缓存中的数据刷新到磁盘。这里先讲一下文件写入机制，一般包括三个阶段：open，write，flush。基本知识： flush阶段：fdatasync（），只会刷新数据文件，不包括文件的metadata（如文件大小，时间戳等），fsync（）则会全部刷新，所以fsync做的事情要比其他的sync方式要多，故也非常昂贵。   innodb_flush_method用于控制innodb的刷新方式，废话少说，看下表和图就能一目了然。</p>
+<table>
+<thead>
+<tr>
+<th>innodb_flush_method</th>
+<th>open log</th>
+<th>flush log</th>
+<th>open datafile</th>
+<th>flush datafile</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td> fdatasync</td>
+<td></td>
+<td>fsync()</td>
+<td></td>
+<td>fsync()</td>
+</tr>
+<tr>
+<td> O_DSYNC</td>
+<td>O_SYNC</td>
+<td></td>
+<td></td>
+<td>fsync()</td>
+</tr>
+<tr>
+<td> O_DIRECT</td>
+<td></td>
+<td>fsync()</td>
+<td>O_DIRECT</td>
+<td>fsync()</td>
+</tr>
+<tr>
+<td> O_DIRECT_NO_FSYNC</td>
+<td></td>
+<td>fsync()</td>
+<td>O_DIRECT</td>
+<td></td>
+</tr>
+<tr>
+<td> All_O_DIRECT</td>
+<td>O_DIRECT</td>
+<td>fsync()</td>
+<td>O_DIRECT</td>
+<td>fsync()</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>这里有几个重点：</p>
+<ul>
+<li>innodb_flush_method 控制的不仅仅是redo log，还包括 数据文件。</li>
+<li>即便innodb_flush_method 设置的是任何值如：fdatasync，最终flush阶段，mysql为了考虑安全性，底层调用的是fsync(),而不是fdatasync();</li>
+<li>除了O_DIRECT_NO_FSYNC以外，InnoDB都使用fsync()刷新“数据文件”</li>
+<li>在open阶段，以O_SYNC方式打开文件，自身必须要求文件最终fsync()写入成功，所以不需要在flush阶段调用fsync()</li>
+</ul>
+<p>更直观的图如下：</p>
+<p><img src="/image/mysql_ref/flush_method.png" alt="flush_method" title="flush_method"></p>
+<p>问题：为什么O_Direct,ALL_O_Direct 方式绕过vfs后直接写文件，最终还要调用fsync呢？</p>
+<p>没错，他们写文件的时候，只会将文件的数据写入，最后一次fsync就是刷新文件的metadata。</p>
+<p>好了，介绍了那么多，现在回到正题。既然，fsync 那么消耗资源，如果可以将多次fsync合并成一次，<br>这样可以大大提升Mysql的写入效率。就这样的想法，5.0之后由于支持分布式事务和两阶段提交协议，当sync_binlog 设置成1后，为了保证Binlog中的事务顺序和redo log事务顺序一致，被动放弃了Group Commit。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">binlog_prepare (<span class="keyword">do</span> nothing)</div><div class="line"></div><div class="line"> innodb_xa_prepare  (加锁, 刷新<span class="keyword">redo</span> <span class="built_in">log</span>)</div><div class="line"></div><div class="line">  	<span class="keyword">write</span>() <span class="built_in">and</span> fsync() binary <span class="built_in">log</span>  </div><div class="line"></div><div class="line">  binlog_commit</div><div class="line"></div><div class="line">innobase_commit</div></pre></td></tr></table></figure>
+
+<p> 由于在innodb prepare 阶段加了锁，当sync_binlog=1时，也就意味着 write() and fsync() binary log是串行的，且每次只刷新一个事务。如果将nnodb_xa_prepare的锁去掉，又会导致binary log和redo log的顺序不一致，导致slave错乱。由于innodb 本身的prepare/commit 现在已经可以group commit，这里只要能够解决binlog 的commit顺序和innodb commit一致就可以完成。</p>
+<p> 于是，binlog Ordered Commit的概念被提出。</p>
+<p> <img src="/image/mysql_ref/ordered_commit.png" alt="ordered_commit" title="ordered_commit"></p>
+<p> <img src="/image/mysql_ref/ordered_commit_2.png" alt="ordered_commit_2" title="ordered_commit_2"></p>
+<p> 第一个进入队列的作为leader，后面的都是follower，由leader完成所有三阶段操作，这样既能并发，又能保证和innodb log的顺序一致。</p>
+<h3 id="multi_thread_slave（5-6）">multi thread slave（5.6）</h3>
+<p>5.6 的多线程复制是基于schema的。每类相同的库，由一个worker负责跟进。</p>
+<p><img src="/image/mysql_ref/mts_56.png" alt="mts_56" title="mts_56"></p>
+<p>特点：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>如果有一条语句操作多个库，那么这个是不会被调度的，还是走原来的流程。</div><div class="line"><span class="bullet">* </span>如果应用方只有一个库，根本提升不了效率。</div><div class="line"><span class="bullet">* </span>会导致slave 上的执行顺序被颠倒，导致传统模式的复制，无法change master。不过可以用GTID弥补。</div></pre></td></tr></table></figure>
+
+<h3 id="multi_thread_slave（5-7-2）">multi thread slave（5.7.2）</h3>
+<p>由于现在的mysql可以保证在同时在prepare阶段的事务order commit，所以利用这一点，只要两个事务在prepare阶段相交，且第一个事务commit完成前，后一个事务还在prepare阶段，就可以被安排并行执行。</p>
+<p><img src="/image/mysql_ref/mts_57.png" alt="mts_57" title="mts_57"></p>
+<h3 id="multi_thread_slave（MariaDB）">multi thread slave（MariaDB）</h3>
+<p>MariaDB的做法被认为是最好的，它是按照relay log的日志写入顺序作为slave的commit顺序。之前都是由</p>
+<p>一个sql线程读取和回放relay log日志，现在不同的是多个线程回放。它内部会维护一个数据结构<br>commit_order，里面有一个递增的计数器，每读relay-log一个事务，计数器会被分配，而且每一个线程读取<br>到的数据结构中，都会记录当前等待的commit事务和需要唤醒的事务，如果等待的事务没有commit，自己是没有办法提交的。。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">Struct commit_order</div><div class="line">{</div><div class="line">  <span class="keyword">Int</span> own_Commit_id<span class="comment">;</span></div><div class="line">  <span class="keyword">Int</span> Wait_commit_id<span class="comment">;</span></div><div class="line">  Bool waiting_for_commit；</div><div class="line">  Struct commit_order *waiter；</div><div class="line">  LIST waitees<span class="comment">;</span></div><div class="line">  LOCK_commit_order<span class="comment">;</span></div><div class="line">  COND_commit_order<span class="comment">;</span></div><div class="line">}</div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>当一个事务执行到提交阶段时，首先判断是否需要等待提交，若需要则进行条件等待</li>
+<li>当一个事务提交完毕之后，需要唤醒等待它的事务(Wait_commit_id++,Wait_commit_id—)</li>
+<li>回放日志是并行的，commit是串行的，事实上，即便是在master上，任何并发事务最终也是串行。</li>
+</ul>
+<h3 id="Row-based_Replication_Enhancements">Row-based Replication Enhancements</h3>
+<blockquote>
+<p>上面已经提到过，row模式的复制的缺点就是binlog文件会比statment格式的大很多，所以<br>为了提升效率，5.6 做了一些改进.</p>
+</blockquote>
+<ul>
+<li>SET binlog_row_image = [MINIMAL | NOBLOB | FULL] – default is FULL</li>
+<li>FULL：before &amp; after image 都会记录所有字段内容</li>
+<li>NOBLOB：当NOBLOB没有改变的时候，不会记录BLOB值</li>
+<li>MINIMAL：before image只记录主键，after image 只记录被修改的值</li>
+</ul>
+<p><img src="/image/mysql_ref/row_base_enhance.png" alt="row_base_enhance" title="row_base_enhance"></p>
+<h2 id="new_replication_GTID">new replication GTID</h2>
+<hr>
+<h3 id="GTID能解决什么问题">GTID能解决什么问题</h3>
+<ul>
+<li>传统模式的困扰1</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_solve_prop_1.png" alt="gtid_solve_prop_1" title="gtid_solve_prop_1"></p>
+<ul>
+<li>传统模式的困扰2</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_solve_prop_mts_2.png" alt="gtid_solve_prop_mts_2" title="gtid_solve_prop_mts_2"></p>
+<ul>
+<li>GTID make DBA’life easy</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_solve_prop_3.png" alt="gtid_solve_prop_3" title="gtid_solve_prop_3"></p>
+<h3 id="什么是GTID">什么是GTID</h3>
+<ul>
+<li>global transaction identifiers</li>
+<li>样例：965d996a-fea7-11e2-ba15-001e4fb6d589：1，即：$uuid:$tin</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">==UUID==</div><div class="line">	<span class="keyword">*</span> server_uuid 在auto.cnf中，如果此文件被删除，会自动重建且重新generate一个uuid</div><div class="line">	<span class="keyword">*</span> 128-bit identification number （uuid）</div><div class="line">	<span class="keyword">*</span> GTID 会写在binlog中</div><div class="line">==TIN==</div><div class="line">	<span class="keyword">*</span> TIN – 64-bit transaction identification number</div><div class="line"> 	<span class="keyword">*</span> 每一个事务会产生一个sequence，且递增</div><div class="line"> 	<span class="keyword">*</span> 从1开始，而不是0</div></pre></td></tr></table></figure>
+
+<h3 id="如何配置GTID">如何配置GTID</h3>
+<p>开启下面四个参数</p>
+<ul>
+<li><p>gtid_mode</p>
+</li>
+<li><p>log_bin(existed)</p>
+</li>
+<li><p>log-slave-updates</p>
+</li>
+<li><p>enforce-gtid-consistency</p>
+</li>
+</ul>
+<h3 id="新的复制协议_COM_BINLOG_DUMP_GTID">新的复制协议 COM_BINLOG_DUMP_GTID</h3>
+<ul>
+<li>Slave sends to master range of identifiers of executed transactions to master</li>
+<li>Master send all other transactions to slave</li>
+<li>同样的GTID不能被执行两次，如果有同样的GTID，会自动被skip掉。</li>
+</ul>
+<h3 id="binlog_的格式">binlog 的格式</h3>
+<ul>
+<li>GTID 写入binlog的格式图</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_bin_1.png" alt="gtid_bin_1" title="gtid_bin_1"></p>
+<ul>
+<li>详细格式图</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_bin_2.png" alt="gtid_bin_2" title="gtid_bin_2"></p>
+<h3 id="GTID_usage">GTID usage</h3>
+<p>mysql&gt; CHANGE MASTER TO MASTER_AUTO_POSITION=1, MASTER_HOST=’…’;</p>
+<h3 id="Automatic_Positioning">Automatic Positioning</h3>
+<ul>
+<li><p>Slave sends @@gtid_executed to master</p>
+</li>
+<li><p>Master sends all other transactions to slave</p>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_new_protocol.png" alt="gtid_new_protocol" title="gtid_new_protocol"></p>
+<ul>
+<li>fail over</li>
+</ul>
+<p><img src="/image/mysql_ref/gtid_fail_over.png" alt="gtid_fail_over" title="gtid_fail_over"></p>
+<h3 id="如何skip_transaction">如何skip transaction</h3>
+<ul>
+<li><p>传统模式很好搞定，一条skip 命令即可。</p>
+</li>
+<li><p>GTID 模式可以这样么？why？</p>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/bad_tran.png" alt="bad_tran" title="bad_tran"></p>
+<p>由此可知，我们不能这样做，当然Mysql也不支持这样的skip命令。</p>
+<ul>
+<li><p>如果slave报错，我们如何skip掉这个bad 事务呢？官方推荐插入空事务</p>
+<ul>
+<li>set gtid_next=”id2”; commit； 啥也不做，只是插入一个事务id</li>
+</ul>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/bad_tran_2.png" alt="bad_tran_2" title="bad_tran_2"></p>
+<ul>
+<li><strong>思考，这样做真的天衣无缝么？</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">* 如果这台插入空事务的slave 某一天被提升成为<span class="keyword">new</span> master，会有什么后果？</div><div class="line">    后果就是：其他还没有执行成功这条事务的slave，当<span class="keyword">change</span> <span class="keyword">new</span> master的时候，就不会执行这个事务了。（相当于丢失了这个事务）</div><div class="line">    </div><div class="line">解决办法就是：</div><div class="line"><span class="number">1</span>）不要插入空事务，用<span class="keyword">set</span> sql_log_bin=<span class="number">0</span>模式，修复好slave，让<span class="keyword">bad</span> transction 修好。</div><div class="line"><span class="number">2</span>）如果已经插入了空事务，那么就用<span class="keyword">pt</span>-table-checksum + <span class="keyword">pt</span>-<span class="keyword">sync</span>（<span class="keyword">set</span> sql_log_bin=<span class="number">0</span>） 修复数据。</div></pre></td></tr></table></figure>
+
+<h3 id="Purged_and_Executed">Purged and Executed</h3>
+<p><img src="/image/mysql_ref/purge_exec.png" alt="purge_exec" title="purge_exec"></p>
+<h3 id="如何搭建GTID环境下的slave">如何搭建GTID环境下的slave</h3>
+<ul>
+<li><p>第一种情况，如果master有所有日志，那么slave啥都需要，直接change master即可。</p>
+</li>
+<li><p>第二种情况，就是从拉出全备，然后change master，这里的关键点就是：SET @@GLOBAL.GTID_PURGED = “@@GTID_EXECUTED at backup”</p>
+</li>
+</ul>
+<p><img src="/image/mysql_ref/restore_gtid.png" alt="restore_gtid" title="restore_gtid"></p>
+<ul>
+<li>试想想看，如果不设置GTID_PURGED，GTID_EXECUTED 会怎么样呢？</li>
+</ul>
+<h3 id="GTID_major_limitation">GTID major limitation</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>更新非事务引擎</div><div class="line"><span class="code">	1) MASTER:对一个innodb表做一个多sql更新的事务,效果是产生一个GTID</span></div><div class="line"><span class="code">	2) SLAVE:对应的表是MyISAM引擎.执行这个GTID的第一个语句后就会报错,因为非事务引擎 一个sql就是一个事务.</span></div><div class="line"><span class="code">	</span></div><div class="line"><span class="bullet">* </span>一个SQL同时操作Innodb引擎和MyISAM引擎</div><div class="line"></div><div class="line"><span class="bullet">* </span>在一个replication group中,所有的mysql必须统一开启或者统一关闭GTID</div><div class="line">功能.</div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>GTID_MODE是not online的,这个限制比较坑爹，个人认为是最大的缺点。（据说 5.7 已经online了）</div></pre></td></tr></table></figure>
+
+<h2 id="参考资料">参考资料</h2>
+<ul>
+<li>以上图片，均来自互联网</li>
+<li>博客和书籍</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div></pre></td><td class="code"><pre><div class="line">==书籍==</div><div class="line">* innodb 存储引擎</div><div class="line">* 高性能Mysql</div><div class="line">* 官方文档-复制，GTID</div><div class="line">* mysql 内核</div><div class="line"></div><div class="line">==博客==</div><div class="line">http:<span class="regexp">//www</span>.youtube.com/watch?v=kaoj_3lgYqQ  </div><div class="line">http:<span class="regexp">//www</span>.youtube.com/watch?v=zZ02_nhzY0w<span class="comment">#t=172</span></div><div class="line">http:<span class="regexp">//www</span>.youtube.com/watch?v=oOHyV54dVt<span class="number">0</span></div><div class="line">http:<span class="regexp">//www</span>.youtube.com/watch?v=PyMMC4cxB0k</div><div class="line"></div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/category/<span class="number">264353</span></div><div class="line">http:<span class="regexp">//qing</span>.blog.sina.com.cn1757661907/<span class="number">68</span>c3cad333002qhe.htmlsudaref=<span class="number">209.116</span>.<span class="number">186.246</span></div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/blog/<span class="number">1770399</span>vv</div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/blog/<span class="number">1770401</span></div><div class="line">http:<span class="regexp">//www</span>.mysqlperformanceblog.com/<span class="number">2013</span>/<span class="number">05</span>/<span class="number">21</span>/replication-in-mysql-<span class="number">5</span>-<span class="number">6</span>-gtids-benefits-<span class="keyword">and</span>-limitations-part-<span class="number">1</span>/</div><div class="line">http:<span class="regexp">//www</span>.mysqlperformanceblog.com/<span class="number">2013</span>/<span class="number">05</span>/<span class="number">30</span>/replication-in-mysql-<span class="number">5</span>-<span class="number">6</span>-gtids-benefits-<span class="keyword">and</span>-limitations-part-<span class="number">2</span>/</div><div class="line">http:<span class="regexp">//www</span>.mysqlperformanceblog.com/<span class="number">2013</span>/<span class="number">02</span>/08/how-to-createrestore-a-slave-using-gtid-replication-in-mysql-<span class="number">5</span>-<span class="number">6</span>/</div><div class="line">http:<span class="regexp">//www</span>.mysqlperformanceblog.com/<span class="number">2014</span>/<span class="number">05</span>/09/gtids-in-mysql-<span class="number">5</span>-<span class="number">6</span>-new-replication-protocol-new-ways-to-<span class="keyword">break</span>-replication/  --New replication protocol; new ways to <span class="keyword">break</span> replication</div><div class="line">http:<span class="regexp">//www</span>.mysqlperformanceblog.com/<span class="number">2014</span>/<span class="number">05</span>/<span class="number">19</span>/errant-transactions-major-hurdle-<span class="keyword">for</span>-gtid-based-failover-in-mysql-<span class="number">5</span>-<span class="number">6</span>/ --errant transactions</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">http:<span class="regexp">//www</span>.orczhou.com/<span class="keyword">index</span>.php/<span class="number">2010</span>/08/<span class="keyword">time</span>-to-group-commit-<span class="number">1</span>/</div><div class="line">http:<span class="regexp">//www</span>.orczhou.com/<span class="keyword">index</span>.php/<span class="number">2011</span>/<span class="number">12</span>/<span class="keyword">time</span>-to-group-commit-<span class="number">2</span>/</div><div class="line">http:<span class="regexp">//www</span>.cnblogs.com/hustcat/p/<span class="number">3577584</span>.html</div><div class="line">http:<span class="regexp">//www</span>.isadba.com</div><div class="line">http:<span class="regexp">//kristiannielsen</span>.livejournal.com/<span class="number">12254</span>.html</div><div class="line">http:<span class="regexp">//kristiannielsen</span>.livejournal.com/<span class="number">12408</span>.html</div><div class="line">http:<span class="regexp">//kristiannielsen</span>.livejournal.com/<span class="number">12553</span>.html</div><div class="line">http:<span class="regexp">//kristiannielsen</span>.livejournal.com/<span class="number">12810</span>.html</div><div class="line"></div><div class="line">http:<span class="regexp">//www</span>.orczhou.com/<span class="keyword">index</span>.php/<span class="number">2009</span>/08/innodb_flush_method-file-io/</div><div class="line">http:<span class="regexp">//www</span>.woqutech.com/?p=<span class="number">1459</span></div><div class="line"></div><div class="line">http:<span class="regexp">//hatemysql</span>.com/<span class="number">2011</span>/<span class="number">10</span>/<span class="number">29</span>/mysql<span class="variable">%E4</span><span class="variable">%BA</span><span class="variable">%8B</span><span class="variable">%E4</span><span class="variable">%BB</span><span class="variable">%B6</span><span class="variable">%E7</span><span class="variable">%B1</span><span class="variable">%BB</span><span class="variable">%E5</span><span class="variable">%9E</span><span class="variable">%8B</span><span class="variable">%E5</span><span class="variable">%92</span><span class="variable">%8C</span><span class="variable">%E6</span><span class="variable">%96</span><span class="variable">%87</span><span class="variable">%E4</span><span class="variable">%BB</span><span class="variable">%B6</span><span class="variable">%E5</span><span class="variable">%A4</span><span class="variable">%B4</span><span class="variable">%E9</span><span class="variable">%95</span><span class="variable">%BF</span><span class="variable">%E5</span><span class="variable">%BA</span><span class="variable">%A6</span>/</div><div class="line">http:<span class="regexp">//hatemysql</span>.com/<span class="number">2011</span>/<span class="number">10</span>/<span class="number">29</span>/mysql-replication<span class="variable">%E6</span><span class="variable">%95</span><span class="variable">%B0</span><span class="variable">%E6</span><span class="variable">%8D</span><span class="variable">%AE</span><span class="variable">%E5</span><span class="variable">%A4</span><span class="variable">%8D</span><span class="variable">%E5</span><span class="variable">%88</span><span class="variable">%B6</span><span class="variable">%E6</span><span class="variable">%A0</span><span class="variable">%BC</span><span class="variable">%E5</span><span class="variable">%BC</span><span class="variable">%8F</span>/</div><div class="line">http:<span class="regexp">//hatemysql</span>.com/<span class="number">2011</span>/<span class="number">12</span>/<span class="number">14</span>/mysql-show-slave-status/ </div><div class="line">http:<span class="regexp">//hatemysql</span>.com/<span class="number">2013</span>/<span class="number">04</span>/<span class="number">15</span>/mysql<span class="variable">%E6</span><span class="variable">%95</span><span class="variable">%B0</span><span class="variable">%E6</span><span class="variable">%8D</span><span class="variable">%AE</span><span class="variable">%E4</span><span class="variable">%B8</span><span class="variable">%A2</span><span class="variable">%E5</span><span class="variable">%A4</span><span class="variable">%B1</span><span class="variable">%E8</span><span class="variable">%AE</span><span class="variable">%A8</span><span class="variable">%E8</span><span class="variable">%AE</span><span class="variable">%BA</span>/ </div><div class="line">http:<span class="regexp">//hatemysql</span>.com/<span class="number">2012</span>/<span class="number">11</span>/<span class="number">23</span>/<span class="variable">%E6</span><span class="variable">%B7</span><span class="variable">%98</span><span class="variable">%E5</span><span class="variable">%AE</span><span class="variable">%9D</span><span class="variable">%E7</span><span class="variable">%89</span><span class="variable">%A9</span><span class="variable">%E6</span><span class="variable">%B5</span><span class="variable">%81mysql</span>-slave<span class="variable">%E6</span><span class="variable">%95</span><span class="variable">%B0</span><span class="variable">%E6</span><span class="variable">%8D</span><span class="variable">%AE</span><span class="variable">%E4</span><span class="variable">%B8</span><span class="variable">%A2</span><span class="variable">%E5</span><span class="variable">%A4</span><span class="variable">%B1</span><span class="variable">%E8</span><span class="variable">%AF</span><span class="variable">%A6</span><span class="variable">%E7</span><span class="variable">%BB</span><span class="variable">%86</span><span class="variable">%E5</span><span class="variable">%8E</span><span class="variable">%9F</span><span class="variable">%E5</span><span class="variable">%9B</span><span class="variable">%A0</span>/ </div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/blog/<span class="number">1770398</span></div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/blog/<span class="number">1770399</span></div><div class="line">http:<span class="regexp">//in</span>355hz.iteye.com/blog/<span class="number">1770401</span></div><div class="line"></div><div class="line">http:<span class="regexp">//www</span>.mysqlplay.com/<span class="number">2013</span>/<span class="number">12</span>/mysql<span class="variable">%E5</span><span class="variable">%B9</span><span class="variable">%B6</span><span class="variable">%E8</span><span class="variable">%A1</span><span class="variable">%8C</span><span class="variable">%E5</span><span class="variable">%A4</span><span class="variable">%8D</span><span class="variable">%E5</span><span class="variable">%88</span><span class="variable">%B6</span><span class="variable">%E7</span><span class="variable">%9A</span><span class="variable">%84</span><span class="variable">%E9</span><span class="variable">%A1</span><span class="variable">%BA</span><span class="variable">%E5</span><span class="variable">%BA</span><span class="variable">%8F</span><span class="variable">%E6</span><span class="variable">%8F</span><span class="variable">%90</span><span class="variable">%E4</span><span class="variable">%BA</span><span class="variable">%A4</span>/ </div><div class="line"></div><div class="line">http:<span class="regexp">//</span>Binary <span class="keyword">log</span> API<span class="number">_</span> A Library <span class="keyword">for</span> Change Data Capture using MySQL Presentation</div><div class="line">http:<span class="regexp">//</span>CON5084_Carvalho-CON5084-MySQLReplicationGlobalTransactionIdentifiers</div><div class="line">http:<span class="regexp">//</span>Failover_GTID_MySQL_56</div><div class="line">http:<span class="regexp">//</span>GTID_based_replication_for_MySQL_High_Availability_057<span class="number">0</span></div><div class="line">http:<span class="regexp">//</span>MySQL_5.<span class="number">6</span>-InnoDB_Features_Scalability</div><div class="line">http:<span class="regexp">//mysql</span>_56_GTID_in_a_nutshell</div><div class="line">http:<span class="regexp">//</span>MySQL_GTID_in_Production</div><div class="line">http:<span class="regexp">//</span>MySQL_replication_internals </div><div class="line">http:<span class="regexp">//</span>MySQL_Replication_Mythology</div><div class="line">http:<span class="regexp">//pythian</span>-repl-<span class="number">121204083902</span>-phpapp01</div><div class="line">http:<span class="regexp">//</span>Replication_MySQL_56-expanded</div><div class="line">http:<span class="regexp">//</span>TUT5019_Carvalho-TUT5019-MySQLReplicationTipsAndTricks</div><div class="line"></div><div class="line">http:<span class="regexp">//mysqllover</span>.com/?p=<span class="number">87</span></div><div class="line">http:<span class="regexp">//www</span>.fromdual.com/gtid_in_action</div><div class="line">http:<span class="regexp">//fromdual</span>.com/replication-troubleshooting-classic-vs-gtid </div><div class="line">http:<span class="regexp">//blog</span>.booking.com/mysql-<span class="number">5.6</span>-gtids-evaluation-<span class="keyword">and</span>-online-migration.html  </div><div class="line">http:<span class="regexp">//blog</span>.marceloaltmann.com/en-mysql-<span class="number">5</span>-<span class="number">6</span>-replication-with-gtid-global-transaction-id-pt-replicacao-com-gtid/</div><div class="line">http:<span class="regexp">//datacharmer</span>.blogspot.com/<span class="number">2013</span>/<span class="number">02</span>/parallel-replication-<span class="keyword">and</span>-gtid-tale-of.html</div><div class="line">http:<span class="regexp">//scriptingmysql</span>.wordpress.com/<span class="number">2012</span>/<span class="number">12</span>/<span class="number">06</span>/using-the-mysql-script-mysqlfailover-<span class="keyword">for</span>-automatic-failover-with-mysql-<span class="number">5</span>-<span class="number">6</span>-gtid-replication/</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/07/17/mysql_replication_inside/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/07/17/22_performance_schema/"  title="Mysql5.6 Performance_schema 深入浅出">
+ <strong>NEXT:</strong><br/> 
+ <span>Mysql5.6 Performance_schema 深入浅出
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/07/17/mysql_replication_inside/" data-title="" data-url="https://Keithlan.github.io/2015/07/17/mysql_replication_inside/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#主要的大纲"><span class="toc-number">1.</span> <span class="toc-text">主要的大纲</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#classic_replication"><span class="toc-number">2.</span> <span class="toc-text">classic replication</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#复制的历史"><span class="toc-number">2.1.</span> <span class="toc-text">复制的历史</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#复制结构流程图"><span class="toc-number">2.2.</span> <span class="toc-text">复制结构流程图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#show_slave_status"><span class="toc-number">2.3.</span> <span class="toc-text">show slave status</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_状态"><span class="toc-number">2.4.</span> <span class="toc-text">IO_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_状态"><span class="toc-number">2.5.</span> <span class="toc-text">SQL_thread 状态</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IO_thread_数据格式（5-1）"><span class="toc-number">2.6.</span> <span class="toc-text">IO thread 数据格式（5.1）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SQL_thread_数据格式（5-1）"><span class="toc-number">2.7.</span> <span class="toc-text">SQL thread 数据格式（5.1）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#replication_internal"><span class="toc-number">3.</span> <span class="toc-text">replication internal</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是binlog？"><span class="toc-number">3.1.</span> <span class="toc-text">什么是binlog？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_格式和类型"><span class="toc-number">3.2.</span> <span class="toc-text">binlog 格式和类型</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_internal"><span class="toc-number">3.3.</span> <span class="toc-text">binlog internal</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_处理流程"><span class="toc-number">3.4.</span> <span class="toc-text">binlog 处理流程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#group_commit"><span class="toc-number">3.5.</span> <span class="toc-text">group commit</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-6）"><span class="toc-number">3.6.</span> <span class="toc-text">multi thread slave（5.6）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（5-7-2）"><span class="toc-number">3.7.</span> <span class="toc-text">multi thread slave（5.7.2）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#multi_thread_slave（MariaDB）"><span class="toc-number">3.8.</span> <span class="toc-text">multi thread slave（MariaDB）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Row-based_Replication_Enhancements"><span class="toc-number">3.9.</span> <span class="toc-text">Row-based Replication Enhancements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#new_replication_GTID"><span class="toc-number">4.</span> <span class="toc-text">new replication GTID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID能解决什么问题"><span class="toc-number">4.1.</span> <span class="toc-text">GTID能解决什么问题</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是GTID"><span class="toc-number">4.2.</span> <span class="toc-text">什么是GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何配置GTID"><span class="toc-number">4.3.</span> <span class="toc-text">如何配置GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#新的复制协议_COM_BINLOG_DUMP_GTID"><span class="toc-number">4.4.</span> <span class="toc-text">新的复制协议 COM_BINLOG_DUMP_GTID</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#binlog_的格式"><span class="toc-number">4.5.</span> <span class="toc-text">binlog 的格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_usage"><span class="toc-number">4.6.</span> <span class="toc-text">GTID usage</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Automatic_Positioning"><span class="toc-number">4.7.</span> <span class="toc-text">Automatic Positioning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何skip_transaction"><span class="toc-number">4.8.</span> <span class="toc-text">如何skip transaction</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Purged_and_Executed"><span class="toc-number">4.9.</span> <span class="toc-text">Purged and Executed</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何搭建GTID环境下的slave"><span class="toc-number">4.10.</span> <span class="toc-text">如何搭建GTID环境下的slave</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GTID_major_limitation"><span class="toc-number">4.11.</span> <span class="toc-text">GTID major limitation</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-number">5.</span> <span class="toc-text">参考资料</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>12</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
