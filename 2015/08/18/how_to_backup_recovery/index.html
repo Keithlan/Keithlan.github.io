@@ -1,0 +1,423 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL 备份与恢复 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。接下来，我们聊聊备份恢复的那些事儿   
+
+备份和恢复业界指标
+
+常用备份方式
+
+备份&amp;amp;恢复速度
+ 
+恢复架构图
+  
+恢复的原理和实践
+
+mysqlbinlog + script
+
+11) 这种方法，我想用过的人都知道，不仅">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/08/18/how_to_backup_recovery/" title="MySQL 备份与恢复" itemprop="url">MySQL 备份与恢复</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-08-18T07:32:24.000Z" itemprop="datePublished">Aug 18 2015</time>
+    Updated:<time datetime="2015-08-18T07:52:17.000Z" itemprop="dateModified">Aug 18 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#备份和恢复业界指标"><span class="toc-number">1.</span> <span class="toc-text">备份和恢复业界指标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常用备份方式"><span class="toc-number">2.</span> <span class="toc-text">常用备份方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#备份&恢复速度"><span class="toc-number">3.</span> <span class="toc-text">备份&恢复速度</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复架构图"><span class="toc-number">4.</span> <span class="toc-text">恢复架构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复的原理和实践"><span class="toc-number">5.</span> <span class="toc-text">恢复的原理和实践</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p>大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。<br>接下来，我们聊聊备份恢复的那些事儿   </p>
+</blockquote>
+<h2 id="备份和恢复业界指标">备份和恢复业界指标</h2>
+<p><img src="/image/mysql_standard/rpo.png" alt="rpo" title="rpo"></p>
+<h2 id="常用备份方式">常用备份方式</h2>
+<p><img src="/image/mysql_standard/back_type.png" alt="back_type" title="back_type"></p>
+<h2 id="备份&amp;恢复速度">备份&amp;恢复速度</h2>
+<p><img src="/image/mysql_standard/back_time.png" alt="back_time" title="back_time"> </p>
+<h2 id="恢复架构图">恢复架构图</h2>
+<p><img src="/image/mysql_standard/recover.png" alt="recover" title="recover">  </p>
+<h2 id="恢复的原理和实践">恢复的原理和实践</h2>
+<ul>
+<li><strong>mysqlbinlog + script</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">1) 这种方法，我想用过的人都知道，不仅麻烦，还很有可能出错</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>利用IO-thread 恢复</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line">0) 必须关闭binlog server的MySQL实例</div><div class="line"></div><div class="line">1) 修改binlog server的部分信息</div><div class="line"></div><div class="line"></div><div class="line">	a) vi /etc/my.cnf</div><div class="line">		log-bin=/data/mysql.bin/binserver</div><div class="line">		</div><div class="line">	b）vi binserver.index</div><div class="line">		 /data/mysql.bin/binserver.000001</div><div class="line">		 /data/mysql.bin/binserver.000002</div><div class="line">		 ... 以此类推（需要恢复的binlog日志）</div><div class="line">		</div><div class="line">	c）<span class="operator"><span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span> 检查一下是否修改有效。</span></div><div class="line">	</div><div class="line">	d) 注意点：</div><div class="line">		binserver.<span class="keyword">index</span> 里面写的内容 一定要和外面一致。</div><div class="line">		</div><div class="line">		比如： cat  binserver.<span class="keyword">index</span></div><div class="line">				/<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/binserver<span class="number">.000001</span></div><div class="line">				/<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/binserver<span class="number">.000002</span></div><div class="line">		那么:  /<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/ 里面一定要有 binserver<span class="number">.000001</span>，binserver<span class="number">.000002</span> 文件</div><div class="line">		</div><div class="line"><span class="number">2</span>）<span class="keyword">full</span> <span class="keyword">backup</span> <span class="keyword">server</span> 导入全备的数据，记录要同步的文件，postion，以及只同步那些表，都设置好。</div><div class="line">	a ) 从全备中拉出需要还原的表，放在对应的DB里面。</div><div class="line">	b ) 设置过滤规则，需要在my.cnf文件中设置，需要重启mysql才能生效</div><div class="line">		比如：我只恢复某几张表</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=newhome_db.ugc_dianping</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=newhome_db.ugc_dianping_content</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=heartbeat_db.heartbeat</div><div class="line">	c）关于复制过滤规则的详细说明，请看http://keithlan.github.io/<span class="number">2015</span>/<span class="number">07</span>/<span class="number">14</span>/mysql_replicate_rule/</div><div class="line">	</div><div class="line"><span class="number">3</span>）<span class="keyword">change</span> <span class="keyword">master</span> 的positon 就是：从全部拉出来的文件的<span class="keyword">position</span>：relay-<span class="keyword">log</span>.info</div><div class="line"></div><div class="line"><span class="number">4</span>）<span class="keyword">start</span> <span class="keyword">slave</span> until <span class="keyword">master</span> <span class="keyword">position</span> 就是： 恢复截止的<span class="keyword">position</span></div><div class="line">	<span class="keyword">START</span> <span class="keyword">SLAVE</span> UNTIL MASTER_LOG_FILE = <span class="string">'log_name'</span>, MASTER_LOG_POS = log_pos</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>利用SQL-Thread</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">原理同上</div></pre></td></tr></table></figure>
+
+<h2 id="总结">总结</h2>
+<blockquote>
+<p>以上，我用的比较多的就是利用IO-thread来做基于position和time的恢复。<br>如果大家还有什么好的方法，互相交流学习下，Thanks</p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-feature/">MySQL feature</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/08/18/how_to_backup_recovery/" data-title="MySQL 备份与恢复 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/07/17/22_performance_schema/"  title="Mysql5.6 Performance_schema 深入浅出">
+ <strong>NEXT:</strong><br/> 
+ <span>Mysql5.6 Performance_schema 深入浅出
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/08/18/how_to_backup_recovery/" data-title="MySQL 备份与恢复" data-url="https://Keithlan.github.io/2015/08/18/how_to_backup_recovery/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#备份和恢复业界指标"><span class="toc-number">1.</span> <span class="toc-text">备份和恢复业界指标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常用备份方式"><span class="toc-number">2.</span> <span class="toc-text">常用备份方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#备份&恢复速度"><span class="toc-number">3.</span> <span class="toc-text">备份&恢复速度</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复架构图"><span class="toc-number">4.</span> <span class="toc-text">恢复架构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复的原理和实践"><span class="toc-number">5.</span> <span class="toc-text">恢复的原理和实践</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>14</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
