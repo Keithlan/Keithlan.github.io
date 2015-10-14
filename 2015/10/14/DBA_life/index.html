@@ -1,0 +1,514 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="对DBA的一些思考
+
+DBA的认知？DBA的价值？DBA的未来？
+
+依稀记得从去年的某个时候，就开始思考这几个问题了。当时，咨询过业界的一些大牛，也和身边的一些DBA讨论过，可是一直都没有得到我想要的答案。今年国庆的7天oncall，突然有了些灵感，故写下来作为我今后的守则。
+DBA的认知
+
+DBA">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/10/14/DBA_life/" title="" itemprop="url"></a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-10-14T02:25:21.000Z" itemprop="datePublished">Oct 14 2015</time>
+    Updated:<time datetime="2015-10-14T02:23:54.000Z" itemprop="dateModified">Oct 14 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#对DBA的一些思考"><span class="toc-number">1.</span> <span class="toc-text">对DBA的一些思考</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">1.1.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">1.2.</span> <span class="toc-text">DBA的价值</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、稳定"><span class="toc-number">1.2.1.</span> <span class="toc-text">一、稳定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二、性能"><span class="toc-number">1.2.2.</span> <span class="toc-text">二、性能</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1_高性能"><span class="toc-number">1.2.2.1.</span> <span class="toc-text">2.1 高性能</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2_高扩展"><span class="toc-number">1.2.2.2.</span> <span class="toc-text">2.2 高扩展</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三、服务"><span class="toc-number">1.2.3.</span> <span class="toc-text">三、服务</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1_如何让老板幸福"><span class="toc-number">1.2.3.1.</span> <span class="toc-text">3.1 如何让老板幸福</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2_如何让开发幸福"><span class="toc-number">1.2.3.2.</span> <span class="toc-text">3.2 如何让开发幸福</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-3_如何让自己幸福"><span class="toc-number">1.2.3.3.</span> <span class="toc-text">3.3 如何让自己幸福</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">1.3.</span> <span class="toc-text">DBA的未来</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#危机感"><span class="toc-number">1.3.1.</span> <span class="toc-text">危机感</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#拨开云雾"><span class="toc-number">1.3.2.</span> <span class="toc-text">拨开云雾</span></a></li></ol></li></ol></li></ol>
+		</div>
+		
+		<h1 id="对DBA的一些思考">对DBA的一些思考</h1>
+<blockquote>
+<p>DBA的认知？<br>DBA的价值？<br>DBA的未来？</p>
+</blockquote>
+<p>依稀记得从去年的某个时候，就开始思考这几个问题了。<br>当时，咨询过业界的一些大牛，也和身边的一些DBA讨论过，<br>可是一直都没有得到我想要的答案。今年国庆的7天oncall，突然有了些灵感，故写下来作为我今后的守则。</p>
+<h2 id="DBA的认知">DBA的认知</h2>
+<hr>
+<p>DBA 是什么？ 我想这个问题大家一定不陌生。</p>
+<p>回答：  </p>
+<ul>
+<li><strong>DBA: Doctor of Business Administration 工商管理博士</strong>   </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">呵呵~~</div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li><strong>DBA: DataBase Administrator 数据库管理员</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">应该都是这么认为的吧。不过，传统DBA大部分都是这样的角色。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>DBA：DataBase Architect 数据库架构师</strong>  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">区别不用多说了吧。你想成为什么样的人，完全取决于你的态度和认知。</div></pre></td></tr></table></figure>
+
+<h2 id="DBA的价值">DBA的价值</h2>
+<hr>
+<blockquote>
+<p>DBA的职责和工作内容<br>DBA的核心价值</p>
+</blockquote>
+<p>DBA的工作内容&amp;内心读白：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">开发： DBA整天都在做啥？除了执行下SQL，其他也没啥事吧  ~~~   </div><div class="line">DBA： 一天到晚忙死了，但是也不知道忙了个啥，整天就在擦屁股，救火 ~~~</div></pre></td></tr></table></figure>
+
+<p>回答以上问题，往下看…</p>
+<p>为什么会有DBA这个职位呢？</p>
+<p>DBA的核心价值又是什么呢？</p>
+<p>换位思考下，如果把自己当做是公司的老板，你会怎么考虑这个问题，想想其实很简单了。</p>
+<blockquote>
+<p>首先：我不希望数据库挂掉，应该要 365 <em> 7 </em> 24 对外提供服务。<br>其次：我希望它很快，很快，很快。<br>最后：幸福感</p>
+</blockquote>
+<p>最后也不难总结了</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">核心价值： 稳定，性能，服务，让<span class="pseudo">DB</span>变得更简单</div></pre></td></tr></table></figure>
+
+<h3 id="一、稳定">一、稳定</h3>
+<blockquote>
+<p>可靠性： 99.999% 提供服务 </p>
+</blockquote>
+<ul>
+<li><strong>卓越：避免故障发生，防火比救火重要</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">* 哪里可能会有问题： 监控</div><div class="line">	1. DBMO</div><div class="line">	2. slow	 </div><div class="line">	</div><div class="line">* 具体分析点：point</div><div class="line">	1. slow 分析系统</div><div class="line">	2. SQL 智能分析</div><div class="line">	3. My-Redis 缓存失效分析</div><div class="line">	4. SQL 误操作预防，show processlist 分析</div><div class="line">	5. TMC 分析&预防 </div><div class="line">	6. disk 自动化分析</div><div class="line">	7. util 分析</div><div class="line">	8. load 分析</div><div class="line">	9. swap 分析</div><div class="line">	10. slave 延迟</div><div class="line">	11. Replication error： 1048，1062...</div><div class="line">	12. 如何监控‘我们的监控系统’</div><div class="line">	13. DDL & SQL 预审核</div><div class="line">	14. 测试（基准测试 + 压力测试）</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>优雅：保证服务不受影响，胸有成足</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* HA</div><div class="line">	1. MHA </div><div class="line">	2. MHA + GTID</div><div class="line">	 </div><div class="line"></div><div class="line">* 集群</div><div class="line">	1. Percona XtraDB Cluster</div><div class="line">	2. MariaDB Galera Cluster</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>高效：快速修复，急中生智</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>数据恢复</div><div class="line"><span class="bullet">* </span>监控+自动化修复</div></pre></td></tr></table></figure>
+
+<h3 id="二、性能">二、性能</h3>
+<blockquote>
+<p>高性能，可扩展  </p>
+</blockquote>
+<h4 id="2-1_高性能">2.1 高性能</h4>
+<ul>
+<li><strong>MySQL + NoSQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* 缓存为王，用好NoSQL,来弥补MySQL的不足</div><div class="line">* 数据架构方案的选择，会导致不同的性能表现</div><div class="line">	<span class="number">1.</span> MySQL + Hbase </div><div class="line">	<span class="number">2.</span> MySQL + Redis</div><div class="line">	<span class="number">3.</span> MySQL + MongoDB</div><div class="line">	以上，what，<span class="built_in">why</span>，how，how good 四维分析</div><div class="line">* 日志分析和管理（general <span class="built_in">log</span>，slow <span class="built_in">log</span>，tcpdump <span class="built_in">log</span>，binlog）</div></pre></td></tr></table></figure>
+
+
+<ul>
+<li><strong>slow query</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>为什么会有slow？</div><div class="line"><span class="bullet">2. </span>哪些slow 值得优化？</div><div class="line"><span class="bullet">3. </span>怎么优化？</div><div class="line"><span class="bullet">4. </span>如何彻底避免类似SQL再次出现？SQL最佳实践？</div><div class="line"><span class="bullet">5. </span>如何主动积极的去消除slow？</div></pre></td></tr></table></figure>
+
+<h4 id="2-2_高扩展">2.2 高扩展</h4>
+<ul>
+<li><strong>scale up</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>如何快速提升主机的处理能力？</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>scale out</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">1. 查询迁移</div><div class="line">	* 如何干净，快速的切换query？</div><div class="line">		DNS？</div><div class="line">		LVS？</div><div class="line">		VIP？</div><div class="line">		</div><div class="line">2. 写入迁移</div><div class="line">	* 目前还没有办法做到？</div><div class="line">	</div><div class="line">3. 水平拆分</div><div class="line">	* 分库分表</div><div class="line">	* 中间件 	</div><div class="line"></div><div class="line">4. 垂直拆分</div><div class="line">	* 如何快速拆分库</div><div class="line">		a）如何快速迁移一个库的query</div><div class="line">	* 如何快速拆分表</div><div class="line">		b）如何快速迁移一个表的query</div><div class="line">	</div><div class="line">5. 数据库升级</div><div class="line">	* 如何快速，安全，优雅的升级</div></pre></td></tr></table></figure>
+
+<h3 id="三、服务">三、服务</h3>
+<blockquote>
+<p>对内服务<br>对外服务  </p>
+</blockquote>
+<h4 id="3-1_如何让老板幸福">3.1 如何让老板幸福</h4>
+<ul>
+<li><strong>赚钱 — 保障网站稳定，快速的运行就是赚钱</strong></li>
+<li><strong>省钱 — 合理的资源分配，垃圾数据清理</strong></li>
+</ul>
+<h4 id="3-2_如何让开发幸福">3.2 如何让开发幸福</h4>
+<ul>
+<li><strong> 让开发专心写业务代码，其他一切都应该透明</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">相关服务：</div><div class="line"></div><div class="line"><span class="bullet">* </span>DDL --大表很痛苦，沟通成本</div><div class="line"><span class="bullet">* </span>库表的拆分&迁移 -- SQL无法快速迁移</div><div class="line"><span class="bullet">* </span>实例的迁移 -- SQL无法快速迁移</div><div class="line"><span class="bullet">* </span>数据归档 -- 性能和容量 </div><div class="line"><span class="bullet">* </span>slow sql推进  -- 缓慢</div><div class="line"><span class="bullet">* </span>数据误操作的预防 -- 难 </div><div class="line"><span class="bullet">* </span>恢复 -- 速度</div><div class="line"><span class="bullet">* </span>开发对SQL的认知</div></pre></td></tr></table></figure>
+
+<h4 id="3-3_如何让自己幸福">3.3 如何让自己幸福</h4>
+<ul>
+<li><strong>自动化一切,Make DBA’s life easy</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">规范化 --&gt; 流程化 --&gt; 自动化 --&gt; 平台化 --&gt; 云服务化 ， 这是趋势。</div><div class="line"></div><div class="line"><span class="bullet">* </span>DB服务器自动化初始</div><div class="line"><span class="bullet">* </span>MySQL 一键安装</div><div class="line"><span class="bullet">* </span>DBRT自动审核系统</div><div class="line"><span class="bullet">* </span>自动化备份系统</div><div class="line"><span class="bullet">* </span>自动化归档系统</div><div class="line"><span class="bullet">* </span>自动化扩容</div><div class="line"><span class="bullet">* </span>自动化索引创建和优化</div><div class="line"><span class="bullet">* </span>自动化容量评估系统</div><div class="line"><span class="bullet">* </span>数据库一键迁移</div><div class="line"><span class="bullet">* </span>percona-tools 自动化工具</div><div class="line">等等</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>监 与 控</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>监： 健康，性能检查，报表化分析</div><div class="line"></div><div class="line"><span class="bullet">* </span>控： 智能修复故障，DBA不用半夜苦逼的爬起来。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>最后一根救命稻草</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>备份，备份，备份</div><div class="line"><span class="bullet">* </span>有效的备份，有效的备份，有效的备份</div><div class="line">重要的事情说三遍</div></pre></td></tr></table></figure>
+
+<h2 id="DBA的未来">DBA的未来</h2>
+<h3 id="危机感">危机感</h3>
+<ul>
+<li><strong>云数据库</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>云数据库能做什么？</div><div class="line"><span class="bullet">* </span>优势有哪些？</div><div class="line"><span class="bullet">* </span>云DBA 可以做哪些事情？</div><div class="line"><span class="bullet">* </span>为什么会有云DBA？</div><div class="line"><span class="bullet">* </span>云DBA的现状？</div><div class="line"><span class="bullet">* </span>未来企业中还会有DBA么？</div></pre></td></tr></table></figure>
+
+<h3 id="拨开云雾">拨开云雾</h3>
+<ul>
+<li><strong>核心竞争力</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>云的缺点是什么</div><div class="line"><span class="bullet">* </span>核心价值</div><div class="line"><span class="bullet">* </span>职业规划</div></pre></td></tr></table></figure>
+
+<p>总结：如果以上都能完成80%左右，DBA的幸福感会非常高，也是优秀DBA的一个衡量标准。<br>但是要到到这些，中间会完成很多知识点的学习，原理的理解，多年经验的积累，才能打通任督二脉。<br>之后，会整理出打怪升级的DBA相关技能表，在此之前可以先修炼下这个绝世武功：<a href="http://www.xaprb.com/blog/2015/08/08/innodb-book-outline/" target="_blank" rel="external">http://www.xaprb.com/blog/2015/08/08/innodb-book-outline/</a></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/10/14/DBA_life/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/10/11/DBA_think_1/"  title="我们的分享：上海站1">
+ <strong>NEXT:</strong><br/> 
+ <span>我们的分享：上海站1
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/10/14/DBA_life/" data-title="" data-url="https://Keithlan.github.io/2015/10/14/DBA_life/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#对DBA的一些思考"><span class="toc-number">1.</span> <span class="toc-text">对DBA的一些思考</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">1.1.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">1.2.</span> <span class="toc-text">DBA的价值</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、稳定"><span class="toc-number">1.2.1.</span> <span class="toc-text">一、稳定</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#二、性能"><span class="toc-number">1.2.2.</span> <span class="toc-text">二、性能</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1_高性能"><span class="toc-number">1.2.2.1.</span> <span class="toc-text">2.1 高性能</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#2-2_高扩展"><span class="toc-number">1.2.2.2.</span> <span class="toc-text">2.2 高扩展</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#三、服务"><span class="toc-number">1.2.3.</span> <span class="toc-text">三、服务</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1_如何让老板幸福"><span class="toc-number">1.2.3.1.</span> <span class="toc-text">3.1 如何让老板幸福</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2_如何让开发幸福"><span class="toc-number">1.2.3.2.</span> <span class="toc-text">3.2 如何让开发幸福</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-3_如何让自己幸福"><span class="toc-number">1.2.3.3.</span> <span class="toc-text">3.3 如何让自己幸福</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">1.3.</span> <span class="toc-text">DBA的未来</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#危机感"><span class="toc-number">1.3.1.</span> <span class="toc-text">危机感</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#拨开云雾"><span class="toc-number">1.3.2.</span> <span class="toc-text">拨开云雾</span></a></li></ol></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>14</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">13</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
