@@ -9,8 +9,8 @@
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="背景
-如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，repli">
+    <meta name="description" content="一、背景
+如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，rep">
     
     
     
@@ -78,7 +78,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-11-02T11:32:24.000Z" itemprop="datePublished">Nov 2 2015</time>
-    Updated:<time datetime="2015-11-02T12:24:41.000Z" itemprop="dateModified">Nov 2 2015</time>
+    Updated:<time datetime="2015-11-02T16:42:16.000Z" itemprop="dateModified">Nov 3 2015</time>
     
   </p>
 </header>
@@ -87,12 +87,12 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#理由"><span class="toc-number">2.</span> <span class="toc-text">理由</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Database-Level_Replication_流程图"><span class="toc-number">3.</span> <span class="toc-text">Database-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Table-Level_Replication_流程图"><span class="toc-number">4.</span> <span class="toc-text">Table-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#相关要点"><span class="toc-number">5.</span> <span class="toc-text">相关要点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试"><span class="toc-number">6.</span> <span class="toc-text">测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">7.</span> <span class="toc-text">最后</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、理由"><span class="toc-number">2.</span> <span class="toc-text">二、理由</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、Database-Level_Replication_流程图"><span class="toc-number">3.</span> <span class="toc-text">三、Database-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、Table-Level_Replication_流程图"><span class="toc-number">4.</span> <span class="toc-text">四、Table-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、相关要点"><span class="toc-number">5.</span> <span class="toc-text">五、相关要点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、测试"><span class="toc-number">6.</span> <span class="toc-text">六、测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1_特殊情况"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 特殊情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2_只有库级别的规则"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 只有库级别的规则</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#注意："><span class="toc-number">6.2.1.</span> <span class="toc-text">注意：</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3_只有表级别的规则"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 只有表级别的规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4_库和表级别的规则混用"><span class="toc-number">6.4.</span> <span class="toc-text">6.4 库和表级别的规则混用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">7.</span> <span class="toc-text">最后</span></a></li></ol>
 		</div>
 		
-		<h2 id="背景">背景</h2>
+		<h2 id="一、背景">一、背景</h2>
 <p>如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。</p>
-<h2 id="理由">理由</h2>
+<h2 id="二、理由">二、理由</h2>
 <p>为了搭建这一套环境（只复制master的B，C库），部分人会在my.cnf中这样配置：</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db=<span class="constant">B</span>,<span class="constant">C</span></span></div></pre></td></tr></table></figure>
 
@@ -105,13 +105,19 @@
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db</span></div><div class="line">-<span class="ruby">-replicate-ignore-db</span></div><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-wild-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-ignore-table</span></div><div class="line">-<span class="ruby">-replicate-wild-ignore-table</span></div></pre></td></tr></table></figure>
 
 <p>这里面可以随意组合，且不同组合有不同的含义，为了彻底搞清楚他们直接的关系，下面我们一起来一窥究竟。</p>
-<h2 id="Database-Level_Replication_流程图">Database-Level Replication 流程图</h2>
+<h2 id="三、Database-Level_Replication_流程图">三、Database-Level Replication 流程图</h2>
+<blockquote>
+<p>注意1：库级别的规则，只针对binlog_format=’STATEMENT or MIXED‘<br>注意2：如果是binlog_format=‘ROW’，不受库级别规则限制，只受表级别规则限制。</p>
+</blockquote>
 <hr>
 <p><img src="/image/mysql_error/rpl_db_level.png" alt="db" title="db"></p>
-<h2 id="Table-Level_Replication_流程图">Table-Level Replication 流程图</h2>
+<h2 id="四、Table-Level_Replication_流程图">四、Table-Level Replication 流程图</h2>
 <hr>
 <p><img src="/image/mysql_error/rpl_tb_level.png" alt="tb" title="tb"></p>
-<h2 id="相关要点">相关要点</h2>
+<h2 id="五、相关要点">五、相关要点</h2>
+<blockquote>
+<p>注意： 以下测试和结论，前提都是row_format=’MIXED’</p>
+</blockquote>
 <hr>
 <ul>
 <li><p><strong>在DB level 中，当binlog-format=statement 时，过滤以use DB为主（不允许跨库）。为rows模式是：不以use DB为主（允许跨库）</strong></p>
@@ -129,39 +135,84 @@
 <li><p><strong>在Table-level中, 从第一个阶段（replicate-do-table）开始，如果符合replicate-do-table判断规则，则exit。如果不符合，则跳到下一层（replicate-ignore-table）。 然后以此内推，直到最后一层（replicate-wild-ignore-table）都不符合，则最后判断是否有（replicate-do-table or replicate-wild-do-table），如果有，则ignore &amp; exit。如果没有，则execute &amp; exit</strong></p>
 </li>
 </ul>
-<h2 id="测试">测试</h2>
+<h2 id="六、测试">六、测试</h2>
+<blockquote>
+<p>注意： 以下测试和结论，前提都是row_format=’MIXED’</p>
+</blockquote>
 <hr>
+<h3 id="6-1_特殊情况">6.1 特殊情况</h3>
 <p>说明：以下测试，均以statement格式为例。 rows模式参见原理同样可以证明，这里就不解释。</p>
 <ul>
 <li><strong>第一种情况：设置replicate_do_DB=A,B</strong></li>
 </ul>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">结论：<span class="literal">A</span>和B都没有在slave上执行。因为mysql将'<span class="literal">A</span>,B'作为一个库名。</div></pre></td></tr></table></figure>
 
+<h3 id="6-2_只有库级别的规则">6.2 只有库级别的规则</h3>
+<h4 id="注意：">注意：</h4>
 <ul>
-<li><strong>第二种情况</strong></li>
+<li><strong>do-db</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">replicate_do_DB=user_prop_s00_db</div><div class="line">replicate_do_DB=heartbeat_db</div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line"></div><div class="line">replicate_wild_do_tables=user_prop_s00_db.%</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">结论：</div><div class="line"><span class="operator"><span class="keyword">use</span> user_prop_s00_db;</span> dml； <span class="comment">--来自user_prop_s00_db库的操作都复制。</span></div><div class="line"><span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;    <span class="comment">--来自其他库的所有表都不复制</span></div><div class="line"></div><div class="line">过程分析：如果存在DB-level规则，则不允许跨库操作。以上有<span class="operator"><span class="keyword">do</span>规则在，就走<span class="keyword">do</span>规则且忽略<span class="keyword">ignore</span>规则。很明显，满足user_prop_s00_db & heartbeat_db DB-<span class="keyword">level</span>的操作都可以进入<span class="keyword">table</span>-<span class="keyword">level</span>。</span></div><div class="line">so：</div><div class="line"><span class="number">1</span>） <span class="keyword">use</span> user_prop_s00_db; dml； 满足wild_do_tables的过滤，允许操作。</div><div class="line">2） <span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;  不满足任何一个table-level的规则，所以走到最后一层分析（存在wild_do_tables or _do_tables，则ignore & exit）</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">replicate_<span class="keyword">do</span>_DB=A</div><div class="line">replicate_<span class="keyword">do</span>_DB=B</div></pre></td></tr></table></figure>
 
 <ul>
-<li><strong>第三种情况</strong></li>
+<li><strong>ignoare-db</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">replicate_do_DB=user_prop_s00_db</div><div class="line">replicate_do_DB=heartbeat_db</div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line"></div><div class="line">replicate_wild_do_tables=user_prop_s00_db.%</div><div class="line">replicate_wild_do_tables=heartbeat_db.%</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">结果：</div><div class="line"></div><div class="line">1)跨库操作user_prop_s00_db,heartbeat_db没有通过。比如：<span class="operator"><span class="keyword">use</span> hehe;</span> <span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> heartbeat_db.table_1 <span class="keyword">values</span>(<span class="number">1</span>);</span> #slave 不执行。</div><div class="line"></div><div class="line">2)跨库操作user_prop_s00_db,heartbeat_db通过. 比如：<span class="operator"><span class="keyword">use</span> user_prop_s00_db;</span> <span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> heartbeat_db.table_1 <span class="keyword">values</span>(<span class="number">1</span>);</span> #slave 执行成功。</div><div class="line"></div><div class="line">为什么 例2）中的跨库可以成功呢？</div><div class="line">理由很简单：虽然是跨库，但是这两个库在DB-level中都是被允许的。</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="variable">replicate_ignore_DB=</span>A</div><div class="line"><span class="variable">replicate_ignore_DB=</span>B</div></pre></td></tr></table></figure>
 
 <ul>
-<li><strong>第四种情况</strong></li>
+<li><strong>do-db &amp; ignore-db</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">只设置</div><div class="line">replicate_<span class="keyword">do</span>_DB=A</div><div class="line">replicate_<span class="keyword">do</span>_DB=B</div><div class="line"></div><div class="line">结果：A，B以外的跨库操作不会通过。</div><div class="line">理由：自己可以根据原理试试</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="variable">replicate_do_DB=</span>A</div><div class="line"><span class="variable">replicate_do_DB=</span>B</div><div class="line"><span class="variable">replicate-ignore-db=</span>mysql</div><div class="line"><span class="variable">replicate-ignore-db=</span>test</div></pre></td></tr></table></figure>
+
+<h3 id="6-3_只有表级别的规则">6.3 只有表级别的规则</h3>
+<ul>
+<li><p><strong>do-table</strong></p>
+</li>
+<li><p><strong>ignore-table</strong></p>
+</li>
+<li><p><strong>wild-do-table</strong></p>
+</li>
+<li><p><strong>wild-ignore-table</strong></p>
+</li>
+<li><p><strong>do-table &amp; ignore-table</strong></p>
+</li>
+<li><p><strong>do-table &amp; wild-ignore-table</strong></p>
+</li>
+<li><p><strong>wild-do-table &amp; wild-ignore-table</strong></p>
+</li>
+</ul>
+<h3 id="6-4_库和表级别的规则混用">6.4 库和表级别的规则混用</h3>
+<ul>
+<li><strong>do-DB &amp; do-table</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">replicate_do_DB=A</div><div class="line">replicate_do_DB=B</div><div class="line">replicate-<span class="operator"><span class="keyword">do</span>-<span class="keyword">table</span>=table1</span></div><div class="line"><span class="keyword">replicate</span>-<span class="keyword">do</span>-<span class="keyword">table</span>=table2</div></pre></td></tr></table></figure>
 
 <ul>
-<li><strong>第五种情况</strong></li>
+<li><strong>do-DB &amp; wild-do-table</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">只设置</div><div class="line">replicate_wild_<span class="keyword">do</span>_tables=A.%</div><div class="line">replicate_wild_<span class="keyword">do</span>_tables=B.%</div><div class="line">结果： A，B以外的跨库操作，也可以通过</div><div class="line">理由：自己可以根据原理试试</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">replicate_do_DB=A</div><div class="line">replicate_do_DB=B</div><div class="line">replicate-wild-<span class="operator"><span class="keyword">do</span>-<span class="keyword">table</span>=mysql.%</span></div><div class="line"><span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=test.%</div></pre></td></tr></table></figure>
 
 <ul>
-<li><strong>第六种情况</strong></li>
+<li><strong>do-DB &amp; ignore-table</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="variable">replicate_do_DB=</span>A</div><div class="line"><span class="variable">replicate_do_DB=</span>B</div><div class="line"><span class="variable">replicate-ignore-table=</span>table1</div><div class="line"><span class="variable">replicate-ignore-table=</span>table2</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>do-DB &amp; wild-ignore-table</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="variable">replicate_do_DB=</span>A</div><div class="line"><span class="variable">replicate_do_DB=</span>B</div><div class="line"><span class="variable">replicate-wild-ignore-table=</span>mysql.%</div><div class="line"><span class="variable">replicate-wild-ignore-table=</span>test.%</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>最常见场景： db-db &amp; do-ignore-db &amp; wild-do-table &amp; wild-ignore-table</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line">* 常见场景：将master上的A，B库 拆分到 新的一组机器上。</div><div class="line">* 特点：</div><div class="line">	1） slave 不复制 master的 mysql，test库</div><div class="line">	2） slave 只复制 master的 A，B库所有操作</div><div class="line"></div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">replicate_do_DB=A</div><div class="line">replicate_do_DB=B</div><div class="line">replicate-wild-<span class="operator"><span class="keyword">do</span>-<span class="keyword">table</span>=A.%</span></div><div class="line"><span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=B.%</div><div class="line"></div><div class="line"></div><div class="line">* 误区：</div><div class="line">	<span class="number">1</span>) 如果我的<span class="keyword">default</span> <span class="keyword">database</span> 不是A或者B，那么接下来的操作就不会被<span class="keyword">slave</span> 执行，然后悲剧就产生了。</div><div class="line">	<span class="keyword">master</span>&gt; <span class="keyword">use</span> C；<span class="keyword">insert</span> <span class="keyword">into</span> A.id <span class="keyword">values</span>(<span class="number">1</span>);</div><div class="line"></div><div class="line">	2）所以，以上cnf配置，只适合default database 是 A，B的情况。</div><div class="line"></div><div class="line"></div><div class="line">* 如果要完成这种需求，应该这样配置【前提：开发没有权限登陆到mysql，test库】：</div><div class="line"></div><div class="line"></div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">replicate-wild-<span class="operator"><span class="keyword">do</span>-<span class="keyword">table</span>=A.%</span></div><div class="line"><span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=B.%</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>实战： wild-do-table &amp; ignore-table &amp; wild-ignore-table </strong></li>
 </ul>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">需求: 将老服务器上的某个库，迁移到新机器上</div><div class="line"></div><div class="line">old_master[库： A , B , mysql] <span class="comment">----&gt;(同步) new_maser[A]</span></div><div class="line"></div><div class="line">        * 验证单库(A)复制的正确性: 规则=&gt; slave 只复制A库，不复制B库</div><div class="line">			my.cnf</div><div class="line">				Replicate_Wild_Do_Table: A.%</div><div class="line">				Replicate_Ignore_DB: mysql</div><div class="line">		   	    Replicate_Wild_Ignore_Table: mysql.%</div><div class="line"></div><div class="line">		<span class="operator">a</span>）use A/B; insert A.<span class="operator">a</span> select B.b <span class="built_in">from</span> B ;  <span class="comment">--err：同步报错，slave没有B库的内容</span></div><div class="line">		b) use A/B; insert A.<span class="operator">a</span> select B.b <span class="built_in">from</span> A,B where A.b=B.b;   <span class="comment">--err：同步报错，slave没有B库的内容</span></div><div class="line">		c) use mysql; insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>); <span class="comment">--err: 同步不报错，但是老master的binlog没有在slave执行，因为Replicate_Ignore_DB: mysql,Replicate_Wild_Ignore_Table: mysql.%</span></div><div class="line"></div><div class="line">		d) use 空库; insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>);  <span class="comment">--ok: 可以同步复制下来</span></div><div class="line">		e) use B;   insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>);  <span class="comment">--ok: 可以同步复制下来</span></div></pre></td></tr></table></figure>
 
+<p>由于组合太多，就不一一列举。</p>
 <h2 id="最后">最后</h2>
 <hr>
 <p>以上情况，还可以衍生出各种场景和组合，只要弄懂了原理，基本都没有问题。</p>
@@ -228,7 +279,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#理由"><span class="toc-number">2.</span> <span class="toc-text">理由</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Database-Level_Replication_流程图"><span class="toc-number">3.</span> <span class="toc-text">Database-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Table-Level_Replication_流程图"><span class="toc-number">4.</span> <span class="toc-text">Table-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#相关要点"><span class="toc-number">5.</span> <span class="toc-text">相关要点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试"><span class="toc-number">6.</span> <span class="toc-text">测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">7.</span> <span class="toc-text">最后</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、理由"><span class="toc-number">2.</span> <span class="toc-text">二、理由</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、Database-Level_Replication_流程图"><span class="toc-number">3.</span> <span class="toc-text">三、Database-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、Table-Level_Replication_流程图"><span class="toc-number">4.</span> <span class="toc-text">四、Table-Level Replication 流程图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、相关要点"><span class="toc-number">5.</span> <span class="toc-text">五、相关要点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、测试"><span class="toc-number">6.</span> <span class="toc-text">六、测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1_特殊情况"><span class="toc-number">6.1.</span> <span class="toc-text">6.1 特殊情况</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2_只有库级别的规则"><span class="toc-number">6.2.</span> <span class="toc-text">6.2 只有库级别的规则</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#注意："><span class="toc-number">6.2.1.</span> <span class="toc-text">注意：</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-3_只有表级别的规则"><span class="toc-number">6.3.</span> <span class="toc-text">6.3 只有表级别的规则</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-4_库和表级别的规则混用"><span class="toc-number">6.4.</span> <span class="toc-text">6.4 库和表级别的规则混用</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">7.</span> <span class="toc-text">最后</span></a></li></ol>
   </div>
 
 <div id="asidepart">
