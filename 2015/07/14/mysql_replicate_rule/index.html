@@ -10,13 +10,7 @@
     <meta name="author" content="兰春">
     
     <meta name="description" content="背景
-如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，replicate-*-do-DB/table 等。
-理由
-为了搭建这一套环境（只复制master的B，C库），部分人会在my.cnf中这样配置：
-1--replicate-do-db=B,C
-
-
-当然，按照大家的惯性思维，认为这样是没有错的。不幸的是，灾难已经来临。">
+如果有这样的一个需求：master 有3个库A，B，C ，D，由于某种原因，现在需要将其中2个库B，C单独拆分出来，单独一个实例。 如果是你，打算怎么做呢？  常见的做法就是，单独搭建一个只有B，C库的实例，然后只复制master的B，C库，过滤掉A，D库。那么复制过滤就应运而生了，repli">
     
     
     
@@ -84,7 +78,7 @@
     </p>
   <p class="article-time">
     <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-    Updated:<time datetime="2015-07-15T03:22:42.000Z" itemprop="dateModified">Jul 15 2015</time>
+    Updated:<time datetime="2015-11-02T12:17:39.000Z" itemprop="dateModified">Nov 2 2015</time>
     
   </p>
 </header>
@@ -102,24 +96,21 @@
 <p>为了搭建这一套环境（只复制master的B，C库），部分人会在my.cnf中这样配置：</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db=<span class="constant">B</span>,<span class="constant">C</span></span></div></pre></td></tr></table></figure>
 
-
 <p>当然，按照大家的惯性思维，认为这样是没有错的。不幸的是，灾难已经来临。</p>
-<a id="more"></a>
-
 <p>官方文档：</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Warning</div><div class="line">To specify multiple databases you must <span class="operator"><span class="keyword">use</span> multiple instances <span class="keyword">of</span> this <span class="keyword">option</span>. Because <span class="keyword">database</span> <span class="keyword">names</span> can contain commas, <span class="keyword">if</span> you supply a comma separated list <span class="keyword">then</span> the list will be treated <span class="keyword">as</span> the name <span class="keyword">of</span> a single <span class="keyword">database</span>.</span></div></pre></td></tr></table></figure>
 
 <p>mysql 会认为<code>B,C</code> 为一个库名，而不是2个库。</p>
 <p>然而，这里不仅仅有一个复制过滤参数，一共包括：</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db </span></div><div class="line">-<span class="ruby">-replicate-ignore-db</span></div><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-wild-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-ignore-table</span></div><div class="line">-<span class="ruby">-replicate-wild-ignore-table</span></div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-db</span></div><div class="line">-<span class="ruby">-replicate-ignore-db</span></div><div class="line">-<span class="ruby">-replicate-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-wild-<span class="keyword">do</span>-table</span></div><div class="line">-<span class="ruby">-replicate-ignore-table</span></div><div class="line">-<span class="ruby">-replicate-wild-ignore-table</span></div></pre></td></tr></table></figure>
 
 <p>这里面可以随意组合，且不同组合有不同的含义，为了彻底搞清楚他们直接的关系，下面我们一起来一窥究竟。</p>
 <h2 id="Database-Level_Replication_流程图">Database-Level Replication 流程图</h2>
 <hr>
-<p><img src="/image/mysql_error/rpl_db_level.png" alt="db"></p>
+<p><img src="image/rpl_db_level.png" alt="db" title="db"></p>
 <h2 id="Table-Level_Replication_流程图">Table-Level Replication 流程图</h2>
 <hr>
-<p><img src="/image/mysql_error/rpl_tb_level.png" alt="tb"></p>
+<p><img src="image/rpl_tb_level.png" alt="tb" title="tb"></p>
 <h2 id="相关要点">相关要点</h2>
 <hr>
 <ul>
@@ -144,12 +135,12 @@
 <ul>
 <li><strong>第一种情况：设置replicate_do_DB=A,B</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"> </div><div class="line">结论：<span class="literal">A</span>和B都没有在slave上执行。因为mysql将'<span class="literal">A</span>,B'作为一个库名。</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">结论：<span class="literal">A</span>和B都没有在slave上执行。因为mysql将'<span class="literal">A</span>,B'作为一个库名。</div></pre></td></tr></table></figure>
 
 <ul>
 <li><strong>第二种情况</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">replicate_do_DB=user_prop_s00_db </div><div class="line">replicate_do_DB=heartbeat_db</div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line"></div><div class="line">replicate_wild_do_tables=user_prop_s00_db.%</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">结论：</div><div class="line"><span class="operator"><span class="keyword">use</span> user_prop_s00_db;</span> dml； <span class="comment">--来自user_prop_s00_db库的操作都复制。</span></div><div class="line"><span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;    <span class="comment">--来自其他库的所有表都不复制</span></div><div class="line"></div><div class="line">过程分析：如果存在DB-level规则，则不允许跨库操作。以上有<span class="operator"><span class="keyword">do</span>规则在，就走<span class="keyword">do</span>规则且忽略<span class="keyword">ignore</span>规则。很明显，满足user_prop_s00_db & heartbeat_db DB-<span class="keyword">level</span>的操作都可以进入<span class="keyword">table</span>-<span class="keyword">level</span>。</span></div><div class="line">so： </div><div class="line"><span class="number">1</span>） <span class="keyword">use</span> user_prop_s00_db; dml； 满足wild_do_tables的过滤，允许操作。</div><div class="line">2） <span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;  不满足任何一个table-level的规则，所以走到最后一层分析（存在wild_do_tables or _do_tables，则ignore & exit）</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">replicate_do_DB=user_prop_s00_db</div><div class="line">replicate_do_DB=heartbeat_db</div><div class="line">replicate-ignore-db=mysql</div><div class="line">replicate-ignore-db=test</div><div class="line"></div><div class="line">replicate_wild_do_tables=user_prop_s00_db.%</div><div class="line">replicate-wild-ignore-table=mysql.%</div><div class="line">replicate-wild-ignore-table=test.%</div><div class="line"></div><div class="line">结论：</div><div class="line"><span class="operator"><span class="keyword">use</span> user_prop_s00_db;</span> dml； <span class="comment">--来自user_prop_s00_db库的操作都复制。</span></div><div class="line"><span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;    <span class="comment">--来自其他库的所有表都不复制</span></div><div class="line"></div><div class="line">过程分析：如果存在DB-level规则，则不允许跨库操作。以上有<span class="operator"><span class="keyword">do</span>规则在，就走<span class="keyword">do</span>规则且忽略<span class="keyword">ignore</span>规则。很明显，满足user_prop_s00_db & heartbeat_db DB-<span class="keyword">level</span>的操作都可以进入<span class="keyword">table</span>-<span class="keyword">level</span>。</span></div><div class="line">so：</div><div class="line"><span class="number">1</span>） <span class="keyword">use</span> user_prop_s00_db; dml； 满足wild_do_tables的过滤，允许操作。</div><div class="line">2） <span class="operator"><span class="keyword">use</span> heartbeat_db;</span> dml ;  不满足任何一个table-level的规则，所以走到最后一层分析（存在wild_do_tables or _do_tables，则ignore & exit）</div></pre></td></tr></table></figure>
 
 <ul>
 <li><strong>第三种情况</strong></li>
@@ -159,12 +150,17 @@
 <ul>
 <li><strong>第四种情况</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">只设置replicate_<span class="keyword">do</span>_DB=A</div><div class="line">replicate_<span class="keyword">do</span>_DB=B</div><div class="line"></div><div class="line">结果：A，B以外的跨库操作不会通过。</div><div class="line">理由：自己可以根据原理试试</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">只设置</div><div class="line">replicate_<span class="keyword">do</span>_DB=A</div><div class="line">replicate_<span class="keyword">do</span>_DB=B</div><div class="line"></div><div class="line">结果：A，B以外的跨库操作不会通过。</div><div class="line">理由：自己可以根据原理试试</div></pre></td></tr></table></figure>
 
 <ul>
 <li><strong>第五种情况</strong></li>
 </ul>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">只设置</div><div class="line">replicate_wild_<span class="keyword">do</span>_tables=A.%</div><div class="line">replicate_wild_<span class="keyword">do</span>_tables=B.%</div><div class="line">结果： A，B以外的跨库操作，也可以通过</div><div class="line">理由：自己可以根据原理试试</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>第六种情况</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">需求: 将老服务器上的某个库，迁移到新机器上</div><div class="line"></div><div class="line">old_master[库： A , B , mysql] <span class="comment">----&gt;(同步) new_maser[A]</span></div><div class="line"></div><div class="line">        * 验证单库(A)复制的正确性: 规则=&gt; slave 只复制A库，不复制B库</div><div class="line">			my.cnf</div><div class="line">				Replicate_Wild_Do_Table: A.%</div><div class="line">				Replicate_Ignore_DB: mysql</div><div class="line">		   	    Replicate_Wild_Ignore_Table: mysql.%</div><div class="line"></div><div class="line">		<span class="operator">a</span>）use A/B; insert A.<span class="operator">a</span> select B.b <span class="built_in">from</span> B ;  <span class="comment">--err：同步报错，slave没有B库的内容</span></div><div class="line">		b) use A/B; insert A.<span class="operator">a</span> select B.b <span class="built_in">from</span> A,B where A.b=B.b;   <span class="comment">--err：同步报错，slave没有B库的内容</span></div><div class="line">		c) use mysql; insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>); <span class="comment">--err: 同步不报错，但是老master的binlog没有在slave执行，因为Replicate_Ignore_DB: mysql,Replicate_Wild_Ignore_Table: mysql.%</span></div><div class="line"></div><div class="line">		d) use 空库; insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>);  <span class="comment">--ok: 可以同步复制下来</span></div><div class="line">		e) use B;   insert <span class="keyword">into</span> A.<span class="operator">a</span> values(<span class="string">'a'</span>);  <span class="comment">--ok: 可以同步复制下来</span></div></pre></td></tr></table></figure>
 
 <h2 id="最后">最后</h2>
 <hr>
