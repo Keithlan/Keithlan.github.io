@@ -4,22 +4,18 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>我们的分享：上海站1 | Focus on MySQL,Focus on Focus</title>
+    <title>Mixed format + DML limit 引发的血案 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="简介
+    <meta name="description" content="背景
 
-分享主题：对DBA的一些思考分享地点：上海市东方路1217号陆家嘴金融服务广场分享时间：2015-10-13 15:00:00分享嘉宾：兰春
 
-DBA的认知
-
-开发：DBA整天都在做啥？除了执行下SQL，其他也没啥事吧
-
-DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦屁股，救火
-
-">
+MySQL版本 5.6.16
+DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; S  
+相信做DB拆分，机房搬迁，数据库升级，都会用到这种类似的架构吧。 
+那么问题来了，最近做数据校验的时候，发现New_S 的数据竟然比 M,New_M 还多，">
     
     
     
@@ -79,15 +75,15 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/10/11/DBA_think_1/" title="我们的分享：上海站1" itemprop="url">我们的分享：上海站1</a>
+      <a href="/2015/11/16/mixed_dml_limit/" title="Mixed format + DML limit 引发的血案" itemprop="url">Mixed format + DML limit 引发的血案</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-10-11T07:32:24.000Z" itemprop="datePublished">Oct 11 2015</time>
-    Updated:<time datetime="2015-10-12T07:51:11.000Z" itemprop="dateModified">Oct 12 2015</time>
+    <time datetime="2015-11-15T16:05:24.000Z" itemprop="datePublished">Nov 16 2015</time>
+    Updated:<time datetime="2015-11-15T16:19:21.000Z" itemprop="dateModified">Nov 16 2015</time>
     
   </p>
 </header>
@@ -96,70 +92,78 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">2.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">3.</span> <span class="toc-text">DBA的价值</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">4.</span> <span class="toc-text">DBA的未来</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例&分析"><span class="toc-number">2.</span> <span class="toc-text">案例&分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#M的binlog"><span class="toc-number">2.1.</span> <span class="toc-text">M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#New_M的binlog"><span class="toc-number">2.2.</span> <span class="toc-text">New_M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Mixed_模式"><span class="toc-number">2.3.</span> <span class="toc-text">Mixed 模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ROW_模式"><span class="toc-number">2.4.</span> <span class="toc-text">ROW 模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
 		</div>
 		
-		<h2 id="简介">简介</h2>
+		<hr>
+<h2 id="背景">背景</h2>
 <blockquote>
-<p>分享主题：对DBA的一些思考<br>分享地点：上海市东方路1217号陆家嘴金融服务广场<br>分享时间：2015-10-13 15:00:00<br>分享嘉宾：兰春</p>
+<ol>
+<li>MySQL版本 5.6.16</li>
+<li>DB架构（级联复制） M —&gt; New_M（log_slave_update）—&gt; S  </li>
+<li>相信做DB拆分，机房搬迁，数据库升级，都会用到这种类似的架构吧。 </li>
+<li>那么问题来了，最近做数据校验的时候，发现New_S 的数据竟然比 M,New_M 还多，是否奇怪？   </li>
+</ol>
 </blockquote>
-<h2 id="DBA的认知">DBA的认知</h2>
+<p><img src="/image/mysql_error/m_s_s.png" alt="m" title="m"></p>
+<h2 id="案例&amp;分析">案例&amp;分析</h2>
+<blockquote>
+<ol>
+<li>如何做数据校验？  pt-table-checksum ，或自己写对比程序。  </li>
+<li>校验出来后，发现A表在M，S，New_M三个实例上 有300条记录， New_S,Bak_etl 却有500条记录  </li>
+</ol>
+</blockquote>
+<p><img src="/image/mysql_error/m_s_s_2.png" alt="m" title="m"></p>
+<p>为什么New_M的数据比New_S的数据还要少呢？？？<br>这种情况下，只能比对binlog了，但是binlog数据量如此之大，如何查呢？<br>具体分析下，M,S,New_M的数据是一样的，说明他们之间的复制同步没有问题。<br>New_S和Bak_etl 数据是一样的，说明他们之间执行的binlog也没问题。<br>那么问题就出在M的binlog ， New_M的binlog不一致了。<br>换句话说就是：一条delete语句，在M上删除了N条，但是在New_M的binlog中只记录了delete N-200<br>从而导致最后的slave比master要多200条记录了。<br>接下来，我们验证下  </p>
+<h3 id="M的binlog">M的binlog</h3>
+<p><img src="/image/mysql_error/m_s_s_3.png" alt="m" title="m"></p>
+<h3 id="New_M的binlog">New_M的binlog</h3>
+<p><img src="/image/mysql_error/m_s_s_4.png" alt="m" title="m"></p>
+<p>很明显，New_M 相比 M，少了很多binlog event，有部分binlog（从214568151开始，全部丢失）都没了。</p>
+<p>ok，问题确认了，但是由于SQL语句已经被强制转换成了ROW模式的关系，SQL语句如何定位呢？<br>还好，这里有5.6新特性Performance schema的帮助，很快定位到了问题SQL</p>
+<p>performance_schema&gt; select * from events_statements_summary_by_digest where DIGEST_TEXT like ‘%broker_user_relation_sub%’\G</p>
+<p><img src="/image/mysql_error/m_s_s_7.png" alt="m" title="m"></p>
+<p>到这个地步，有几个问题：</p>
+<blockquote>
+<p>1） 为什么binlog会丢失？<br>2） 什么情况下会丢失？  </p>
+</blockquote>
+<p>这几个问题，经过反复测试，得出以下结论。</p>
 <ul>
-<li><p><strong>开发：DBA整天都在做啥？除了执行下SQL，其他也没啥事吧</strong></p>
-</li>
-<li><p><strong>DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦屁股，救火</strong></p>
-</li>
+<li><strong>为什么binlog会丢失？</strong></li>
 </ul>
-<h2 id="DBA的价值">DBA的价值</h2>
-<ul>
-<li><p><strong>稳定</strong></p>
-<ul>
-<li>卓越：避免故障发生，防火比救火重要</li>
-<li>优雅：保证服务不受影响，胸有成足</li>
-<li>高效：快速修复，急中生智</li>
-</ul>
-</li>
-<li><p><strong>性能</strong></p>
-<ul>
-<li>高性能</li>
-<li>高扩展</li>
-</ul>
-</li>
-<li><p><strong>服务</strong></p>
-<ul>
-<li>如何让老板幸福</li>
-<li>如何让开发幸福</li>
-<li>如何让自己幸福</li>
-</ul>
-</li>
-</ul>
-<h2 id="DBA的未来">DBA的未来</h2>
-<ul>
-<li><p><strong>危机感</strong></p>
-</li>
-<li><p><strong>拨开云雾</strong></p>
-</li>
-</ul>
+<blockquote>
+<p>条件1：当binlog format 设置为mixed时，普通复制不会有问题，但是级联复制在特殊情况下会binlog丢失。<br>条件2：当出现大量数据（400W左右）扫描的更新，删除，插入的时候，且有不确定dml语句（如：delete from table where data&lt;’N’ limit ）的时候.<br>当条件1 和 条件2 同时满足时，会导致问题的发生。以上案例，就是证据。  </p>
+</blockquote>
+<p>接下来，我们再来测试下我们的理论。这次我们不用delete + limit，用 insert into select  </p>
+<h3 id="Mixed_模式">Mixed 模式</h3>
+<p><img src="/image/mysql_error/m_s_s_5.png" alt="m" title="m"></p>
+<h3 id="ROW_模式">ROW 模式</h3>
+<p><img src="/image/mysql_error/m_s_s_6.png" alt="m" title="m"></p>
+<h2 id="总结">总结</h2>
+<p>强烈建议MySQL binlog format 设置成ROW模式来确保主从数据的一致性。</p>
+<blockquote>
+<p> set global binlog_format=ROW;<br> 禁止非确定性因素的DML，尤其是dml + limit 且没有order by的情况。</p>
+</blockquote>
   
 	</div>
 		<footer class="article-footer clearfix">
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/分享/">分享</a>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/10/11/DBA_think_1/" data-title="我们的分享：上海站1 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2015/11/16/mixed_dml_limit/" data-title="Mixed format + DML limit 引发的血案 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -168,19 +172,11 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/10/14/DBA_life/" title="我们的分享：上海站1 下">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  我们的分享：上海站1 下</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/08/18/how_to_backup_recovery/"  title="MySQL 备份与恢复">
+<a href="/2015/11/02/mysql_replicate_rule/"  title="Mysql 复制过滤详解">
  <strong>NEXT:</strong><br/> 
- <span>MySQL 备份与恢复
+ <span>Mysql 复制过滤详解
 </span>
 </a>
 </div>
@@ -190,7 +186,7 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/10/11/DBA_think_1/" data-title="我们的分享：上海站1" data-url="https://Keithlan.github.io/2015/10/11/DBA_think_1/"></div>
+<div class="ds-thread" data-thread-key="/2015/11/16/mixed_dml_limit/" data-title="Mixed format + DML limit 引发的血案" data-url="https://Keithlan.github.io/2015/11/16/mixed_dml_limit/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -211,7 +207,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">2.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">3.</span> <span class="toc-text">DBA的价值</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">4.</span> <span class="toc-text">DBA的未来</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例&分析"><span class="toc-number">2.</span> <span class="toc-text">案例&分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#M的binlog"><span class="toc-number">2.1.</span> <span class="toc-text">M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#New_M的binlog"><span class="toc-number">2.2.</span> <span class="toc-text">New_M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Mixed_模式"><span class="toc-number">2.3.</span> <span class="toc-text">Mixed 模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ROW_模式"><span class="toc-number">2.4.</span> <span class="toc-text">ROW 模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
   </div>
 
 <div id="asidepart">
