@@ -1,0 +1,965 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>InnoDB hung&amp;crash : a long semaphore wait | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="环境
+123456789* OS	CentOS release 6.6 (Final)	Linux 2.6.32-504.el6.x86_64 #1 SMP Wed Oct 15 04:27:16 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux* disk	2*SAS">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2015/12/06/innodb_semaphore/" title="InnoDB hung&amp;crash : a long semaphore wait" itemprop="url">InnoDB hung&amp;crash : a long semaphore wait</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2015-12-06T03:32:24.000Z" itemprop="datePublished">Dec 6 2015</time>
+    Updated:<time datetime="2015-12-06T04:34:35.000Z" itemprop="dateModified">Dec 6 2015</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#症状"><span class="toc-number">2.</span> <span class="toc-text">症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#how_to_repeat"><span class="toc-number">3.</span> <span class="toc-text">how to repeat</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL_配置文件"><span class="toc-number">4.</span> <span class="toc-text">MySQL 配置文件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试手法"><span class="toc-number">5.</span> <span class="toc-text">测试手法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试方案"><span class="toc-number">6.</span> <span class="toc-text">测试方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#第一轮测试（无厘头测试）"><span class="toc-number">6.1.</span> <span class="toc-text">第一轮测试（无厘头测试）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试表示"><span class="toc-number">7.</span> <span class="toc-text">测试表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">8.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后方案"><span class="toc-number">9.</span> <span class="toc-text">最后方案</span></a></li></ol>
+		</div>
+		
+		<h2 id="环境">环境</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">*</span> OS</div><div class="line">	CentOS release 6.6 (Final)</div><div class="line">	Linux 2.6.32-504.el6.x86_64 <span class="comment">#1 SMP Wed Oct 15 04:27:16 UTC 2014 x86_64 x86_64 x86_64 GNU/Linux</span></div><div class="line"><span class="keyword">*</span> disk</div><div class="line">	2<span class="keyword">*</span>SAS raid1 + 6<span class="keyword">*</span>800G ssd raid5</div><div class="line"><span class="keyword">*</span> MySQL</div><div class="line">	MySQL 5.6.16</div><div class="line"><span class="keyword">*</span> memory</div><div class="line">	128G</div></pre></td></tr></table></figure>
+
+<h2 id="症状">症状</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1) MySQL huang 住， 除了<span class="operator"><span class="keyword">show</span> <span class="keyword">variables</span> 和 <span class="keyword">show</span> <span class="keyword">processlist</span> ，其他都做不了。</span></div><div class="line"><span class="number">2</span>）如果过一段时间不管他，会自己crash掉。然后就一直起不来了。</div></pre></td></tr></table></figure>
+
+<h2 id="how_to_repeat">how to repeat</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">M1 -&gt; M2(log_slave_update) -&gt; slave</div><div class="line"></div><div class="line">当M2(log_slave_update) 开启同步后，过<span class="number">1</span>~<span class="number">2</span>小时，M2就会自己crash。如果想加速他的crash，可以写脚本对库里面的表转化表引擎。</div><div class="line"></div><div class="line">* 做过的尝试和修改</div><div class="line"></div><div class="line"><span class="number">1</span>） 关闭AIO功能 ， 但是结果还是一样，会huag住</div><div class="line"></div><div class="line"><span class="number">2</span>） 关闭自适应hash索引,  还是会报同样的错，然后hung住。</div><div class="line"></div><div class="line"><span class="keyword">https</span>://dev.mysql.com/doc/refman/<span class="number">5.6</span>/en/innodb-adaptive-hash.html</div><div class="line"></div><div class="line">You can monitor <span class="operator">the</span> use <span class="operator">of</span> <span class="operator">the</span> adaptive hash index <span class="operator">and</span> <span class="operator">the</span> contention <span class="keyword">for</span> its use <span class="operator">in</span> <span class="operator">the</span> SEMAPHORES section <span class="operator">of</span> <span class="operator">the</span> output <span class="operator">of</span> <span class="operator">the</span> SHOW ENGINE INNODB STATUS <span class="command"><span class="keyword">command</span>.   </span></div><div class="line">If you see many threads waiting <span class="command"><span class="keyword">on</span> <span class="title">an</span> <span class="title">RW-latch</span> <span class="title">created</span> <span class="title">in</span> <span class="title">btr0sea</span>.<span class="title">c</span>, <span class="title">then</span> <span class="title">it</span> <span class="title">might</span> <span class="title">be</span> <span class="title">useful</span> <span class="title">to</span> <span class="title">disable</span> <span class="title">adaptive</span> <span class="title">hash</span> <span class="title">indexing</span>.</span></div></pre></td></tr></table></figure>
+
+<h2 id="MySQL_配置文件">MySQL 配置文件</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div></pre></td><td class="code"><pre><div class="line">[client]</div><div class="line"><span class="variable">port            =</span> <span class="number">3306</span></div><div class="line"><span class="variable">socket          =</span> /tmp/mysql.sock</div><div class="line"></div><div class="line">[mysqld]</div><div class="line"><span class="variable">basedir         =</span> /usr/local/mysql</div><div class="line"><span class="variable">datadir         =</span> /data/mysql_data</div><div class="line"><span class="variable">port            =</span> <span class="number">3306</span></div><div class="line"><span class="variable">socket          =</span> /tmp/mysql.sock</div><div class="line"><span class="variable">init-connect=</span>'SET NAMES utf8'</div><div class="line"><span class="variable">character-set-server =</span> utf8</div><div class="line"></div><div class="line"><span class="variable">back_log =</span> <span class="number">500</span></div><div class="line"></div><div class="line"><span class="variable">max_connections =</span> <span class="number">3500</span></div><div class="line"><span class="variable">max_user_connections =</span> <span class="number">2000</span></div><div class="line"><span class="variable">max_connect_errors =</span> <span class="number">100000</span></div><div class="line"></div><div class="line"><span class="variable">max_allowed_packet =</span> <span class="number">16</span>M</div><div class="line"></div><div class="line"><span class="variable">binlog_cache_size =</span> <span class="number">1</span>M</div><div class="line"><span class="variable">max_heap_table_size =</span> <span class="number">64</span>M</div><div class="line"><span class="variable">sort_buffer_size =</span> <span class="number">8</span>M</div><div class="line"><span class="variable">join_buffer_size =</span> <span class="number">8</span>M</div><div class="line"></div><div class="line"><span class="variable">thread_cache_size =</span> <span class="number">100</span></div><div class="line"><span class="variable">thread_concurrency =</span> <span class="number">8</span></div><div class="line"></div><div class="line"><span class="variable">query_cache_type =</span> <span class="number">0</span></div><div class="line"><span class="variable">query_cache_size =</span> <span class="number">0</span></div><div class="line"></div><div class="line"><span class="variable">ft_min_word_len =</span> <span class="number">4</span></div><div class="line"></div><div class="line"><span class="variable">thread_stack =</span> <span class="number">192</span>K</div><div class="line"></div><div class="line"><span class="variable">tmp_table_size =</span> <span class="number">64</span>M</div><div class="line"></div><div class="line"><span class="comment"># *** Log related settings</span></div><div class="line"><span class="variable">log-bin=</span>/data/mysql.bin/xx</div><div class="line"><span class="variable">binlog-format=</span>ROW</div><div class="line"><span class="variable">log-error=</span>xx</div><div class="line"><span class="variable">relay-log=</span>xx-relay-bin</div><div class="line"><span class="variable">slow_query_log =</span> <span class="number">1</span></div><div class="line"><span class="variable">slow-query-log-file =</span> xx-slow.log</div><div class="line"><span class="variable">long_query_time =</span> <span class="number">0.1</span></div><div class="line"><span class="variable">log_queries_not_using_indexes =</span> <span class="number">1</span></div><div class="line"><span class="variable">log_slow_admin_statements =</span> <span class="number">1</span></div><div class="line"><span class="variable">log_slow_slave_statements =</span> <span class="number">1</span></div><div class="line"><span class="comment">#log_throttle_queries_not_using_indexes = 10</span></div><div class="line"><span class="variable">min_examined_row_limit =</span> <span class="number">1000</span></div><div class="line"></div><div class="line"><span class="comment"># ***  Replication related settings</span></div><div class="line"><span class="variable">server-id =</span> xx</div><div class="line"><span class="variable">replicate-ignore-db=</span>mysql</div><div class="line"><span class="variable">replicate-wild-ignore-table=</span>mysql.%</div><div class="line"><span class="variable">replicate-ignore-db=</span>test</div><div class="line"><span class="variable">replicate-wild-ignore-table=</span>test.%</div><div class="line"><span class="comment">##replicate_do_db=c2cdb</span></div><div class="line"><span class="comment">##replicate-wild-do-table= c2cdb.%</span></div><div class="line">skip-slave-start</div><div class="line"><span class="comment">#read_only</span></div><div class="line">log_slave_updates</div><div class="line"><span class="comment">#innodb_adaptive_hash_index=off</span></div><div class="line"></div><div class="line"><span class="comment">#** Timeout options</span></div><div class="line"><span class="variable">wait_timeout =</span> <span class="number">1800</span></div><div class="line"><span class="variable">interactive_timeout =</span> <span class="number">1800</span></div><div class="line"></div><div class="line">skip-name-resolve</div><div class="line">skip-external-locking</div><div class="line"><span class="comment">#skip-bdb</span></div><div class="line"><span class="comment">#skip-innodb</span></div><div class="line"></div><div class="line"><span class="comment">##*** InnoDB Specific options</span></div><div class="line"><span class="variable">default-storage-engine =</span> InnoDB</div><div class="line"><span class="variable">transaction_isolation =</span> READ-COMMITTED</div><div class="line"><span class="variable">innodb_file_format=</span>barracuda</div><div class="line"><span class="variable">innodb_file_format_max=</span>Barracuda</div><div class="line"><span class="variable">innodb_buffer_pool_size =</span> <span class="number">95</span>G</div><div class="line"><span class="variable">innodb_data_file_path =</span> ibdata1:<span class="number">4</span>G:autoextend</div><div class="line"><span class="variable">innodb_strict_mode =</span> <span class="number">1</span></div><div class="line"><span class="variable">innodb_file_per_table =</span> <span class="number">1</span></div><div class="line"><span class="variable">innodb_write_io_threads=</span><span class="number">32</span></div><div class="line"><span class="variable">innodb_read_io_threads=</span><span class="number">32</span></div><div class="line"><span class="variable">innodb_thread_concurrency =</span> <span class="number">64</span></div><div class="line"><span class="variable">innodb_io_capacity=</span><span class="number">4000</span></div><div class="line"><span class="variable">innodb_io_capacity_max=</span><span class="number">8000</span></div><div class="line"><span class="variable">innodb_flush_log_at_trx_commit =</span> <span class="number">1</span></div><div class="line"><span class="variable">innodb_log_buffer_size =</span> <span class="number">32</span>M</div><div class="line"><span class="variable">innodb_log_file_size =</span> <span class="number">4</span>G</div><div class="line"><span class="variable">innodb_log_files_in_group =</span> <span class="number">2</span></div><div class="line"><span class="variable">innodb_adaptive_flushing =</span> <span class="number">1</span></div><div class="line"><span class="variable">innodb_lock_wait_timeout =</span> <span class="number">120</span></div><div class="line"><span class="variable">innodb_fast_shutdown =</span> <span class="number">0</span></div><div class="line"></div><div class="line"><span class="comment">##innodb_status_file</span></div><div class="line"><span class="comment">##innodb_open_files</span></div><div class="line"><span class="comment">##innodb_table_locks</span></div><div class="line"></div><div class="line"><span class="comment">##5.6 new##</span></div><div class="line"><span class="variable">sync_master_info =</span> <span class="number">10000</span></div><div class="line"><span class="variable">sync_relay_log   =</span> <span class="number">10000</span></div><div class="line"><span class="variable">sync_relay_log_info =</span> <span class="number">10000</span></div><div class="line"><span class="variable">relay_log_info_repository =</span> table</div><div class="line"><span class="variable">master_info_repository =</span> table</div><div class="line"><span class="variable">sync_binlog =</span> <span class="number">1</span></div><div class="line"></div><div class="line"><span class="comment">#explicit_defaults_for_timestamp</span></div><div class="line"><span class="variable">innodb_buffer_pool_instances =</span> <span class="number">8</span></div><div class="line">sysdate-is-now</div><div class="line">performance_schema</div><div class="line"><span class="variable">performance_schema_max_table_instances =</span> <span class="number">30000</span></div><div class="line"><span class="variable">sql_mode=</span></div><div class="line"><span class="variable">innodb_flush_neighbors=</span><span class="number">1</span></div><div class="line"><span class="variable">innodb_flush_method=</span>O_DIRECT</div><div class="line"><span class="variable">innodb_old_blocks_time =</span> <span class="number">1000</span></div><div class="line"><span class="variable">innodb_stats_on_metadata =</span> off</div><div class="line"><span class="variable">innodb_online_alter_log_max_size =</span> <span class="number">256</span>M</div><div class="line"><span class="variable">innodb_stats_persistent =</span> on</div><div class="line"><span class="variable">innodb_stats_auto_recalc =</span> on</div><div class="line"><span class="variable">table_definition_cache=</span><span class="number">4096</span></div><div class="line"><span class="variable">table_open_cache =</span> <span class="number">4096</span></div><div class="line"><span class="variable">innodb_open_files=</span><span class="number">4096</span></div><div class="line"></div><div class="line">[mysqldump]</div><div class="line">quick</div><div class="line"><span class="variable">max_allowed_packet =</span> <span class="number">16</span>M</div><div class="line"></div><div class="line">[mysql]</div><div class="line"><span class="variable">default-character-set=</span>utf8</div><div class="line"><span class="variable">prompt=</span><span class="string">"\\u:\\d&gt; "</span></div><div class="line"><span class="variable">pager=</span>more</div><div class="line"><span class="comment">#tee="/tmp/query.log"</span></div><div class="line">no-auto-rehash</div><div class="line"></div><div class="line">[isamchk]</div><div class="line"><span class="variable">key_buffer =</span> <span class="number">512</span>M</div><div class="line"><span class="variable">sort_buffer_size =</span> <span class="number">512</span>M</div><div class="line"><span class="variable">read_buffer =</span> <span class="number">8</span>M</div><div class="line"><span class="variable">write_buffer =</span> <span class="number">8</span>M</div><div class="line"></div><div class="line">[myisamchk]</div><div class="line"><span class="variable">key_buffer =</span> <span class="number">512</span>M</div><div class="line"><span class="variable">sort_buffer_size =</span> <span class="number">512</span>M</div><div class="line"><span class="variable">read_buffer =</span> <span class="number">8</span>M</div><div class="line"><span class="variable">write_buffer =</span> <span class="number">8</span>M</div><div class="line"></div><div class="line">[mysqlhotcopy]</div><div class="line">interactive-timeout</div><div class="line"></div><div class="line">[mysqld_safe]</div><div class="line"><span class="variable">open-files-limit =</span> <span class="number">65535</span></div><div class="line"><span class="variable">user =</span> mysql</div><div class="line"><span class="comment">#nice = -20</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>error log</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div><div class="line">254</div><div class="line">255</div><div class="line">256</div><div class="line">257</div><div class="line">258</div><div class="line">259</div><div class="line">260</div><div class="line">261</div><div class="line">262</div><div class="line">263</div><div class="line">264</div><div class="line">265</div><div class="line">266</div><div class="line">267</div><div class="line">268</div><div class="line">269</div><div class="line">270</div><div class="line">271</div><div class="line">272</div><div class="line">273</div><div class="line">274</div><div class="line">275</div><div class="line">276</div><div class="line">277</div><div class="line">278</div><div class="line">279</div><div class="line">280</div><div class="line">281</div><div class="line">282</div><div class="line">283</div><div class="line">284</div><div class="line">285</div><div class="line">286</div><div class="line">287</div><div class="line">288</div><div class="line">289</div><div class="line">290</div><div class="line">291</div><div class="line">292</div><div class="line">293</div><div class="line">294</div><div class="line">295</div><div class="line">296</div><div class="line">297</div><div class="line">298</div><div class="line">299</div><div class="line">300</div><div class="line">301</div><div class="line">302</div><div class="line">303</div><div class="line">304</div><div class="line">305</div><div class="line">306</div><div class="line">307</div><div class="line">308</div><div class="line">309</div><div class="line">310</div><div class="line">311</div><div class="line">312</div><div class="line">313</div><div class="line">314</div><div class="line">315</div><div class="line">316</div><div class="line">317</div><div class="line">318</div><div class="line">319</div><div class="line">320</div><div class="line">321</div><div class="line">322</div><div class="line">323</div><div class="line">324</div><div class="line">325</div><div class="line">326</div><div class="line">327</div><div class="line">328</div><div class="line">329</div><div class="line">330</div><div class="line">331</div><div class="line">332</div><div class="line">333</div><div class="line">334</div><div class="line">335</div><div class="line">336</div><div class="line">337</div><div class="line">338</div><div class="line">339</div><div class="line">340</div><div class="line">341</div><div class="line">342</div><div class="line">343</div><div class="line">344</div><div class="line">345</div><div class="line">346</div><div class="line">347</div><div class="line">348</div><div class="line">349</div><div class="line">350</div><div class="line">351</div><div class="line">352</div><div class="line">353</div><div class="line">354</div><div class="line">355</div><div class="line">356</div><div class="line">357</div><div class="line">358</div><div class="line">359</div><div class="line">360</div><div class="line">361</div><div class="line">362</div><div class="line">363</div><div class="line">364</div><div class="line">365</div><div class="line">366</div><div class="line">367</div><div class="line">368</div><div class="line">369</div><div class="line">370</div><div class="line">371</div><div class="line">372</div><div class="line">373</div><div class="line">374</div><div class="line">375</div><div class="line">376</div><div class="line">377</div><div class="line">378</div><div class="line">379</div><div class="line">380</div><div class="line">381</div><div class="line">382</div><div class="line">383</div><div class="line">384</div><div class="line">385</div><div class="line">386</div><div class="line">387</div><div class="line">388</div><div class="line">389</div><div class="line">390</div><div class="line">391</div><div class="line">392</div><div class="line">393</div></pre></td><td class="code"><pre><div class="line">第一个错误：</div><div class="line"></div><div class="line"><span class="comment">----------------------------</span></div><div class="line"><span class="operator"><span class="keyword">END</span> <span class="keyword">OF</span> <span class="keyword">INNODB</span> MONITOR <span class="keyword">OUTPUT</span></span></div><div class="line">============================</div><div class="line"><span class="keyword">InnoDB</span>: ###### Diagnostic info printed <span class="keyword">to</span> the standard error stream</div><div class="line"><span class="keyword">InnoDB</span>: Error: semaphore wait has lasted &gt; <span class="number">600</span> seconds</div><div class="line"><span class="keyword">InnoDB</span>: We intentionally crash the <span class="keyword">server</span>, because it appears <span class="keyword">to</span> be hung.</div><div class="line"><span class="number">2015</span>-<span class="number">12</span>-<span class="number">03</span> <span class="number">00</span>:<span class="number">23</span>:<span class="number">03</span> <span class="number">7</span>fddc77c9700  <span class="keyword">InnoDB</span>: <span class="keyword">Assertion</span> failure <span class="keyword">in</span> thread <span class="number">140590511331072</span> <span class="keyword">in</span> file srv0srv.cc line <span class="number">1748</span></div><div class="line"><span class="keyword">InnoDB</span>: We intentionally generate a memory trap.</div><div class="line"><span class="keyword">InnoDB</span>: Submit a detailed bug report <span class="keyword">to</span> http://bugs.mysql.com.</div><div class="line"><span class="keyword">InnoDB</span>: <span class="keyword">If</span> you <span class="keyword">get</span> repeated <span class="keyword">assertion</span> failures <span class="keyword">or</span> crashes, even</div><div class="line"><span class="keyword">InnoDB</span>: immediately <span class="keyword">after</span> the mysqld startup, there may be</div><div class="line"><span class="keyword">InnoDB</span>: corruption <span class="keyword">in</span> the <span class="keyword">InnoDB</span> <span class="keyword">tablespace</span>. Please refer <span class="keyword">to</span></div><div class="line"><span class="keyword">InnoDB</span>: http://dev.mysql.com/doc/refman/<span class="number">5.6</span>/en/forcing-<span class="keyword">innodb</span>-recovery.html</div><div class="line"><span class="keyword">InnoDB</span>: about forcing recovery.</div><div class="line"></div><div class="line"></div><div class="line">第二错误： </div><div class="line"></div><div class="line"><span class="number">2015</span>-<span class="number">11</span>-<span class="number">30</span> <span class="number">18</span>:<span class="number">08</span>:<span class="number">42</span> <span class="number">17070</span> [Note] <span class="keyword">Check</span> error <span class="keyword">log</span> <span class="keyword">for</span> additional messages. You will <span class="keyword">not</span> be able <span class="keyword">to</span> <span class="keyword">start</span> replication until the issue <span class="keyword">is</span> resolved <span class="keyword">and</span> the <span class="keyword">server</span> restarted.</div><div class="line"><span class="number">2015</span>-<span class="number">11</span>-<span class="number">30</span> <span class="number">18</span>:<span class="number">08</span>:<span class="number">42</span> <span class="number">17070</span> [Note] <span class="keyword">Event</span> Scheduler: Loaded <span class="number">0</span> <span class="keyword">events</span></div><div class="line"><span class="number">2015</span>-<span class="number">11</span>-<span class="number">30</span> <span class="number">18</span>:<span class="number">08</span>:<span class="number">42</span> <span class="number">17070</span> [Note] /usr/<span class="keyword">local</span>/mysql/<span class="keyword">bin</span>/mysqld: ready <span class="keyword">for</span> connections.</div><div class="line"><span class="keyword">Version</span>: <span class="string">'5.6.16-log'</span>  socket: <span class="string">'/tmp/mysql.sock'</span>  port: <span class="number">3306</span>  MySQL Community <span class="keyword">Server</span> (GPL)</div><div class="line"><span class="number">2015</span>-<span class="number">11</span>-<span class="number">30</span> <span class="number">18</span>:<span class="number">11</span>:<span class="number">36</span> <span class="number">17070</span> [Note] <span class="string">'CHANGE MASTER TO executed'</span>. Previous state master_host=<span class="string">'x'</span>, master_port= x, master_log_file=<span class="string">''</span>, master_log_pos= <span class="number">4</span>, master_bind=<span class="string">''</span>. New state master_host=<span class="string">'x'</span>, master_port= <span class="number">3306</span>, master_log_file=<span class="string">'x'</span>, master_log_pos= x, master_bind=<span class="string">''</span>.</div><div class="line"><span class="number">2015</span>-<span class="number">11</span>-<span class="number">30</span> <span class="number">18</span>:<span class="number">11</span>:<span class="number">38</span> <span class="number">17070</span> [Warning] Storing MySQL <span class="keyword">user</span> name <span class="keyword">or</span> <span class="keyword">password</span> information <span class="keyword">in</span> the <span class="keyword">master</span> info repository <span class="keyword">is</span> <span class="keyword">not</span> secure <span class="keyword">and</span> <span class="keyword">is</span> therefore <span class="keyword">not</span> recommended. Please consider <span class="keyword">using</span> the <span class="keyword">USER</span> <span class="keyword">and</span> <span class="keyword">PASSWORD</span> <span class="keyword">connection</span> options <span class="keyword">for</span> <span class="keyword">START</span> <span class="keyword">SLAVE</span>; see the '<span class="operator"><span class="keyword">START</span> <span class="keyword">SLAVE</span> Syntax<span class="string">' in the MySQL Manual for more information.</span></span></div><div class="line">2015-11-30 18:11:38 17070 [Note] Slave SQL thread initialized, starting replication in log 'x<span class="number">.004942</span><span class="string">' at position 118512044, relay log '</span>./x-relay-<span class="keyword">bin</span><span class="number">.000001</span><span class="string">' position: 4</span></div><div class="line">2015-11-30 18:11:39 17070 [Note] Slave I/O thread: connected to master 'repl@x:<span class="number">3306</span><span class="string">',replication started in log '</span>db10-<span class="number">049.004942</span><span class="string">' at position 118512044</span></div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611514595072 has waited at sync0rw.cc line 297 for 241.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611483125504 has waited at btr0cur.cc line 545 for 241.00 seconds the semaphore:</div><div class="line">X-lock (wait_ex) on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611546064640 has waited at sync0rw.cc line 297 for 241.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139610916673280 has waited at sync0rw.cc line 270 for 241.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611357247232 has waited at btr0cur.cc line 554 for 241.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611619493632 has waited at btr0cur.cc line 554 for 241.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611525084928 has waited at sync0rw.cc line 297 for 241.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139611441166080 has waited at btr0cur.cc line 554 for 241.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139719716267776 has waited at buf0buf.cc line 2457 for 241.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0x7f098dc11540 created in file buf0buf.cc line 996</div><div class="line">a writer (thread id 139719716267776) has reserved it in mode  exclusive</div><div class="line">number of readers 0, waiters flag 1, lock_word: 0</div><div class="line">Last time read locked in file not yet reserved line 0</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/buf/buf0buf.cc line 3579</div><div class="line">InnoDB: Warning: a long semaphore wait:</div><div class="line">--Thread 139610260764416 has waited at btr0cur.cc line 554 for 241.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">InnoDB: ###### Starts InnoDB Monitor for 30 secs to print diagnostic info:</div><div class="line">InnoDB: Pending preads 0, pwrites 0</div><div class="line"></div><div class="line">=====================================</div><div class="line">2015-11-30 20:33:03 7ef9b3b86700 INNODB MONITOR OUTPUT</div><div class="line">=====================================</div><div class="line">Per second averages calculated from the last 60 seconds</div><div class="line">-----------------</div><div class="line">BACKGROUND THREAD</div><div class="line">-----------------</div><div class="line">srv_master_thread loops: 8135 srv_active, 0 srv_shutdown, 175 srv_idle</div><div class="line">srv_master_thread log flush and writes: 8309</div><div class="line">----------</div><div class="line">SEMAPHORES</div><div class="line">----------</div><div class="line">OS WAIT ARRAY INFO: reservation count 66048</div><div class="line">--Thread 139611514595072 has waited at sync0rw.cc line 297 for 251.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">--Thread 139611483125504 has waited at btr0cur.cc line 545 for 251.00 seconds the semaphore:</div><div class="line">X-lock (wait_ex) on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">--Thread 139611546064640 has waited at sync0rw.cc line 297 for 251.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">--Thread 139610916673280 has waited at sync0rw.cc line 270 for 251.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">--Thread 139611357247232 has waited at btr0cur.cc line 554 for 251.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">--Thread 139611619493632 has waited at btr0cur.cc line 554 for 251.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">--Thread 139611525084928 has waited at sync0rw.cc line 297 for 251.00 seconds the semaphore:</div><div class="line">Mutex at 0x1372a40 created file sync0sync.cc line 1472, lock var 1</div><div class="line">waiters flag 1</div><div class="line">--Thread 139611441166080 has waited at btr0cur.cc line 554 for 251.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">--Thread 139719716267776 has waited at buf0buf.cc line 2457 for 251.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0x7f098dc11540 created in file buf0buf.cc line 996</div><div class="line">a writer (thread id 139719716267776) has reserved it in mode  exclusive</div><div class="line">number of readers 0, waiters flag 1, lock_word: 0</div><div class="line">Last time read locked in file not yet reserved line 0</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/buf/buf0buf.cc line 3579</div><div class="line">--Thread 139610260764416 has waited at btr0cur.cc line 554 for 251.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0xa37b3dc8 created in file dict0dict.cc line 2420</div><div class="line">a writer (thread id 139611483125504) has reserved it in mode  wait exclusive</div><div class="line">number of readers 1, waiters flag 1, lock_word: ffffffffffffffff</div><div class="line">Last time read locked in file btr0cur.cc line 554</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/ibuf/ibuf0ibuf.cc line 409</div><div class="line">--Thread 139610895693568 has waited at buf0flu.cc line 1064 for 244.00 seconds the semaphore:</div><div class="line">S-lock on RW-latch at 0x7f09893f2340 created in file buf0buf.cc line 996</div><div class="line">a writer (thread id 139611525084928) has reserved it in mode  exclusive</div><div class="line">number of readers 0, waiters flag 1, lock_word: 0</div><div class="line">Last time read locked in file btr0cur.cc line 265</div><div class="line">Last time write locked in file /export/home/pb2/build/sb_0-11248666-1389714123.71/mysql-5.6.16/storage/innobase/btr/btr0cur.cc line 265</div><div class="line">OS WAIT ARRAY INFO: signal count 82316</div><div class="line">Mutex spin waits 5723675, rounds 5019676, OS waits 27829</div><div class="line">RW-shared spins 68787, rounds 1361576, OS waits 31392</div><div class="line">RW-excl spins 47999, rounds 493233, OS waits 5902</div><div class="line">Spin rounds per wait: 0.88 mutex, 19.79 RW-shared, 10.28 RW-excl</div><div class="line">------------</div><div class="line">TRANSACTIONS</div><div class="line">------------</div><div class="line">Trx id counter 39221621177</div><div class="line">Purge done for trx's n:o &lt; <span class="number">39221621177</span> undo n:o &lt; <span class="number">0</span> state: running but idle</div><div class="line">History list length <span class="number">2003</span></div><div class="line">LIST <span class="keyword">OF</span> TRANSACTIONS <span class="keyword">FOR</span> <span class="keyword">EACH</span> <span class="keyword">SESSION</span>:</div><div class="line"><span class="comment">---TRANSACTION 39221621175, not started</span></div><div class="line">MySQL thread id <span class="number">2</span>, OS thread handle <span class="number">0x7f13080b5700</span>, <span class="keyword">query</span> id <span class="number">0</span> Waiting <span class="keyword">for</span> <span class="keyword">master</span> <span class="keyword">to</span> send <span class="keyword">event</span></div><div class="line"><span class="comment">---TRANSACTION 39221620820, ACTIVE 251 sec inserting</span></div><div class="line">mysql <span class="keyword">tables</span> <span class="keyword">in</span> <span class="keyword">use</span> <span class="number">1</span>, locked <span class="number">1</span></div><div class="line"><span class="number">1</span> <span class="keyword">lock</span> struct(s), heap <span class="keyword">size</span> <span class="number">360</span>, <span class="number">0</span> <span class="keyword">row</span> <span class="keyword">lock</span>(s), undo <span class="keyword">log</span> entries <span class="number">1</span></div><div class="line">MySQL thread id <span class="number">3</span>, OS thread handle <span class="number">0x7ef98bfff700</span>, <span class="keyword">query</span> id <span class="number">28601706</span> System <span class="keyword">lock</span></div><div class="line"><span class="comment">---TRANSACTION 39221511555, ACTIVE 300 sec fetching rows, thread declared inside InnoDB 1853</span></div><div class="line">mysql <span class="keyword">tables</span> <span class="keyword">in</span> <span class="keyword">use</span> <span class="number">1</span>, locked <span class="number">1</span></div><div class="line"><span class="number">27937</span> <span class="keyword">lock</span> struct(s), heap <span class="keyword">size</span> <span class="number">3405352</span>, <span class="number">7514649</span> <span class="keyword">row</span> <span class="keyword">lock</span>(s)</div><div class="line">MySQL thread id <span class="number">981</span>, OS thread handle <span class="number">0x7f13080e6700</span>, <span class="keyword">query</span> id <span class="number">28351219</span> localhost dbadmin copy <span class="keyword">to</span> tmp <span class="keyword">table</span></div><div class="line"><span class="keyword">alter</span> <span class="keyword">table</span> user_pool_20150318 <span class="keyword">engine</span>=MyISAM</div><div class="line"><span class="comment">--------</span></div><div class="line">FILE I/O</div><div class="line"><span class="comment">--------</span></div><div class="line">I/O thread <span class="number">0</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">insert</span> buffer thread)</div><div class="line">I/O thread <span class="number">1</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">log</span> thread)</div><div class="line">I/O thread <span class="number">2</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">3</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">4</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">5</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">6</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">7</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">8</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">9</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">10</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">11</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">12</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">13</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">14</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">15</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">16</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">17</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">18</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">19</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">20</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">21</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">22</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">23</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">24</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">25</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">26</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">27</span> state: complete io <span class="keyword">for</span> buf page (<span class="keyword">read</span> thread) ev <span class="keyword">set</span></div><div class="line">I/O thread <span class="number">28</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">29</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">30</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">31</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">32</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">33</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">read</span> thread)</div><div class="line">I/O thread <span class="number">34</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">35</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">36</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">37</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">38</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">39</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">40</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">41</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">42</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">43</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">44</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">45</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">46</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">47</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">48</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">49</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">50</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">51</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">52</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">53</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">54</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">55</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">56</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">57</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">58</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">59</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">60</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">61</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">62</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">63</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">64</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">I/O thread <span class="number">65</span> state: waiting <span class="keyword">for</span> i/o request (<span class="keyword">write</span> thread)</div><div class="line">Pending normal aio reads: <span class="number">100</span> [<span class="number">5</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">7</span>, <span class="number">0</span>, <span class="number">3</span>, <span class="number">70</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">4</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">7</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">2</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>] , aio writes: <span class="number">0</span> [<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>] ,</div><div class="line"> ibuf aio reads: <span class="number">0</span>, <span class="keyword">log</span> i/o<span class="string">'s: 0, sync i/o'</span>s: <span class="number">0</span></div><div class="line">Pending flushes (fsync) <span class="keyword">log</span>: <span class="number">0</span>; buffer pool: 0</div><div class="line">270736 OS file reads, 396343 OS file writes, 132039 OS fsyncs</div><div class="line">0.00 reads/s, 0 avg bytes/read, 0.00 writes/s, 0.00 fsyncs/s</div><div class="line"><span class="comment">-------------------------------------</span></div><div class="line"><span class="operator"><span class="keyword">INSERT</span> BUFFER <span class="keyword">AND</span> ADAPTIVE HASH <span class="keyword">INDEX</span></span></div><div class="line"><span class="comment">-------------------------------------</span></div><div class="line"><span class="keyword">InnoDB</span>: ###### Diagnostic info printed <span class="keyword">to</span> the standard error stream</div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611514595072 has waited at sync0rw.cc line 297 for 272.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611483125504 has waited at btr0cur.cc line 545 for 272.00 seconds the semaphore:</span></div><div class="line">X-<span class="keyword">lock</span> (wait_ex) <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611546064640 has waited at sync0rw.cc line 297 for 272.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610916673280 has waited at sync0rw.cc line 270 for 272.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611357247232 has waited at btr0cur.cc line 554 for 272.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611619493632 has waited at btr0cur.cc line 554 for 272.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611525084928 has waited at sync0rw.cc line 297 for 272.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611441166080 has waited at btr0cur.cc line 554 for 272.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139719716267776 has waited at buf0buf.cc line 2457 for 272.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0x7f098dc11540</span> created <span class="keyword">in</span> file buf0buf.cc line <span class="number">996</span></div><div class="line">a writer (thread id <span class="number">139719716267776</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">0</span>, waiters flag <span class="number">1</span>, lock_word: <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file <span class="keyword">not</span> yet reserved line <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/buf/buf0buf.cc line <span class="number">3579</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610260764416 has waited at btr0cur.cc line 554 for 272.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610895693568 has waited at buf0flu.cc line 1064 for 265.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0x7f09893f2340</span> created <span class="keyword">in</span> file buf0buf.cc line <span class="number">996</span></div><div class="line">a writer (thread id <span class="number">139611525084928</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">0</span>, waiters flag <span class="number">1</span>, lock_word: <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">265</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/btr/btr0cur.cc line <span class="number">265</span></div><div class="line"><span class="keyword">InnoDB</span>: ###### Starts <span class="keyword">InnoDB</span> Monitor <span class="keyword">for</span> <span class="number">30</span> secs <span class="keyword">to</span> print diagnostic info:</div><div class="line"><span class="keyword">InnoDB</span>: Pending preads <span class="number">0</span>, pwrites <span class="number">0</span></div><div class="line"><span class="keyword">InnoDB</span>: ###### Diagnostic info printed <span class="keyword">to</span> the standard error stream</div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611514595072 has waited at sync0rw.cc line 297 for 303.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611483125504 has waited at btr0cur.cc line 545 for 303.00 seconds the semaphore:</span></div><div class="line">X-<span class="keyword">lock</span> (wait_ex) <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611546064640 has waited at sync0rw.cc line 297 for 303.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610916673280 has waited at sync0rw.cc line 270 for 303.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611357247232 has waited at btr0cur.cc line 554 for 303.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611619493632 has waited at btr0cur.cc line 554 for 303.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611525084928 has waited at sync0rw.cc line 297 for 303.00 seconds the semaphore:</span></div><div class="line"><span class="keyword">Mutex</span> <span class="keyword">at</span> <span class="number">0x1372a40</span> created file sync0sync.cc line <span class="number">1472</span>, <span class="keyword">lock</span> <span class="keyword">var</span> <span class="number">1</span></div><div class="line">waiters flag <span class="number">1</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139611441166080 has waited at btr0cur.cc line 554 for 303.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139719716267776 has waited at buf0buf.cc line 2457 for 303.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0x7f098dc11540</span> created <span class="keyword">in</span> file buf0buf.cc line <span class="number">996</span></div><div class="line">a writer (thread id <span class="number">139719716267776</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">0</span>, waiters flag <span class="number">1</span>, lock_word: <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file <span class="keyword">not</span> yet reserved line <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/buf/buf0buf.cc line <span class="number">3579</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610260764416 has waited at btr0cur.cc line 554 for 303.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0xa37b3dc8</span> created <span class="keyword">in</span> file dict0dict.cc line <span class="number">2420</span></div><div class="line">a writer (thread id <span class="number">139611483125504</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  wait exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">1</span>, waiters flag <span class="number">1</span>, lock_word: ffffffffffffffff</div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">554</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/ibuf/ibuf0ibuf.cc line <span class="number">409</span></div><div class="line"><span class="keyword">InnoDB</span>: Warning: a long semaphore wait:</div><div class="line"><span class="comment">--Thread 139610895693568 has waited at buf0flu.cc line 1064 for 296.00 seconds the semaphore:</span></div><div class="line">S-<span class="keyword">lock</span> <span class="keyword">on</span> RW-latch <span class="keyword">at</span> <span class="number">0x7f09893f2340</span> created <span class="keyword">in</span> file buf0buf.cc line <span class="number">996</span></div><div class="line">a writer (thread id <span class="number">139611525084928</span>) has reserved it <span class="keyword">in</span> <span class="keyword">mode</span>  exclusive</div><div class="line"><span class="built_in">number</span> <span class="keyword">of</span> readers <span class="number">0</span>, waiters flag <span class="number">1</span>, lock_word: <span class="number">0</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">read</span> locked <span class="keyword">in</span> file btr0cur.cc line <span class="number">265</span></div><div class="line"><span class="keyword">Last</span> <span class="keyword">time</span> <span class="keyword">write</span> locked <span class="keyword">in</span> file /export/home/pb2/build/sb_0-<span class="number">11248666</span>-<span class="number">1389714123.71</span>/mysql-<span class="number">5.6</span><span class="number">.16</span>/storage/innobase/btr/btr0cur.cc line <span class="number">265</span></div><div class="line"><span class="keyword">InnoDB</span>: ###### Starts <span class="keyword">InnoDB</span> Monitor <span class="keyword">for</span> <span class="number">30</span> secs <span class="keyword">to</span> print diagnostic info:</div><div class="line"><span class="keyword">InnoDB</span>: Pending preads <span class="number">0</span>, pwrites <span class="number">0</span></div><div class="line"><span class="keyword">InnoDB</span>: ###### Diagnostic info printed <span class="keyword">to</span> the standard error stream</div></pre></td></tr></table></figure>
+
+<p>期间，本想对有问题的MySQL进行strace跟踪，看看出错后发生了什么。</p>
+<p>结果，开启strace，他却没有发生故障，如果你再次关闭strace，不久立马报错。</p>
+<p>尝试过的解决方案：</p>
+<p>1）echo “kernel.sem=250 32000 100 128″&gt;&gt;/etc/sysctl.conf   </p>
+<p>2）设置 innodb innodb_adaptive_hash_index=OFF  </p>
+<p>均无效果。  </p>
+<p>这时，已哭晕在厕所，醒来之后开始模拟测试各种场景。</p>
+<h2 id="测试手法">测试手法</h2>
+<ul>
+<li><p><strong>1 . M-M(log_slave_update)-S</strong></p>
+</li>
+<li><p><strong>2 . set trx=0 &amp; alter table engine=Myisam &amp; start slave</strong></p>
+</li>
+</ul>
+<h2 id="测试方案">测试方案</h2>
+<h3 id="第一轮测试（无厘头测试）">第一轮测试（无厘头测试）</h3>
+<ul>
+<li>MySQL 5.6.16 ROW AIO 边转换表引擎，边级联复制 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.0</span>) 天津机房： centos6<span class="number">.6</span>  二进制安装       aio=<span class="keyword">ON</span> <span class="keyword">or</span> aio=<span class="keyword">OFF</span>  结果：crash</div><div class="line"><span class="number">1.1</span>) 天津机房 ：centos6<span class="number">.6</span>  源码编译安装     aio=<span class="keyword">ON</span>  结果：crash</div><div class="line"><span class="number">1.2</span>) 天津机房： centos6<span class="number">.6</span>  二进制安装 开启strace </div><div class="line">	结果：</div><div class="line">		* 没有crash，但是有如下错误</div><div class="line">		* InnoDB: unable <span class="keyword">to</span> purge a record</div><div class="line">		* Enabling keys got errno <span class="number">127</span> <span class="keyword">on</span> aifang_adm.<span class="preprocessor">#sql-5d39_12d9, retrying</span></div><div class="line"><span class="number">1.3</span>) 天津机房: centos6<span class="number">.6</span> 二进制安装 dw load压力测试</div><div class="line">	结果： ？</div><div class="line"></div><div class="line"><span class="number">1.4</span>) 天津机房: centos6<span class="number">.6</span> 二进制安装, yum <span class="keyword">erase</span> libaio 结果：</div><div class="line"></div><div class="line"><span class="number">2.1</span>) 上海机房： redhat6.x 二进制安装     aio=<span class="keyword">ON</span>  结果：ok</div><div class="line"><span class="number">2.2</span>）上海机房： redhat6.x 源码编译安装   aio=<span class="keyword">OFF</span> 结果：ok</div></pre></td></tr></table></figure>
+
+<ul>
+<li>MySQL 5.6.27 ROW AIO 边转换表引擎，边级联复制</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.0</span>) 天津机房：  centos6.<span class="number">6</span> 二进制安装       <span class="variable">aio=</span>ON <span class="constant">or</span> <span class="variable">aio=</span>OFF  结果：?</div><div class="line"><span class="number">1.1</span>) 天津机房 ： centos6.<span class="number">6</span> 源码编译安装    <span class="variable">aio=</span>ON  结果：？</div><div class="line"><span class="number">1.3</span>) 天津机房: centos6.<span class="number">6</span> 二进制安装 dw load压力测试</div><div class="line">    结果： ？</div><div class="line"><span class="number">2.1</span>) 上海机房：  redhat6.x 二进制安装     <span class="variable">aio=</span>ON  结果：ok</div><div class="line"><span class="number">2.2</span>）上海机房：  redhat6.x 源码编译安装   <span class="variable">aio=</span>OFF 结果: ok</div></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>测试方式</th>
+<th>机房</th>
+<th>memory</th>
+<th>OS版本</th>
+<th>OS内核</th>
+<th>MySQL版本</th>
+<th>MySQL安装方式</th>
+<th>innodb_use_native_aio</th>
+<th>libaio是否安装</th>
+<th>测试结果</th>
+<th>补充</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>source</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>problem</td>
+<td>开启strace后，没有crash</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>OFF</td>
+<td>no</td>
+<td>无法启动mysql</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>source</td>
+<td>OFF</td>
+<td>no</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.23.4.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.23.4.el6.x86_64</td>
+<td>5.6.16</td>
+<td>source</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，大量load数据</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>64G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>64G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>source</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>上海</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>上海</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.16</td>
+<td>source</td>
+<td>OFF</td>
+<td>yes</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>source</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>ok</td>
+<td>开启strace后，没有crash</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>OFF</td>
+<td>no</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>source</td>
+<td>OFF</td>
+<td>no</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.23.4.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.23.4.el6.x86_64</td>
+<td>5.6.27</td>
+<td>source</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，大量load数据</td>
+<td>天津</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>ON</td>
+<td>yes</td>
+<td>?</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>上海</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>binary</td>
+<td>ON or OFF</td>
+<td>yes</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>ROW 模式，边转换表引擎，边级联复制</td>
+<td>上海</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>2.6.32-504.el6.x86_64</td>
+<td>5.6.27</td>
+<td>source</td>
+<td>OFF</td>
+<td>yes</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>经过第一轮测试，大致得到以下结论,初步怀疑是硬件故障：</p>
+<ul>
+<li><strong>1. 部分机器dmesg : hpsa 0000:03:00.0: out of memory</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">网上搜索 & 联系HP官方 得到的答复是：驱动升级</div><div class="line"></div><div class="line"><span class="number">1</span>) https://access.redhat.com/solutions/<span class="number">1248173</span> </div><div class="line"><span class="number">2</span>) http://h20564.www2.hpe.com/hpsc/doc/public/display?<span class="variable">docId=</span>c04302261&<span class="variable">lang=</span>en-us&<span class="variable">cc=</span>us</div></pre></td></tr></table></figure>
+
+<p>不过，再升级之前，我又做了以下测试, 想验证除了硬件故障外，是否还有其他猫腻：</p>
+<p>第二波测试：</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>内存</th>
+<th>OS</th>
+<th>aio</th>
+<th>是否有out of memory</th>
+<th>MySQL版本</th>
+<th>测试方法</th>
+<th>结果</th>
+<th>补充</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>innodb_use_native_aio=on</td>
+<td>no</td>
+<td>5.6.16</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2</td>
+<td>128G</td>
+<td>redhat6.5</td>
+<td>innodb_use_native_aio=on</td>
+<td>no</td>
+<td>5.6.27</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>3</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>no</td>
+<td>5.6.16</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>4</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>no</td>
+<td>5.6.27</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>5</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>yes</td>
+<td>5.6.16</td>
+<td>OLAP压测</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>6</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>yes</td>
+<td>5.6.27</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>7</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>yes</td>
+<td>5.6.27</td>
+<td>OLAP压测</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>8</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>yes</td>
+<td>5.6.16</td>
+<td>OLAP压测</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>9</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>yes</td>
+<td>5.6.16</td>
+<td>追同步测试</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>10</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>yes</td>
+<td>5.6.27</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>11</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>no</td>
+<td>5.6.16</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>12</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>no</td>
+<td>5.6.27</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>13</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>yes</td>
+<td>5.6.27</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>14</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>yes</td>
+<td>5.6.27</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+<tr>
+<td>14</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=off</td>
+<td>no，驱动升级</td>
+<td>5.6.16</td>
+<td>追同步测试</td>
+<td>crash</td>
+<td>-</td>
+</tr>
+<tr>
+<td>15</td>
+<td>128G</td>
+<td>centos6.6</td>
+<td>innodb_use_native_aio=on</td>
+<td>no，驱动升级</td>
+<td>5.6.27</td>
+<td>追同步测试</td>
+<td>ok</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h2 id="测试表示">测试表示</h2>
+<ul>
+<li><p><strong>1. MySQL5.6.27 在各方面都ok，没有报错</strong></p>
+</li>
+<li><p><strong>2. MySQL5.6.16 在硬件完全没问题的机器上ok，不会报错</strong></p>
+</li>
+</ul>
+<h2 id="总结">总结</h2>
+<ul>
+<li><p><strong>1. 硬件知识需要多学习，自动化检测,硬件监控需加强</strong></p>
+</li>
+<li><p><strong>2. Linux 调优与故障诊断需要加强</strong></p>
+</li>
+</ul>
+<blockquote>
+<p>善于利用dmesg,对/var/log/kernel.log &amp; /var/log/messges 信息要过于敏感。</p>
+</blockquote>
+<ul>
+<li><p><strong>3. 要经常翻MySQL的release note，多关注bug的修复，做到心中有数</strong></p>
+</li>
+<li><p><strong>4. 测试非常重要，自动化压力测试和基准测试，可以提前发现很多问题</strong></p>
+</li>
+<li><p><strong>5. 态度，情怀，毅力最重要，要怀抱敬畏之心</strong></p>
+</li>
+</ul>
+<h2 id="最后方案">最后方案</h2>
+<ol>
+<li><p>从以上测试得知，并非完全是硬件问题，但又和硬件相关。 MySQL5.6.27 的稳定性 要优于 MySQL5.6.16，所以升级是王道。</p>
+</li>
+<li><p>但是由于线上还有5.1，5.5 的服务，所以还是不要用有问题的机器。</p>
+</li>
+</ol>
+<p>最后感谢为此付出努力和帮助过我的同学们，接下来继续填坑吧，走起。。。</p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2015/12/06/innodb_semaphore/" data-title="InnoDB hung&amp;crash : a long semaphore wait | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2015/11/16/mixed_dml_limit/"  title="Mixed format + DML limit 引发的血案">
+ <strong>NEXT:</strong><br/> 
+ <span>Mixed format + DML limit 引发的血案
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2015/12/06/innodb_semaphore/" data-title="InnoDB hung&crash : a long semaphore wait" data-url="https://Keithlan.github.io/2015/12/06/innodb_semaphore/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#症状"><span class="toc-number">2.</span> <span class="toc-text">症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#how_to_repeat"><span class="toc-number">3.</span> <span class="toc-text">how to repeat</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL_配置文件"><span class="toc-number">4.</span> <span class="toc-text">MySQL 配置文件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试手法"><span class="toc-number">5.</span> <span class="toc-text">测试手法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试方案"><span class="toc-number">6.</span> <span class="toc-text">测试方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#第一轮测试（无厘头测试）"><span class="toc-number">6.1.</span> <span class="toc-text">第一轮测试（无厘头测试）</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试表示"><span class="toc-number">7.</span> <span class="toc-text">测试表示</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">8.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后方案"><span class="toc-number">9.</span> <span class="toc-text">最后方案</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>16</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>10</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
