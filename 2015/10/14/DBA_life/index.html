@@ -84,7 +84,7 @@ DBA">
     </p>
   <p class="article-time">
     <time datetime="2015-10-14T02:32:24.000Z" itemprop="datePublished">Oct 14 2015</time>
-    Updated:<time datetime="2015-10-14T02:26:46.000Z" itemprop="dateModified">Oct 14 2015</time>
+    Updated:<time datetime="2016-02-17T03:25:00.000Z" itemprop="dateModified">Feb 17 2016</time>
     
   </p>
 </header>
@@ -147,7 +147,7 @@ DBA">
 <ul>
 <li><strong>卓越：避免故障发生，防火比救火重要</strong></li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">* 哪里可能会有问题： 监控</div><div class="line">	1. DBMO</div><div class="line">	2. slow	 </div><div class="line">	</div><div class="line">* 具体分析点：point</div><div class="line">	1. slow 分析系统</div><div class="line">	2. SQL 智能分析</div><div class="line">	3. My-Redis 缓存失效分析</div><div class="line">	4. SQL 误操作预防，show processlist 分析</div><div class="line">	5. TMC 分析&预防 </div><div class="line">	6. disk 自动化分析</div><div class="line">	7. util 分析</div><div class="line">	8. load 分析</div><div class="line">	9. swap 分析</div><div class="line">	10. slave 延迟</div><div class="line">	11. Replication error： 1048，1062...</div><div class="line">	12. 如何监控‘我们的监控系统’</div><div class="line">	13. DDL & SQL 预审核</div><div class="line">	14. 测试（基准测试 + 压力测试）</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">* 哪里可能会有问题： 监控</div><div class="line">	1. 压力分析系统：对每台服务器做到胸有成足，了解自己的服务器负载。</div><div class="line">		a）今天和过去（近1天，1周）对比，压力（qps，util，iowait）趋势（高了/低了/异常了）如何？</div><div class="line">		b）异常的性能趋势，必须报警出来。</div><div class="line">	2. DBMO</div><div class="line">	3. slow	 </div><div class="line">	</div><div class="line">* 具体分析点：point</div><div class="line">	1. slow 分析系统</div><div class="line">	2. SQL 智能分析</div><div class="line">	3. My-Redis 缓存失效分析</div><div class="line">	4. SQL 误操作预防，show processlist 分析</div><div class="line">	5. TMC 分析&预防 </div><div class="line">	6. disk 自动化分析</div><div class="line">	7. util 分析</div><div class="line">	8. load 分析</div><div class="line">	9. swap 分析</div><div class="line">	10. slave 延迟</div><div class="line">	11. Replication error： 1048，1062...</div><div class="line">	12. 如何监控‘我们的监控系统’</div><div class="line">	13. DDL & SQL 预审核</div><div class="line">	14. 测试（基准测试 + 压力测试）</div></pre></td></tr></table></figure>
 
 <ul>
 <li><strong>优雅：保证服务不受影响，胸有成足</strong></li>
