@@ -68,6 +68,37 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/07/15/mysqsla/" title="mysql日志分析神器之mysqlsla" itemprop="url">
+      
+        mysql日志分析神器之mysqlsla
+      </a>
+    </h1>
+    
+     
+       <p itemprop="description" >hack mysqlsla 文档
+背景
+
+什么是mysqlsla？
+  Mysqlsla 是daniel-nichter 用perl 写的一个脚本，专门用于处理分析Mysql的日志而存在。 
+
+mysqlsla 能解决什么问题？
+  作为一名Mysql DBA，日常工作中处理日志</p>
+      
+    
+    <p class="article-more-link">
+      <time datetime="2015-07-15T03:32:24.000Z" itemprop="datePublished">Jul 15 2015</time>
+      
+          <a href="/2015/07/15/mysqsla/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/14/mysql_group_order_limit/" title="Mysql 5.6 执行计划错误案例分析" itemprop="url">
       
         Mysql 5.6 执行计划错误案例分析
@@ -175,29 +206,22 @@ The server stops accepting new</p>
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
+        <a href="/2015/07/14/mysql_error_1048/" title="Mysql Error 1048 奇遇记" itemprop="url">
       
-        mysqlsla 源码解析
+        Mysql Error 1048 奇遇记
       </a>
     </h1>
     
      
-       <p itemprop="description" >知识结构
+       <p itemprop="description" >前提
 
-
-目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
-
-mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
-
-分析 main 函数，一步步了解主要流程
-
-针对一条线进行分析，比如slow lo</p>
+上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟</p>
       
     
     <p class="article-more-link">
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysql_error_1048/">阅读更多&raquo;</a>
       
     </p>
 
@@ -260,22 +284,29 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/14/mysql_error_1048/" title="Mysql Error 1048 奇遇记" itemprop="url">
+        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
       
-        Mysql Error 1048 奇遇记
+        mysqlsla 源码解析
       </a>
     </h1>
     
      
-       <p itemprop="description" >前提
+       <p itemprop="description" >知识结构
 
-上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟</p>
+
+目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
+
+mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
+
+分析 main 函数，一步步了解主要流程
+
+针对一条线进行分析，比如slow lo</p>
       
     
     <p class="article-more-link">
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/14/mysql_error_1048/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
       
     </p>
 
@@ -347,7 +378,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>16</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>17</sup></a></li>
 		
 			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
 		
@@ -358,7 +389,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -374,6 +405,8 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
 			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>2</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
 		
 		</ul>
 </div>
