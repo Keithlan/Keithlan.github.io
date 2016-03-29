@@ -80,7 +80,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-03-27T07:32:24.000Z" itemprop="datePublished">Mar 27 2016</time>
-    Updated:<time datetime="2016-03-29T05:36:27.000Z" itemprop="dateModified">Mar 29 2016</time>
+    Updated:<time datetime="2016-03-29T05:53:03.000Z" itemprop="dateModified">Mar 29 2016</time>
     
   </p>
 </header>
@@ -180,27 +180,25 @@
 <h2 id="Transportable_Tablespace_Internals">Transportable Tablespace Internals</h2>
 <ol>
 <li><p>ALTER TABLE … DISCARD TABLESPACE Internals</p>
-<pre><code>1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
-1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
+<pre><code> 1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
+ 1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
 </code></pre></li>
 <li><p>FLUSH TABLES … FOR EXPORT  Internals</p>
-<pre><code><span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
-<span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
-<span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
-<span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
+<pre><code> <span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
+ <span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
+ <span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
+ <span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
 </code></pre></li>
-</ol>
-<ol>
 <li><p>UNLOCK TABLES</p>
-<pre><code>3.1 The binary .cfg file is deleted.
-3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
+<pre><code> 3.1 The binary .cfg file is deleted.
+ 3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
 </code></pre></li>
 <li><p>ALTER TABLE … IMPORT TABLESPACE</p>
-<pre><code><span class="number">4.1</span> Each tablespace page <span class="keyword">is</span> checked <span class="keyword">for</span> corruption.
-<span class="number">4.2</span> The <span class="constant">space</span> ID <span class="keyword">and</span> <span class="command">log</span> sequence numbers (LSNs) <span class="function_start"><span class="keyword">on</span></span> each page are updated
-<span class="number">4.3</span> Flags are validated <span class="keyword">and</span> LSN updated <span class="keyword">for</span> <span class="keyword">the</span> header page.
-<span class="number">4.4</span> Btree pages are updated.
-<span class="number">4.5</span> The page state <span class="keyword">is</span> <span class="keyword">set</span> <span class="keyword">to</span> dirty so <span class="keyword">that</span> <span class="keyword">it</span> will be written <span class="keyword">to</span> disk.
+<pre><code> <span class="number">4.1</span> Each tablespace page <span class="keyword">is</span> checked <span class="keyword">for</span> corruption.
+ <span class="number">4.2</span> The <span class="constant">space</span> ID <span class="keyword">and</span> <span class="command">log</span> sequence numbers (LSNs) <span class="function_start"><span class="keyword">on</span></span> each page are updated
+ <span class="number">4.3</span> Flags are validated <span class="keyword">and</span> LSN updated <span class="keyword">for</span> <span class="keyword">the</span> header page.
+ <span class="number">4.4</span> Btree pages are updated.
+ <span class="number">4.5</span> The page state <span class="keyword">is</span> <span class="keyword">set</span> <span class="keyword">to</span> dirty so <span class="keyword">that</span> <span class="keyword">it</span> will be written <span class="keyword">to</span> disk.
 </code></pre></li>
 </ol>
 <h2 id="Question_&amp;_Tips">Question &amp; Tips</h2>
