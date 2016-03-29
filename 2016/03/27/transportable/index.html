@@ -1,0 +1,529 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>InnoDB可传输表空间 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="Copying File-Per-Table Tablespaces to Another ServerTransportable Tablespace ExamplesTransportable Tablespace Internals
+
+背景
+大家先来回顾一下，如果要将innoDB中的一个表 M">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/03/27/transportable/" title="InnoDB可传输表空间" itemprop="url">InnoDB可传输表空间</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-03-27T07:32:24.000Z" itemprop="datePublished">Mar 27 2016</time>
+    Updated:<time datetime="2016-03-29T05:36:27.000Z" itemprop="dateModified">Mar 29 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它有什么优势"><span class="toc-number">2.</span> <span class="toc-text">它有什么优势</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#哪些需要注意"><span class="toc-number">3.</span> <span class="toc-text">哪些需要注意</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Transportable_Tablespace_Examples"><span class="toc-number">4.</span> <span class="toc-text">Transportable Tablespace Examples</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Ex1:_Copying_an_InnoDB_Partitioned_Table_From_One_Server_To_Another"><span class="toc-number">4.1.</span> <span class="toc-text">Ex1: Copying an InnoDB Partitioned Table From One Server To Another</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Ex2:_Copying_an_InnoDB_Table_From_One_Server_To_Another"><span class="toc-number">4.2.</span> <span class="toc-text">Ex2: Copying an InnoDB Table From One Server To Another</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Transportable_Tablespace_Internals"><span class="toc-number">5.</span> <span class="toc-text">Transportable Tablespace Internals</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Question_&_Tips"><span class="toc-number">6.</span> <span class="toc-text">Question & Tips</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p>Copying File-Per-Table Tablespaces to Another Server<br>Transportable Tablespace Examples<br>Transportable Tablespace Internals</p>
+</blockquote>
+<h2 id="背景">背景</h2>
+<p>大家先来回顾一下，如果要将innoDB中的一个表 Moving or Copying 到另外一台(machine|instance)上，如何做？</p>
+<blockquote>
+<ol>
+<li>MySQL Enterprise Backup (no need consider)</li>
+<li>Copying Data Files (Cold Backup Method)</li>
+<li>Export and Import (mysqldump,mydumper,mysqlpump)</li>
+</ol>
+</blockquote>
+<p>现在我们有第四种方案</p>
+<blockquote>
+<ol>
+<li>Transportable Tablespaces</li>
+</ol>
+</blockquote>
+<h2 id="它有什么优势">它有什么优势</h2>
+<blockquote>
+<ol>
+<li>To run reports without putting extra load on a production server</li>
+<li>To set up identical data for a table on a new slave server</li>
+<li>To restore a backed-up version of a table or partition after a problem or mistake</li>
+<li>As a faster way of moving data around than importing the results of a mysqldump command. The data is available immediately, rather than having to be re-inserted and the indexes rebuilt</li>
+<li>To move a file-per-table tablespace to a server with storage medium that better suits system requirements. For example, you may want to have busy tables on an SSD device, or large tables on a high-capacity HDD device</li>
+<li>新备份（类似Myisam的备份）</li>
+</ol>
+</blockquote>
+<pre><code>    1. Myisam 只有<span class="operator"><span class="keyword">flush</span> <span class="keyword">table</span>了，就可以随意copy
+    <span class="number">2.</span> 既然如此，为什么<span class="keyword">InnoDB</span>不行呢？
+        <span class="number">2.1</span> 原因一： <span class="keyword">InnoDB</span>的所有信息都有数据字典维护，数据字典在共享表空间中
+        <span class="number">2.2</span> 原因二： 你没有办法控制<span class="keyword">innoDB</span>文件sync到disk
+    <span class="number">3.</span> 所以，现在是否可以利用<span class="number">5.6</span>的新语法，<span class="keyword">flush</span> <span class="keyword">table</span> .. <span class="keyword">for</span> export 功能来sync <span class="keyword">innoDB</span> <span class="keyword">to</span> disk呢</span>
+</code></pre><h2 id="哪些需要注意">哪些需要注意</h2>
+<blockquote>
+<ol>
+<li>必须开启 innodb_file_per_table</li>
+<li>当这个表处于quiesced状态,甚至不能被select</li>
+<li>两边实例的page size 一致</li>
+<li>5.7 版本之前，不支持分区表transport</li>
+<li>外键相关的表，必须设置 foreign_key_checks=0 才能成功</li>
+<li>ALTER TABLE … IMPORT TABLESPACE 不需要.cfg metadata file . 但是，这样的话，MySQL就不会对schema进行verificate</li>
+<li>5.6以及更高版本，import&amp;export 版本必须在同一个series</li>
+<li>在replication环境中，master &amp; slave 都必须开启 innodb_file_per_table</li>
+<li>对于InnoDB general tablespace，不支持discard &amp; import tablespace</li>
+<li>如果两边服务器的table row_format设置的不一样，会导致schema mismatch error</li>
+<li>加密过的InnoDB tablespace 必须要拷贝.cfp 文件</li>
+</ol>
+</blockquote>
+<h2 id="Transportable_Tablespace_Examples">Transportable Tablespace Examples</h2>
+<h3 id="Ex1:_Copying_an_InnoDB_Partitioned_Table_From_One_Server_To_Another"><del>Ex1: Copying an InnoDB Partitioned Table From One Server To Another</del></h3>
+<h3 id="Ex2:_Copying_an_InnoDB_Table_From_One_Server_To_Another">Ex2: Copying an InnoDB Table From One Server To Another</h3>
+<blockquote>
+<p>这个例子演示了一个regular InnoDB table的传输过程</p>
+</blockquote>
+<ol>
+<li><p>在source server A上，创建一个表</p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
+ mysql&gt; CREATE TABLE t(c1 INT) engine=InnoDB;
+</code></pre></li>
+<li><p>在destination server B上，也创建同样的表结构</p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
+ mysql&gt; CREATE TABLE t(c1 INT) engine=InnoDB;
+</code></pre></li>
+<li><p>在destination server B上，discard 该表（这一步是必须的）</p>
+<pre><code> mysql&gt; ALTER <span class="keyword">TABLE</span> t DISCARD TABLESPACE;
+</code></pre></li>
+<li><p>在source server A上，执行 FLUSH TABLES … FOR EXPORT , 该表这时候处于quiesce状态，只读，且创建.cfg metadata文件</p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
+ mysql&gt; FLUSH TABLES t <span class="keyword">FOR</span> EXPORT;
+</code></pre><p> 此时，.cfg 文件在InnoDB的data directory中</p>
+</li>
+<li><p>拷贝.ibd &amp; .cfg 从source server A 到 在destination server B</p>
+<pre><code> shell&gt; scp <span class="regexp">/path/</span>to<span class="regexp">/datadir/</span>test<span class="regexp">/t.{ibd,cfg} destination-server:/</span>path<span class="regexp">/to/</span>datadir<span class="regexp">/test</span>
+</code></pre></li>
+<li><p>在source server A， 执行unlock tables 来释放FLUSH TABLES … FOR EXPORT 加的locks</p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
+ mysql&gt; UNLOCK TABLES;
+</code></pre></li>
+<li><p>在destination server B上，导入tablespace</p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
+ mysql&gt; ALTER TABLE t IMPORT TABLESPACE;
+</code></pre></li>
+</ol>
+<h2 id="Transportable_Tablespace_Internals">Transportable Tablespace Internals</h2>
+<ol>
+<li><p>ALTER TABLE … DISCARD TABLESPACE Internals</p>
+<pre><code>1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
+1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
+</code></pre></li>
+<li><p>FLUSH TABLES … FOR EXPORT  Internals</p>
+<pre><code><span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
+<span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
+<span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
+<span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
+</code></pre></li>
+</ol>
+<ol>
+<li><p>UNLOCK TABLES</p>
+<pre><code>3.1 The binary .cfg file is deleted.
+3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
+</code></pre></li>
+<li><p>ALTER TABLE … IMPORT TABLESPACE</p>
+<pre><code><span class="number">4.1</span> Each tablespace page <span class="keyword">is</span> checked <span class="keyword">for</span> corruption.
+<span class="number">4.2</span> The <span class="constant">space</span> ID <span class="keyword">and</span> <span class="command">log</span> sequence numbers (LSNs) <span class="function_start"><span class="keyword">on</span></span> each page are updated
+<span class="number">4.3</span> Flags are validated <span class="keyword">and</span> LSN updated <span class="keyword">for</span> <span class="keyword">the</span> header page.
+<span class="number">4.4</span> Btree pages are updated.
+<span class="number">4.5</span> The page state <span class="keyword">is</span> <span class="keyword">set</span> <span class="keyword">to</span> dirty so <span class="keyword">that</span> <span class="keyword">it</span> will be written <span class="keyword">to</span> disk.
+</code></pre></li>
+</ol>
+<h2 id="Question_&amp;_Tips">Question &amp; Tips</h2>
+<ul>
+<li><p><strong>flush tables .. for export需要注意什么</strong></p>
+<pre><code>  1. <span class="operator"><span class="keyword">flush</span> <span class="keyword">tables</span> .. <span class="keyword">for</span> export 会加锁，这时候，千万不能退出终端或<span class="keyword">session</span>，否则加锁无效且.cfg文件自动删除。</span>
+</code></pre></li>
+<li><p><strong>如果没有.cfg文件，还能够import成功吗</strong></p>
+<pre><code>  <span class="number">1.</span> 可以，但是这样就没办法认证schema了
+  +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------------+</span>
+  | Level   | Code | Message                                                                                                                                        |
+  +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------------+</span>
+  | Warning | <span class="number">1810</span> | InnoDB: IO Read error: (<span class="number">2</span>, No such <span class="built_in">file</span> <span class="operator">or</span> <span class="built_in">directory</span>) Error opening <span class="string">'./test/t.cfg'</span>, will attempt <span class="built_in">to</span> import <span class="keyword">without</span> schema verification |
+  +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------------+</span>
+  <span class="number">1</span> row <span class="operator">in</span> <span class="built_in">set</span> (<span class="number">0.00</span> <span class="built_in">sec</span>)
+</code></pre></li>
+<li><p><strong>如果discard了，还能select吗</strong></p>
+<pre><code>  1. 很不幸，是不可以被<span class="operator"><span class="keyword">select</span>的
+  ERROR <span class="number">1814</span> (HY000): <span class="keyword">Tablespace</span> has been discarded <span class="keyword">for</span> <span class="keyword">table</span> <span class="string">'t'</span></span>
+</code></pre></li>
+<li><p><strong>discard 是什么意思，我就不能对其做任何操作了吗</strong></p>
+<pre><code>  1. discard的意思就是从数据库detached,会删除ibd文件，保留frm文件。
+  2. 也就意味着，你可以对frm文件操作，比如：<span class="operator"><span class="keyword">rename</span> <span class="keyword">table</span>,<span class="keyword">drop</span> <span class="keyword">table</span> ，但是不能对ibd文件操作，比如：dml</span>
+</code></pre></li>
+<li><p><strong>这样传输表的速度快吗？对io负载大吗？</strong></p>
+<pre><code>  <span class="number">1</span>. 这几步中，最慢的是<span class="preprocessor"><span class="keyword">import</span>，其他几乎是瞬间完成。比较<span class="keyword">import</span>做的事情也很多吗，anyway，都比mysqldump要快很多很多倍。</span>
+  <span class="number">2</span>. 至于io负载，当然是有的，但是还是要优于mysqlimport很多很多哇。
+</code></pre></li>
+</ul>
+<p>参考文献</p>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/tablespace-copying.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/tablespace-copying.html</a></p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-feature/">MySQL feature</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/03/27/transportable/" data-title="InnoDB可传输表空间 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/03/14/wrong_index/"  title="SQL优化：执行计划出错之重复索引干扰">
+ <strong>NEXT:</strong><br/> 
+ <span>SQL优化：执行计划出错之重复索引干扰
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/03/27/transportable/" data-title="InnoDB可传输表空间" data-url="https://Keithlan.github.io/2016/03/27/transportable/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它有什么优势"><span class="toc-number">2.</span> <span class="toc-text">它有什么优势</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#哪些需要注意"><span class="toc-number">3.</span> <span class="toc-text">哪些需要注意</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Transportable_Tablespace_Examples"><span class="toc-number">4.</span> <span class="toc-text">Transportable Tablespace Examples</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Ex1:_Copying_an_InnoDB_Partitioned_Table_From_One_Server_To_Another"><span class="toc-number">4.1.</span> <span class="toc-text">Ex1: Copying an InnoDB Partitioned Table From One Server To Another</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Ex2:_Copying_an_InnoDB_Table_From_One_Server_To_Another"><span class="toc-number">4.2.</span> <span class="toc-text">Ex2: Copying an InnoDB Table From One Server To Another</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Transportable_Tablespace_Internals"><span class="toc-number">5.</span> <span class="toc-text">Transportable Tablespace Internals</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Question_&_Tips"><span class="toc-number">6.</span> <span class="toc-text">Question & Tips</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>18</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>10</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>2</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
