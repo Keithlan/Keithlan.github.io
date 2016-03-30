@@ -80,7 +80,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-03-27T07:32:24.000Z" itemprop="datePublished">Mar 27 2016</time>
-    Updated:<time datetime="2016-03-29T05:53:03.000Z" itemprop="dateModified">Mar 29 2016</time>
+    Updated:<time datetime="2016-03-30T02:37:29.000Z" itemprop="dateModified">Mar 30 2016</time>
     
   </p>
 </header>
@@ -180,25 +180,27 @@
 <h2 id="Transportable_Tablespace_Internals">Transportable Tablespace Internals</h2>
 <ol>
 <li><p>ALTER TABLE … DISCARD TABLESPACE Internals</p>
-<pre><code> 1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
- 1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
+<pre><code>1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
+1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
 </code></pre></li>
 <li><p>FLUSH TABLES … FOR EXPORT  Internals</p>
-<pre><code> <span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
- <span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
- <span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
- <span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
+<pre><code><span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
+<span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
+<span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
+<span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
 </code></pre></li>
+</ol>
+<ol>
 <li><p>UNLOCK TABLES</p>
-<pre><code> 3.1 The binary .cfg file is deleted.
- 3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
+<pre><code>3.1 The binary .cfg file is deleted.
+3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
 </code></pre></li>
 <li><p>ALTER TABLE … IMPORT TABLESPACE</p>
-<pre><code> <span class="number">4.1</span> Each tablespace page <span class="keyword">is</span> checked <span class="keyword">for</span> corruption.
- <span class="number">4.2</span> The <span class="constant">space</span> ID <span class="keyword">and</span> <span class="command">log</span> sequence numbers (LSNs) <span class="function_start"><span class="keyword">on</span></span> each page are updated
- <span class="number">4.3</span> Flags are validated <span class="keyword">and</span> LSN updated <span class="keyword">for</span> <span class="keyword">the</span> header page.
- <span class="number">4.4</span> Btree pages are updated.
- <span class="number">4.5</span> The page state <span class="keyword">is</span> <span class="keyword">set</span> <span class="keyword">to</span> dirty so <span class="keyword">that</span> <span class="keyword">it</span> will be written <span class="keyword">to</span> disk.
+<pre><code><span class="number">4.1</span> Each tablespace page <span class="keyword">is</span> checked <span class="keyword">for</span> corruption.
+<span class="number">4.2</span> The <span class="constant">space</span> ID <span class="keyword">and</span> <span class="command">log</span> sequence numbers (LSNs) <span class="function_start"><span class="keyword">on</span></span> each page are updated
+<span class="number">4.3</span> Flags are validated <span class="keyword">and</span> LSN updated <span class="keyword">for</span> <span class="keyword">the</span> header page.
+<span class="number">4.4</span> Btree pages are updated.
+<span class="number">4.5</span> The page state <span class="keyword">is</span> <span class="keyword">set</span> <span class="keyword">to</span> dirty so <span class="keyword">that</span> <span class="keyword">it</span> will be written <span class="keyword">to</span> disk.
 </code></pre></li>
 </ol>
 <h2 id="Question_&amp;_Tips">Question &amp; Tips</h2>
@@ -227,8 +229,79 @@
 <pre><code>  <span class="number">1</span>. 这几步中，最慢的是<span class="preprocessor"><span class="keyword">import</span>，其他几乎是瞬间完成。比较<span class="keyword">import</span>做的事情也很多吗，anyway，都比mysqldump要快很多很多倍。</span>
   <span class="number">2</span>. 至于io负载，当然是有的，但是还是要优于mysqlimport很多很多哇。
 </code></pre></li>
+<li><p><strong>如果两边表结构不一致，可以导入过来吗？</strong></p>
+<pre><code>  <span class="number">1.</span> 很遗憾，会报错
+      <span class="type">ERROR</span> <span class="number">1808</span> (<span class="type">HY000</span>): <span class="type">Schema</span> mismatch (<span class="type">Number</span> <span class="keyword">of</span> columns don't match, table has <span class="number">5</span> columns but the tablespace meta-<span class="typedef"><span class="keyword">data</span> file has 4 columns)</span>
+  <span class="number">2.</span> 所以，这里也有一个缺陷就是，如果你有ibd文件，还不一定能够恢复，你必须还要知道该表的表结构才行
+</code></pre></li>
+<li><p><strong><code>特别注意: 必须使用.cfg来帮助认证schema，否则很可能导致MySQL卡死</code></strong></p>
+<pre><code>  原始表结构如下：
+  root:test&gt; show create table t_2;
+  +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+  | Table | Create Table                                                                                                                   |
+  +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+  | t_2   | CREATE TABLE `t_2` (
+    `id` int(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span>
+  ) ENGINE=InnoDB <span class="keyword">DEFAULT</span> CHARSET=utf8 |
+  +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+  <span class="number">1</span> row <span class="keyword">in</span> set (<span class="number">0.00</span> sec)
+</code></pre></li>
 </ul>
-<p>参考文献</p>
+<pre><code>    再没有原始表结构的前提下，自己随便创建了一个表结构
+    root:test&gt; show create table t_2;
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    | Table | Create Table                                                                                                                   |
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    | t_2   | CREATE TABLE `t_2` (
+      `idsssss` int(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span>,
+      `iddddddd` char(<span class="number">10</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span>
+    ) ENGINE=InnoDB <span class="keyword">DEFAULT</span> CHARSET=utf8 |
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    <span class="number">1</span> row <span class="keyword">in</span> set (<span class="number">0.00</span> sec)
+
+    root:test&gt; ALTER TABLE t_2 IMPORT TABLESPACE;
+    Query OK, <span class="number">0</span> rows affected, <span class="number">1</span> warning (<span class="number">0.00</span> sec)
+
+    root:test&gt; show warnings;
+    +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------+</span>
+    | Level   | Code | Message                                                                                                                                  |
+    +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------+</span>
+    | Warning | <span class="number">1810</span> | InnoDB: IO Read error: (<span class="number">2</span>, No such <span class="keyword">file</span> <span class="keyword">or</span> directory) Error opening './test/t_2.cfg', will attempt <span class="keyword">to</span> import without schema verification |
+    +<span class="comment">---------+------+------------------------------------------------------------------------------------------------------------------------------------------+</span>
+    <span class="number">1</span> row <span class="keyword">in</span> set (<span class="number">0.00</span> sec)
+
+    root:test&gt; show create table t_2;
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    | Table | Create Table                                                                                                                   |
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    | t_2   | CREATE TABLE `t_2` (
+      `idsssss` int(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span>,
+      `iddddddd` char(<span class="number">10</span>) <span class="keyword">DEFAULT</span> <span class="keyword">NULL</span>
+    ) ENGINE=InnoDB <span class="keyword">DEFAULT</span> CHARSET=utf8 |
+    +<span class="comment">-------+--------------------------------------------------------------------------------------------------------------------------------+</span>
+    <span class="number">1</span> row <span class="keyword">in</span> set (<span class="number">0.00</span> sec)
+
+    root:test&gt;
+    root:test&gt; <span class="keyword">select</span> * from t_2;
+
+
+
+    ^CCtrl-C <span class="comment">-- sending "KILL QUERY 32" to server ...</span>
+    Ctrl-C <span class="comment">-- query aborted.</span>
+    ^CCtrl-C <span class="comment">-- sending "KILL 32" to server ...</span>
+
+    root:(none)&gt; show processlist;
+    +<span class="comment">----+------+-----------+------+---------+------+--------------+-------------------+</span>
+    | Id | User | Host      | db   | Command | <span class="typename">Time</span> | State        | Info              |
+    +<span class="comment">----+------+-----------+------+---------+------+--------------+-------------------+</span>
+    | <span class="number">32</span> | root | localhost | test | Killed  | <span class="number">1834</span> | Sending data | <span class="keyword">select</span> * from t_2 |
+    | <span class="number">43</span> | root | localhost | test | Sleep   | <span class="number">1419</span> |              | <span class="keyword">NULL</span>              |
+    | <span class="number">46</span> | root | localhost | <span class="keyword">NULL</span> | Query   |    <span class="number">0</span> | init         | show processlist  |
+    +<span class="comment">----+------+-----------+------+---------+------+--------------+-------------------+</span>
+    <span class="number">3</span> rows <span class="keyword">in</span> set (<span class="number">0.00</span> sec)
+
+    惨痛的教训： 只能通过kill mysql才能释放链接
+</code></pre><p>参考文献</p>
 <blockquote>
 <p><a href="http://dev.mysql.com/doc/refman/5.7/en/tablespace-copying.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/tablespace-copying.html</a></p>
 </blockquote>
