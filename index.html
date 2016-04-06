@@ -68,6 +68,38 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2016/04/06/auto_incre_reduce/" title="auto_increment的后裔" itemprop="url">
+      
+        auto_increment的后裔
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >记一次auto_increment即将引发的悲剧  
+
+实战
+先来看看架构图吧
+
+
+x表将数据写入A，这时候A的id是自增长的    
+A再将自己的自增长的id（发号器），写入到 B, 注意是指定id写入。insert into B(id) values(xx);  
+同时也将数</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2016-04-06T11:20:24.000Z" itemprop="datePublished">Apr 6 2016</time>
+      
+          <a href="/2016/04/06/auto_incre_reduce/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2016/03/27/transportable/" title="InnoDB可传输表空间" itemprop="url">
       
         InnoDB可传输表空间
@@ -327,40 +359,6 @@ mysqlbinlog + script
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/16/ref_56/" title="Mysql5.6 新特性" itemprop="url">
-      
-        Mysql5.6 新特性
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >第一章：基本信息
-
-1.4__ Mysql5.6 的新特性
-新增的特性
-
-
-安全方面的增强
-
-mysql 提供存放认真信息在 .mylogin.cnf,“mysql_config_editor — MySQL Configuration Utility”
-
-mysql 提供更加强</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-16T03:32:24.000Z" itemprop="datePublished">Jul 16 2015</time>
-      
-          <a href="/2015/07/16/ref_56/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
     <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
@@ -402,7 +400,7 @@ mysql 提供更加强</p>
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>18</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>19</sup></a></li>
 		
 			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
 		
@@ -413,7 +411,7 @@ mysql 提供更加强</p>
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -422,7 +420,7 @@ mysql 提供更加强</p>
 	<p class="asidetitle">Tags</p>
 		<ul class="clearfix">
 		
-			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>10</sup></a></li>
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>11</sup></a></li>
 		
 			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		

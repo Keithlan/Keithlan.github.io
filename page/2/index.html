@@ -68,6 +68,40 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/07/16/ref_56/" title="Mysql5.6 新特性" itemprop="url">
+      
+        Mysql5.6 新特性
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >第一章：基本信息
+
+1.4__ Mysql5.6 的新特性
+新增的特性
+
+
+安全方面的增强
+
+mysql 提供存放认真信息在 .mylogin.cnf,“mysql_config_editor — MySQL Configuration Utility”
+
+mysql 提供更加强</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2015-07-16T03:32:24.000Z" itemprop="datePublished">Jul 16 2015</time>
+      
+          <a href="/2015/07/16/ref_56/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/16/mysql_replication_inside/" title="mysql replication inside" itemprop="url">
       
         mysql replication inside
@@ -123,6 +157,39 @@ mysqlsla 能解决什么问题？
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
+      
+        mysqlsla 源码解析
+      </a>
+    </h1>
+    
+     
+       <p itemprop="description" >知识结构
+
+
+目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
+
+mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
+
+分析 main 函数，一步步了解主要流程
+
+针对一条线进行分析，比如slow lo</p>
+      
+    
+    <p class="article-more-link">
+      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+      
+          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/14/mysql_group_order_limit/" title="Mysql 5.6 执行计划错误案例分析" itemprop="url">
       
         Mysql 5.6 执行计划错误案例分析
@@ -147,25 +214,21 @@ mysqlsla 能解决什么问题？
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/14/mysql_error_1293/" title="深入浅出timestamp" itemprop="url">
+        <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">
       
-        深入浅出timestamp
+        MySQL 5.6 中 In 优化的那些事
       </a>
     </h1>
     
      
-       <p itemprop="description" >前提
-1对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp
-
-错误场景
-
-好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 </p>
+       <p itemprop="description" >背景
+这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都ro</p>
       
     
     <p class="article-more-link">
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/14/mysql_error_1293/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysql_in/">阅读更多&raquo;</a>
       
     </p>
 
@@ -279,64 +342,6 @@ The server stops accepting new</p>
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">
-      
-        MySQL 5.6 中 In 优化的那些事
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都ro</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_in/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
-      
-        mysqlsla 源码解析
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >知识结构
-
-
-目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
-
-mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
-
-分析 main 函数，一步步了解主要流程
-
-针对一条线进行分析，比如slow lo</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
     <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
@@ -378,7 +383,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>18</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>19</sup></a></li>
 		
 			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
 		
@@ -389,7 +394,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -398,7 +403,7 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
 	<p class="asidetitle">Tags</p>
 		<ul class="clearfix">
 		
-			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>10</sup></a></li>
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>11</sup></a></li>
 		
 			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		

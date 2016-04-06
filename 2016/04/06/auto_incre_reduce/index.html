@@ -4,15 +4,23 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>特殊场景下的slave重构 | Focus on MySQL,Focus on Focus</title>
+    <title>auto_increment的后裔 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="Mysql Backup and Recovery
-背景说明
+    <meta name="description" content="记一次auto_increment即将引发的悲剧  
 
-备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF Mysql Backup and Recovery 分享 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？">
+实战
+先来看看架构图吧
+
+
+x表将数据写入A，这时候A的id是自增长的    
+A再将自己的自增长的id（发号器），写入到 B, 注意是指定id写入。insert into B(id) values(xx);  
+同时也将数据写入到C  
+
+
+">
     
     
     
@@ -72,15 +80,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/07/14/mysql_recovery_myisam_slave/" title="特殊场景下的slave重构" itemprop="url">特殊场景下的slave重构</a>
+      <a href="/2016/04/06/auto_incre_reduce/" title="auto_increment的后裔" itemprop="url">auto_increment的后裔</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-    Updated:<time datetime="2015-07-15T02:29:22.000Z" itemprop="dateModified">Jul 15 2015</time>
+    <time datetime="2016-04-06T11:20:24.000Z" itemprop="datePublished">Apr 6 2016</time>
+    Updated:<time datetime="2016-04-06T11:21:09.000Z" itemprop="dateModified">Apr 6 2016</time>
     
   </p>
 </header>
@@ -89,43 +97,62 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景说明"><span class="toc-number">1.</span> <span class="toc-text">背景说明</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#前提"><span class="toc-number">2.</span> <span class="toc-text">前提</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#方案一"><span class="toc-number">3.</span> <span class="toc-text">方案一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#方案二"><span class="toc-number">4.</span> <span class="toc-text">方案二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
 		</div>
 		
-		<p><a href="http://dev.mysql.com/doc/refman/5.6/en/backup-and-recovery.html" target="_blank" rel="external">Mysql Backup and Recovery</a></p>
-<h2 id="背景说明">背景说明</h2>
-<hr>
-<p>备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF <a href="https://github.com/Keithlan/Keithlan.github.io/tree/master/github_md/Mysql/BACKUP_RECOVERY" target="_blank" rel="external">Mysql Backup and Recovery 分享</a> 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备份的前提下，如果从master上恢复一台slave出来？</p>
-<a id="more"></a>
-
-<h2 id="前提">前提</h2>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">* Master</div><div class="line">	1. Myisam 引擎</div><div class="line">	2. 无全量备份</div><div class="line">	3. 有最近2天的binlog</div><div class="line">	4. SQL语句特点： 全是insert</div><div class="line">	5. 每个表都有主键id，并且auto increment </div><div class="line">* Master 上的table</div><div class="line">	1. table1_YYYMM (按月分表)</div><div class="line">	2. table2_YYYMMDD (按天分表)</div><div class="line">	3. table3 (整张表)</div></pre></td></tr></table></figure>
-
-<p>如果是innoDB 引擎，到时可以用mysqldump —single transaction 或者 percona xtrabackup 来恢复。  但是在Myisam中，在这种场景下，如何恢复搭建slave呢？</p>
-<h2 id="方案一">方案一</h2>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1. copy 已经不在写的表，比如table1_YYYMM 今天之前，今月之前的表。 消耗时间A</div><div class="line">2. 在master 上<span class="operator"><span class="keyword">flush</span> <span class="keyword">tables</span> <span class="keyword">with</span> <span class="keyword">read</span> <span class="keyword">lock</span>；<span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span>；消耗时间B</span></div><div class="line"><span class="number">3.</span> copy 剩下的表； 消耗时间C</div><div class="line"><span class="number">4.</span> <span class="keyword">unlock</span> <span class="keyword">tables</span>；</div><div class="line"><span class="number">5.</span> 在<span class="keyword">slave</span>上，开启同步</div></pre></td></tr></table></figure>
-
-<ul>
-<li><strong>方案一的优点和缺点也很明显：</strong></li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">*</span>优点</div><div class="line">	1.无须担心一致性问题。</div><div class="line"><span class="keyword">*</span>缺点</div><div class="line">	1. 需要锁表，锁住的时间就是copy数据的时间C。 表越大，锁越长，有些业务是不允许这么长时间的。</div></pre></td></tr></table></figure>
-
-<h2 id="方案二">方案二</h2>
-<p>这里主要抓住一点，只有insert操作。根据这个特性，我们可以针对性的恢复</p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">* 检查一下表的自增主键</div><div class="line">* 第一步：提前先copy好所有不再写的表，比如table1_YYYMM 今天之前，今月之前的表，同上。  消耗时间A</div><div class="line">* 第二步：然后再copy 当天，当月，当时的表， 并且记下 max（主键），一遍后续补数据用。  消耗时间B</div><div class="line">* 第三步：在master上  消耗时间C</div><div class="line"> 	1. <span class="operator"><span class="keyword">flush</span> <span class="keyword">tables</span> <span class="keyword">with</span> <span class="keyword">read</span> <span class="keyword">lock</span>；</span></div><div class="line"> 	<span class="number">2.</span> <span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span>； </div><div class="line"> 	<span class="number">3.</span> 记下当天，当月，当时的表的<span class="keyword">max</span>（主键），由于是myisam引擎，基本是瞬间完成。 </div><div class="line"> 	<span class="number">4.</span> <span class="keyword">unlock</span> <span class="keyword">tables</span>； </div><div class="line">* 第四步：修补第二步和第三步 <span class="keyword">max</span>（主键）中的空洞。  </div><div class="line">* 第五步：<span class="keyword">repair</span> 部分表，可以用同步机制自动检测且修复，无须人为关心。</div><div class="line">* 第六步：在<span class="keyword">slave</span>上，开启同步</div></pre></td></tr></table></figure>
-
-<ul>
-<li><strong>方案二的优点和缺点：</strong></li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* 优点：</div><div class="line">	1. 基本上无中断业务时间。</div><div class="line">	2. 不会丢失任何数据。</div><div class="line">* 缺点：</div><div class="line">	1. 需要脚本处理max值，记录position点。</div><div class="line">	2. 需要repair表。</div><div class="line">	3. 如果有update，delete语句，有风险。</div></pre></td></tr></table></figure>
-
-<p>以上，就是这次奇葩的数据恢复。</p>
-<h2 id="总结">总结</h2>
+		<blockquote>
+<p>记一次auto_increment即将引发的悲剧  </p>
+</blockquote>
+<h2 id="实战">实战</h2>
+<h3 id="先来看看架构图吧">先来看看架构图吧</h3>
+<blockquote>
 <ol>
-<li>没有备份，等于自掘坟墓。</li>
-<li>没有测试恢复过的备份，等于没有备份。</li>
-<li>请看第一点。</li>
+<li>x表将数据写入A，这时候A的id是自增长的    </li>
+<li>A再将自己的自增长的id（发号器），写入到 B, 注意是指定id写入。insert into B(id) values(xx);  </li>
+<li>同时也将数据写入到C  </li>
 </ol>
+</blockquote>
+<p><img src="/image/mysql_error/step1.jpg" alt="auto_1" title="auto_1"></p>
+<h3 id="最终的想法是这样的">最终的想法是这样的</h3>
+<blockquote>
+<ol>
+<li>主表A将发号器id写入C (id 在一个小区间增长: 1 ~ 100000)</li>
+<li>主表B将发号器id也写入C (id 在一个大区间增长: 10000000 ~ ? )  </li>
+<li>很多人疑惑的是：为什么一开始id不区分开来呢？ 因为一开始业务没有拆分，需要保证A,B一致。直到某个阶段，才将B设置alter table B auto_increment = 10000000  </li>
+<li>这个时候，由于指定id写入的原因，A，B的id还是一致的，直到X表分发数据到不同表。如：xx写入A，yy写入B，这个时候由于A，B的auto_increment不一样，所以id就会有所区分(A的id自增长在小的区间，B的id自增长在大的区间)。  </li>
+</ol>
+</blockquote>
+<p><img src="/image/mysql_error/step2.jpg" alt="auto_2" title="auto_2"></p>
+<h3 id="错误场景重现">错误场景重现</h3>
+<blockquote>
+<p>那么问题就来了，如果这时候B的auto_incrememt再次变回到小区间1 ~ 100000，会导致什么问题呢？<br>问题严重啦： 这时候由于A，B 都往C表写同一个区间的数据，会导致很多脏数据，结果就悲剧了咯。。。<br>真实场景重现如下  </p>
+</blockquote>
+<p><img src="/image/mysql_error/step3.jpg" alt="auto_3" title="auto_3"></p>
+<h2 id="分析">分析</h2>
+<blockquote>
+<p>问题的关键处在auto_increment变小  </p>
+</blockquote>
+<h3 id="那么什么场景下回导致auto_increment变小呢？">那么什么场景下回导致auto_increment变小呢？</h3>
+<blockquote>
+<ol>
+<li>参考： <a href="http://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-handling.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-handling.html</a></li>
+<li>alter table xx auto_increment = yy;  </li>
+<li>truncate table   </li>
+<li>restart mysql  </li>
+</ol>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* <span class="keyword">If</span> you specify an AUTO_INCREMENT column <span class="keyword">for</span> an InnoDB table, the table handle <span class="keyword">in</span> the InnoDB data dictionary contains a special counter called the <span class="keyword">auto</span>-increment counter that <span class="keyword">is</span> used <span class="keyword">in</span> assigning <span class="keyword">new</span> values <span class="keyword">for</span> the column. This counter <span class="keyword">is</span> stored only <span class="keyword">in</span> main memory, <span class="keyword">not</span> <span class="keyword">on</span> disk.</div><div class="line"></div><div class="line"><span class="keyword">To</span> initialize an <span class="keyword">auto</span>-increment counter after a server restart, InnoDB executes the equivalent <span class="keyword">of</span> the following statement <span class="keyword">on</span> the first insert <span class="keyword">into</span> a table containing an AUTO_INCREMENT column.</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> MAX(ai_col) <span class="keyword">FROM</span> table_name <span class="keyword">FOR</span> UPDATE;</div><div class="line"></div><div class="line">* A server restart also cancels the effect <span class="keyword">of</span> the AUTO_INCREMENT = N table <span class="keyword">option</span> <span class="keyword">in</span> CREATE TABLE <span class="keyword">and</span> ALTER TABLE statements, which you can use <span class="keyword">with</span> InnoDB tables <span class="keyword">to</span> <span class="keyword">set</span> the initial counter value <span class="keyword">or</span> alter the current counter value.</div></pre></td></tr></table></figure>
+
+<h2 id="解决方案">解决方案</h2>
+<blockquote>
+<ol>
+<li>手动插入一条数据到B，让其最大值在10000000+1, 这样就不会出问题。  </li>
+</ol>
+</blockquote>
+<h2 id="总结">总结</h2>
+<blockquote>
+<p>官方文档要多看<br>官方文档要多看<br>官方文档要多看<br>重要的事情说三遍  </p>
+</blockquote>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -145,7 +172,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/07/14/mysql_recovery_myisam_slave/" data-title="特殊场景下的slave重构 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/04/06/auto_incre_reduce/" data-title="auto_increment的后裔 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -154,19 +181,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/07/14/mysql_error_1048/" title="Mysql Error 1048 奇遇记">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  Mysql Error 1048 奇遇记</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/07/14/mysql_error_1293/"  title="深入浅出timestamp">
+<a href="/2016/03/27/transportable/"  title="InnoDB可传输表空间">
  <strong>NEXT:</strong><br/> 
- <span>深入浅出timestamp
+ <span>InnoDB可传输表空间
 </span>
 </a>
 </div>
@@ -176,7 +195,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/07/14/mysql_recovery_myisam_slave/" data-title="特殊场景下的slave重构" data-url="https://Keithlan.github.io/2015/07/14/mysql_recovery_myisam_slave/"></div>
+<div class="ds-thread" data-thread-key="/2016/04/06/auto_incre_reduce/" data-title="auto_increment的后裔" data-url="https://Keithlan.github.io/2016/04/06/auto_incre_reduce/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -197,7 +216,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景说明"><span class="toc-number">1.</span> <span class="toc-text">背景说明</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#前提"><span class="toc-number">2.</span> <span class="toc-text">前提</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#方案一"><span class="toc-number">3.</span> <span class="toc-text">方案一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#方案二"><span class="toc-number">4.</span> <span class="toc-text">方案二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
   </div>
 
 <div id="asidepart">
