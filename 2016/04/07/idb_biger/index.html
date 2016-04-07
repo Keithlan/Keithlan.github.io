@@ -1,0 +1,480 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL实战系列：大字段如何优化 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="背景
+
+线上发现一张表，1亿的数据量，物理大小尽然惊人的大，1.2T最终发现，原来有很多字段，10个varchar，1个text这么大的表，会给运维带来很大的痛苦：DDL咋办？恢复咋办？备份咋办？
+
+基本知识：InnoDB Storage Architecture for InnoDB On Dis">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/04/07/idb_biger/" title="MySQL实战系列：大字段如何优化" itemprop="url">MySQL实战系列：大字段如何优化</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-04-07T11:20:24.000Z" itemprop="datePublished">Apr 7 2016</time>
+    Updated:<time datetime="2016-04-07T11:38:28.000Z" itemprop="dateModified">Apr 7 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#基本知识：InnoDB_Storage_Architecture_for_InnoDB_On_Disk_Format"><span class="toc-number">2.</span> <span class="toc-text">基本知识：InnoDB Storage Architecture for InnoDB On Disk Format</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_物理结构存储结构"><span class="toc-number">2.1.</span> <span class="toc-text">InnoDB 物理结构存储结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_逻辑存储结构"><span class="toc-number">2.2.</span> <span class="toc-text">InnoDB 逻辑存储结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_page_存储结构"><span class="toc-number">2.3.</span> <span class="toc-text">InnoDB page 存储结构</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#页类型"><span class="toc-number">2.3.1.</span> <span class="toc-text">页类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#页大小"><span class="toc-number">2.3.2.</span> <span class="toc-text">页大小</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#结构图"><span class="toc-number">2.3.3.</span> <span class="toc-text">结构图</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_row_存储结构"><span class="toc-number">2.4.</span> <span class="toc-text">InnoDB row 存储结构</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#rows_文件格式总体规划图"><span class="toc-number">2.4.1.</span> <span class="toc-text">rows 文件格式总体规划图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#row-fomat为Compact的结构图"><span class="toc-number">2.4.2.</span> <span class="toc-text">row-fomat为Compact的结构图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#row-fomat为Redundant的结构图"><span class="toc-number">2.4.3.</span> <span class="toc-text">row-fomat为Redundant的结构图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#compress_&_dynamic_与_Compact_的区别之处"><span class="toc-number">2.4.4.</span> <span class="toc-text">compress & dynamic 与 Compact 的区别之处</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#字段之字符串类型"><span class="toc-number">2.5.</span> <span class="toc-text">字段之字符串类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#char(N)_vs_varchar(N)"><span class="toc-number">2.5.1.</span> <span class="toc-text">char(N) vs  varchar(N)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#varchar(N)_:_255_vs_256"><span class="toc-number">2.5.2.</span> <span class="toc-text">varchar(N) : 255 vs 256</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#varchar（N）_&_char（N）_的最大限制"><span class="toc-number">2.5.3.</span> <span class="toc-text">varchar（N） & char（N） 的最大限制</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#off-page：_行溢出"><span class="toc-number">2.5.4.</span> <span class="toc-text">off-page： 行溢出</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何对大字段进行优化"><span class="toc-number">2.6.</span> <span class="toc-text">如何对大字段进行优化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-number">3.</span> <span class="toc-text">参考</span></a></li></ol>
+		</div>
+		
+		<h2 id="背景">背景</h2>
+<blockquote>
+<p>线上发现一张表，1亿的数据量，物理大小尽然惊人的大，1.2T<br>最终发现，原来有很多字段，10个varchar，1个text<br>这么大的表，会给运维带来很大的痛苦：DDL咋办？恢复咋办？备份咋办？</p>
+</blockquote>
+<h2 id="基本知识：InnoDB_Storage_Architecture_for_InnoDB_On_Disk_Format">基本知识：InnoDB Storage Architecture for InnoDB On Disk Format</h2>
+<blockquote>
+<p>蓝图： database —&gt; tablespaces —&gt; pages —&gt; rows —&gt; columns</p>
+</blockquote>
+<h3 id="InnoDB_物理结构存储结构">InnoDB 物理结构存储结构</h3>
+<p><img src="/image/mysql_innodb_arch/database_file.jpg" alt="database_file" title="database_file"></p>
+<h3 id="InnoDB_逻辑存储结构">InnoDB 逻辑存储结构</h3>
+<p><img src="/image/mysql_innodb_arch/tablespace.jpg" alt="tablespace" title="tablespace"></p>
+<h3 id="InnoDB_page_存储结构">InnoDB page 存储结构</h3>
+<h4 id="页类型">页类型</h4>
+<blockquote>
+<p>数据页（B-tree Node）<br>undo页（undo Log Page）<br>系统页（System Page）<br>事务数据页（Transaction system Page）<br>插入缓冲位图页（Insert Buffer Page）<br>未压缩的二进制大对象页（Uncompressd BLOB Page）<br>压缩的二进制大对象页（compressd BLOB Page）</p>
+</blockquote>
+<h4 id="页大小">页大小</h4>
+<blockquote>
+<p>默认16k(若果没有特殊情况，下面介绍的都是默认16k大小为准)<br>一个页内必须存储2行记录，否则就不是B+tree，而是链表了</p>
+</blockquote>
+<h4 id="结构图">结构图</h4>
+<p><img src="/image/mysql_innodb_arch/innodb_page.jpg" alt="innodb_page" title="innodb_page"></p>
+<h3 id="InnoDB_row_存储结构">InnoDB row 存储结构</h3>
+<h4 id="rows_文件格式总体规划图">rows 文件格式总体规划图</h4>
+<p><img src="/image/mysql_innodb_arch/row_file_format.jpg" alt="row_file_format" title="row_file_format"></p>
+<h4 id="row-fomat为Compact的结构图">row-fomat为Compact的结构图</h4>
+<p><img src="/image/mysql_innodb_arch/compact.jpg" alt="compact" title="compact"></p>
+<h4 id="row-fomat为Redundant的结构图"><del>row-fomat为Redundant的结构图</del></h4>
+<blockquote>
+<p>不常用</p>
+</blockquote>
+<h4 id="compress_&amp;_dynamic_与_Compact_的区别之处">compress &amp; dynamic 与 Compact 的区别之处</h4>
+<p><img src="/image/mysql_innodb_arch/dynamic.jpg" alt="dynamic" title="dynamic"></p>
+<h3 id="字段之字符串类型">字段之字符串类型</h3>
+<h4 id="char(N)_vs_varchar(N)">char(N) vs  varchar(N)</h4>
+<blockquote>
+<p>不管是char，还是varchar，在compact row-format格式下，NULL都不占用任何存储空间<br>在多字节字符集的情况下，CHAR vs VARCHAR 的实际行存储基本没区别<br>CHAR不管是否是多字符集，对未能占满长度的字符还是会填充0x20<br>规范中：对char和varchar可以不做要求</p>
+</blockquote>
+<h4 id="varchar(N)_:_255_vs_256">varchar(N) : 255 vs 256</h4>
+<blockquote>
+<p>当实际长度大于255的时候，变长字段长度列表需要用两个字节存储，也就意味着每一行数据都会增加1个字节<br>实测下来存储空间增长并不算大，且性能影响也不大，所以，尽量在256之内吧</p>
+</blockquote>
+<h4 id="varchar（N）_&amp;_char（N）_的最大限制">varchar（N） &amp; char（N） 的最大限制</h4>
+<blockquote>
+<p>char的最大限制是： N&lt;=255<br>varchar 的最大限制是： N&lt;=65535 , 注意官方文档说的是N是字节，并且说的是一行的所有字段的总和小于65535，而varchar(N)中的N表示的是字符。<br>测试后发现，65535并不是最大限制，最大的限制是65532</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">[MySQL 5.6.27]</span></div><div class="line"></div><div class="line"><span class="bullet">* </span>char的最大限制是： N&lt;=255</div><div class="line">root:test&gt; create table test( a char(65535))charset=latin1 engine=innodb;</div><div class="line">ERROR 1074 (42000): Column length too big for column <span class="emphasis">'a'</span> (max = 255); use BLOB or TEXT instead</div><div class="line"></div><div class="line"><span class="bullet">* </span>测试后发现，65535并不是最大限制，最大的限制是65532</div><div class="line">root:test&gt; create table test( a varchar(65535))charset=latin1 engine=innodb;</div><div class="line">ERROR 1118 (42000): Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs</div><div class="line"></div><div class="line">root:test&gt; create table test( a varchar(65532))charset=latin1 engine=innodb;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="bullet">* </span>varchar 的最大限制是： N&lt;=65535 , 注意官方文档说的是N是字节，并且说的是一行的所有字段的总和小于65535，而varchar(N)中的N表示的是字符</div><div class="line"></div><div class="line">root:test&gt; create table test<span class="emphasis">_1( a varchar(30000),b varchar(30000),c varchar(5535))charset=latin1 engine=innodb;</span></div><div class="line">ERROR 1118 (42000): Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs</div><div class="line"></div><div class="line"><span class="bullet">* </span>varchar(N)中的N表示的是字符</div><div class="line"></div><div class="line">root:test&gt; create table test<span class="emphasis">_1( a varchar(50000))charset=utf8 engine=innodb;</span></div><div class="line">Query OK, 0 rows affected, 1 warning (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">root:test&gt; show warnings;</span></div><div class="line">+-------+------+--------------------------------------------+</div><div class="line"><span class="header">| Level | Code | Message                                    |</span></div><div class="line">+-------+------+--------------------------------------------+</div><div class="line"><span class="header">| Note  | 1246 | Converting column 'a' from VARCHAR to TEXT |</span></div><div class="line">+-------+------+--------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">root:test&gt; show create table test_1;</span></div><div class="line">+--------+-------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table  | Create Table                                                                  |</span></div><div class="line">+--------+-------------------------------------------------------------------------------+</div><div class="line">| test<span class="emphasis">_1 | CREATE TABLE `test_</span>1` (</div><div class="line"><span class="code">  `a` mediumtext</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+--------+-------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<h4 id="off-page：_行溢出">off-page： 行溢出</h4>
+<ul>
+<li><strong>为什么会有行溢出off-page这个概念呢</strong></li>
+</ul>
+<blockquote>
+<p>假设创建了一张表，里面有一个字段是a varchar(30000) , innoDB的页才16384个字节，如何存储的下呢？所以行溢出就来了嘛</p>
+</blockquote>
+<ul>
+<li><strong>如何看出行溢出了？</strong></li>
+</ul>
+<blockquote>
+<p>可以通过姜承尧写的工具查看<br>其中溢出的页有 Uncompressed BLOB Page: 243453</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">[root()@xx script]<span class="comment"># python py_innodb_page_info.py t.ibd</span></div><div class="line"></div><div class="line">Total number of page: <span class="number">537344</span>:</div><div class="line">Insert Buffer Bitmap: <span class="number">33</span></div><div class="line">Freshly Allocated <span class="keyword">Page</span>: <span class="number">74040</span></div><div class="line"><span class="keyword">File</span> Segment inode: <span class="number">1</span></div><div class="line">B-tree Node: <span class="number">219784</span></div><div class="line"><span class="keyword">File</span> Space Header: <span class="number">1</span></div><div class="line">扩展描述页: <span class="number">32</span></div><div class="line">Uncompressed BLOB <span class="keyword">Page</span>: <span class="number">243453</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>溢出有什么危害</strong></li>
+</ul>
+<blockquote>
+<p>溢出的数据不再存储在B+tree中<br>溢出的数据使用的是uncompress BLOB page，并且存储独享,这就是存储越来越大的真正原因</p>
+</blockquote>
+<ul>
+<li><strong>什么情况下会溢出</strong></li>
+</ul>
+<blockquote>
+<p>原则：只要一行记录的总和超过8k，就会溢出。<br>所以：varchar(9000) 或者 varchar(3000) + varchar(3000) + varchar(3000)，当实际长度大于8k的时候，就会溢出<br>所以：Blob，text，一行数据如果实际长度大于8k会溢出，如果实际长度小于8k则不会溢出，并非所有的blob，text都会溢出</p>
+</blockquote>
+<ul>
+<li><strong>多列总和大字段 vs 一列大字段</strong></li>
+</ul>
+<blockquote>
+<p>多个大字段会导致多次off-page</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div></pre></td><td class="code"><pre><div class="line"><span class="header">root:test&gt; show create table t_3_col;</span></div><div class="line">+---------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------</div><div class="line">---------------------------------------+</div><div class="line">| Table   | Create Table</div><div class="line"><span class="header">                                       |</span></div><div class="line">+---------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------</div><div class="line">---------------------------------------+</div><div class="line">| t<span class="emphasis">_3_</span>col | CREATE TABLE <span class="code">`t_3_col`</span> (</div><div class="line"><span class="code">  `id` int(11) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col1` varchar(7000) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col2` varchar(7000) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col3` varchar(7000) DEFAULT NULL</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+---------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------</div><div class="line">---------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">root:test&gt; show create table t_1_col;</span></div><div class="line">+---------+---------------------------------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table   | Create Table                                                                                                                    |</span></div><div class="line">+---------+---------------------------------------------------------------------------------------------------------------------------------+</div><div class="line">| t<span class="emphasis">_1_</span>col | CREATE TABLE <span class="code">`t_1_col`</span> (</div><div class="line"><span class="code">  `id` int(11) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col1` varchar(21000) DEFAULT NULL</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+---------+---------------------------------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">root:test&gt;</div><div class="line">root:test&gt;</div><div class="line">root:test&gt; insert into t<span class="emphasis">_1_</span>col(col1) select repeat(<span class="emphasis">'a'</span>,21000);</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Records: 1  Duplicates: 0  Warnings: 0</div><div class="line"></div><div class="line">root:test&gt;</div><div class="line">root:test&gt;</div><div class="line">root:test&gt; insert into t<span class="emphasis">_3_</span>col(col1,col2,col3) select repeat(<span class="emphasis">'a'</span>,7000),repeat(<span class="emphasis">'a'</span>,7000),repeat(<span class="emphasis">'a'</span>,7000);</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Records: 1  Duplicates: 0  Warnings: 0</div><div class="line"></div><div class="line"></div><div class="line">[root()@xx script]# python py<span class="emphasis">_innodb_</span>page<span class="emphasis">_info.py /data/mysql_</span>data/test/t<span class="emphasis">_1_</span>col.ibd</div><div class="line">Total number of page: 6:</div><div class="line">Insert Buffer Bitmap: 1</div><div class="line">Uncompressed BLOB Page: 2</div><div class="line">File Space Header: 1</div><div class="line">B-tree Node: 1</div><div class="line">File Segment inode: 1</div><div class="line"></div><div class="line">[root()@xx script]# python py<span class="emphasis">_innodb_</span>page<span class="emphasis">_info.py /data/mysql_</span>data/test/t<span class="emphasis">_3_</span>col.ibd</div><div class="line">Total number of page: 7:</div><div class="line">Insert Buffer Bitmap: 1</div><div class="line">Uncompressed BLOB Page: 3</div><div class="line">File Space Header: 1</div><div class="line">B-tree Node: 1</div><div class="line">File Segment inode: 1</div></pre></td></tr></table></figure>
+
+<h3 id="如何对大字段进行优化">如何对大字段进行优化</h3>
+<blockquote>
+<p>如果有多个大字段，尽量序列化后，存储在同一列中,避免多次off-page<br>将text等大字段从主表中拆分出来，a）存储到key-value中 b）存储在单独的一张子表中，并且压缩<br>必须保证一行记录小于8k</p>
+</blockquote>
+<h2 id="参考">参考</h2>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/innodb-storage-engine.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/innodb-storage-engine.html</a><br>INNOBASE 官方文档<br>MySQL技术内幕 InnoDB存储引擎 —姜承尧<br><a href="http://hedengcheng.com/" target="_blank" rel="external">http://hedengcheng.com/</a>  —何登成<br><a href="http://imysql.cn/" target="_blank" rel="external">http://imysql.cn/</a> —叶金荣</p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/04/07/idb_biger/" data-title="MySQL实战系列：大字段如何优化 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/04/06/auto_incre_reduce/"  title="auto_increment的后裔">
+ <strong>NEXT:</strong><br/> 
+ <span>auto_increment的后裔
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/04/07/idb_biger/" data-title="MySQL实战系列：大字段如何优化" data-url="https://Keithlan.github.io/2016/04/07/idb_biger/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#基本知识：InnoDB_Storage_Architecture_for_InnoDB_On_Disk_Format"><span class="toc-number">2.</span> <span class="toc-text">基本知识：InnoDB Storage Architecture for InnoDB On Disk Format</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_物理结构存储结构"><span class="toc-number">2.1.</span> <span class="toc-text">InnoDB 物理结构存储结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_逻辑存储结构"><span class="toc-number">2.2.</span> <span class="toc-text">InnoDB 逻辑存储结构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_page_存储结构"><span class="toc-number">2.3.</span> <span class="toc-text">InnoDB page 存储结构</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#页类型"><span class="toc-number">2.3.1.</span> <span class="toc-text">页类型</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#页大小"><span class="toc-number">2.3.2.</span> <span class="toc-text">页大小</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#结构图"><span class="toc-number">2.3.3.</span> <span class="toc-text">结构图</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_row_存储结构"><span class="toc-number">2.4.</span> <span class="toc-text">InnoDB row 存储结构</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#rows_文件格式总体规划图"><span class="toc-number">2.4.1.</span> <span class="toc-text">rows 文件格式总体规划图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#row-fomat为Compact的结构图"><span class="toc-number">2.4.2.</span> <span class="toc-text">row-fomat为Compact的结构图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#row-fomat为Redundant的结构图"><span class="toc-number">2.4.3.</span> <span class="toc-text">row-fomat为Redundant的结构图</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#compress_&_dynamic_与_Compact_的区别之处"><span class="toc-number">2.4.4.</span> <span class="toc-text">compress & dynamic 与 Compact 的区别之处</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#字段之字符串类型"><span class="toc-number">2.5.</span> <span class="toc-text">字段之字符串类型</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#char(N)_vs_varchar(N)"><span class="toc-number">2.5.1.</span> <span class="toc-text">char(N) vs  varchar(N)</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#varchar(N)_:_255_vs_256"><span class="toc-number">2.5.2.</span> <span class="toc-text">varchar(N) : 255 vs 256</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#varchar（N）_&_char（N）_的最大限制"><span class="toc-number">2.5.3.</span> <span class="toc-text">varchar（N） & char（N） 的最大限制</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#off-page：_行溢出"><span class="toc-number">2.5.4.</span> <span class="toc-text">off-page： 行溢出</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何对大字段进行优化"><span class="toc-number">2.6.</span> <span class="toc-text">如何对大字段进行优化</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-number">3.</span> <span class="toc-text">参考</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>2</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
