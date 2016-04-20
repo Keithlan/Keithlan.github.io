@@ -9,21 +9,11 @@
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="xtrabackup 详解
+    <meta name="description" content="title: “Xtrabackup 的秘密”date: 2015-11-16 00:05:24tags: [MySQL Error]categories: MySQL
+—
 如果想知道如何使用xtrabackup，请翻阅之前的文章 xtrabackup核心文档
 xtrabackup原理深入浅出
-为什么要使用xtrabackup
-
-常用的备份有哪些
-
-
-
-性能对比
-
-
-
-逻辑备份 vs 物理备份
-  逻辑备份优点: 占用空间小，安全  逻辑备份">
+为什">
     
     
     
@@ -90,8 +80,8 @@ xtrabackup原理深入浅出
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-04-20T07:34:30.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-04-20T07:32:46.000Z" itemprop="dateModified">Apr 20 2016</time>
+    <time datetime="2016-04-20T08:33:03.000Z" itemprop="datePublished">Apr 20 2016</time>
+    Updated:<time datetime="2016-04-20T08:33:02.000Z" itemprop="dateModified">Apr 20 2016</time>
     
   </p>
 </header>
@@ -100,21 +90,22 @@ xtrabackup原理深入浅出
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#xtrabackup_详解"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup 详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">1.2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">1.2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">1.2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">1.2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol>
 		</div>
 		
-		<h1 id="xtrabackup_详解">xtrabackup 详解</h1>
-<p>如果想知道如何使用xtrabackup，请翻阅之前的文章 <a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/tools/percona-toolkits/xtrabackup/xtrabackup_doc.md" target="_blank" rel="external">xtrabackup核心文档</a></p>
+		<p>title: “Xtrabackup 的秘密”<br>date: 2015-11-16 00:05:24<br>tags: [MySQL Error]<br>categories: MySQL</p>
+<p>—</p>
+<p>如果想知道如何使用xtrabackup，请翻阅之前的文章 <a href="http://keithlan.github.io/2016/04/19/xtrabackup_doc/" target="_blank" rel="external">xtrabackup核心文档</a></p>
 <h2 id="xtrabackup原理深入浅出">xtrabackup原理深入浅出</h2>
 <h3 id="为什么要使用xtrabackup">为什么要使用xtrabackup</h3>
 <ul>
 <li><strong>常用的备份有哪些</strong></li>
 </ul>
-<p><img src="image/back_type.png" alt="type" title="type"></p>
+<p><img src="/image/mysql_xtrabackup/back_type.png" alt="type" title="type"></p>
 <ul>
 <li><strong>性能对比</strong></li>
 </ul>
-<p><img src="image/back_time.png" alt="time" title="time"></p>
+<p><img src="/image/mysql_xtrabackup/back_time.png" alt="time" title="time"></p>
 <ul>
 <li><p><strong>逻辑备份 vs 物理备份</strong></p>
 <p>  逻辑备份优点: 占用空间小，安全<br>  逻辑备份缺点: 恢复速度慢<br>  物理备份优点: 备份，恢复速度快<br>  物理备份缺点: 占用空间大  </p>
@@ -136,8 +127,8 @@ xtrabackup原理深入浅出
 <blockquote>
 <p>简单来说，就是备份的数据都处在同一时间点  </p>
 </blockquote>
-<p><img src="image/non-consis.jpg" alt="non-consis" title="non-consis"></p>
-<p><img src="image/consis.jpg" alt="consis" title="consis"> </p>
+<p><img src="/image/mysql_xtrabackup/non-consis.jpg" alt="non-consis" title="non-consis"></p>
+<p><img src="/image/mysql_xtrabackup/consis.jpg" alt="consis" title="consis"> </p>
 <h3 id="percona_xtrabackup基本概念">percona xtrabackup基本概念</h3>
 <blockquote>
 <p>innobackupex 是一个perl写的脚本，为了方便，封装了xtrabackup，所以一般备份都用innobackupex<br>xtrabackup 只备份innoDB表  ，其余的都交给innobackupex<br>新版本如：2.4，2.3.xx 已经将innodbex用c 重写了，然后链接到xtrabackup    </p>
@@ -156,7 +147,7 @@ xtrabackup原理深入浅出
 <li>删除xtrabackup_suspended_2文件 , 并且退出  </li>
 </ol>
 </blockquote>
-<p><img src="image/innobackup.jpg" alt="innobackup" title="innobackup"></p>
+<p><img src="/image/mysql_xtrabackup/innobackup.jpg" alt="innobackup" title="innobackup"></p>
 <p>从上述流程图可以看出，FLUSH TABLES WITH READ LOCK【FTWRL】  这个时间点，就是备份恢复的时间点，即一致性点<br>因为数据再拷贝的过程中是不一致的，MySQL利用其自身的crash recover机制，用redo来保证最终一致性  </p>
 <h2 id="生产环境如何备份">生产环境如何备份</h2>
 <blockquote>
@@ -171,20 +162,20 @@ xtrabackup原理深入浅出
 <ul>
 <li>如果是在master上备份，那么直接copy是不行的，因为redo一直再变且轮询  </li>
 </ul>
-<p><img src="image/master.jpg" alt="master" title="master"></p>
+<p><img src="/image/mysql_xtrabackup/master.jpg" alt="master" title="master"></p>
 <ul>
 <li>如果是在slave上，或者etl&amp;backup机器上呢？ 不难发现，xtrabackup记录了redo的变化，如果我们人为的让redo不再增长，stop slave，这样的备份原理是否和xtrabackup一样呢？  </li>
 </ul>
-<p><img src="image/slave.jpg" alt="slave" title="slave">  </p>
+<p><img src="/image/mysql_xtrabackup/slave.jpg" alt="slave" title="slave">  </p>
 <p>这样做的好处是，不用浪费一半的空间，也不需要传送2次   </p>
 <h3 id="你所不知道的秘密">你所不知道的秘密</h3>
-<p><img src="image/commit.jpg" alt="commit" title="commit"></p>
+<p><img src="/image/mysql_xtrabackup/commit.jpg" alt="commit" title="commit"></p>
 <p>通过以上流程图，可以发现一个重要的线索：我们的物理备份，是不会备份binlog的【重要】<br>所以，友谊的小船说翻就翻  </p>
-<p><img src="image/commit_1.jpg" alt="commit_1" title="commit_1"></p>
+<p><img src="/image/mysql_xtrabackup/commit_1.jpg" alt="commit_1" title="commit_1"></p>
 <p>对于5.1 &amp; 5.5，用xtrabackup for 5.1 or 5.5 ，如果innodb_flush_log_at_trx_commit=1 ,应该没问题  </p>
-<p><img src="image/commit_2.jpg" alt="commit_2" title="commit_2"></p>
+<p><img src="/image/mysql_xtrabackup/commit_2.jpg" alt="commit_2" title="commit_2"></p>
 <p>对于5.6 ， 用xtrabackup for 5.1 or 5.5 ， 即便如果innodb_flush_log_at_trx_commit=1，有可能会丢失事务  </p>
-<p><img src="image/commit_3.jpg" alt="commit_3" title="commit_3"></p>
+<p><img src="/image/mysql_xtrabackup/commit_3.jpg" alt="commit_3" title="commit_3"></p>
 <p>对于5.6 ， 用xtrabackup for 5.6， 不会丢失事务  </p>
 <h3 id="重要">重要</h3>
 <p>所以，如果你想通过stop slave的方式，直接拷贝文件的话，必须执行   </p>
@@ -243,7 +234,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#xtrabackup_详解"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup 详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">1.2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">1.2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">1.2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">1.2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
