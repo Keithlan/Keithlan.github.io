@@ -4,16 +4,25 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Focus on MySQL,Focus on Focus</title>
+    <title>Xtrabackup 的秘密 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="title: “Xtrabackup 的秘密”date: 2015-11-16 00:05:24tags: [MySQL Error]categories: MySQL
-—
-如果想知道如何使用xtrabackup，请翻阅之前的文章 xtrabackup核心文档
+    <meta name="description" content="如果想知道如何使用xtrabackup，请翻阅之前的文章 xtrabackup核心文档
 xtrabackup原理深入浅出
-为什">
+为什么要使用xtrabackup
+
+常用的备份有哪些
+
+
+
+性能对比
+
+
+
+逻辑备份 vs 物理备份
+  逻辑备份优点: 占用空间小，安全  逻辑备份缺点: 恢复速度慢  物理备">
     
     
     
@@ -73,15 +82,15 @@ xtrabackup原理深入浅出
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/04/20/xtrabackup_inside/" title="" itemprop="url"></a>
+      <a href="/2016/04/20/xtrabackup_inside/" title="Xtrabackup 的秘密" itemprop="url">Xtrabackup 的秘密</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-04-20T08:33:03.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-04-20T08:33:02.000Z" itemprop="dateModified">Apr 20 2016</time>
+    <time datetime="2016-04-20T08:32:24.000Z" itemprop="datePublished">Apr 20 2016</time>
+    Updated:<time datetime="2016-04-20T08:36:45.000Z" itemprop="dateModified">Apr 20 2016</time>
     
   </p>
 </header>
@@ -93,9 +102,7 @@ xtrabackup原理深入浅出
 		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol>
 		</div>
 		
-		<p>title: “Xtrabackup 的秘密”<br>date: 2015-11-16 00:05:24<br>tags: [MySQL Error]<br>categories: MySQL</p>
-<p>—</p>
-<p>如果想知道如何使用xtrabackup，请翻阅之前的文章 <a href="http://keithlan.github.io/2016/04/19/xtrabackup_doc/" target="_blank" rel="external">xtrabackup核心文档</a></p>
+		<p>如果想知道如何使用xtrabackup，请翻阅之前的文章 <a href="http://keithlan.github.io/2016/04/19/xtrabackup_doc/" target="_blank" rel="external">xtrabackup核心文档</a></p>
 <h2 id="xtrabackup原理深入浅出">xtrabackup原理深入浅出</h2>
 <h3 id="为什么要使用xtrabackup">为什么要使用xtrabackup</h3>
 <ul>
@@ -185,12 +192,22 @@ xtrabackup原理深入浅出
 	</div>
 		<footer class="article-footer clearfix">
 
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-tools/">MySQL tools</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/" data-title="Xtrabackup 的秘密 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -213,7 +230,7 @@ xtrabackup原理深入浅出
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2016/04/20/xtrabackup_inside/" data-title="" data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/"></div>
+<div class="ds-thread" data-thread-key="/2016/04/20/xtrabackup_inside/" data-title="Xtrabackup 的秘密" data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -271,7 +288,7 @@ var duoshuoQuery = {short_name:keithlan};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
 		
 			<li><a href="/categories/分享/" title="分享">分享<sup>3</sup></a></li>
 		
@@ -298,6 +315,8 @@ var duoshuoQuery = {short_name:keithlan};
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
 		
 			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>3</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
 		
 			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
 		
