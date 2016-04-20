@@ -1,0 +1,957 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="1. 介绍
+1.1 MySQL 备份工具特性对比
+
+
+
+Features
+Percona XtraBackup
+MySQL Enterprise backup
+
+
+
+
+License
+GPL
+Proprietary 
+
+
+Price
+Free
+Included in subscription at ">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/04/19/xtrabackup_doc/" title="Percona XtraBackup 核心文档" itemprop="url">Percona XtraBackup 核心文档</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-04-19T02:32:24.000Z" itemprop="datePublished">Apr 19 2016</time>
+    Updated:<time datetime="2016-04-20T07:37:53.000Z" itemprop="dateModified">Apr 20 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-_介绍"><span class="toc-number">1.</span> <span class="toc-text">1. 介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_MySQL_备份工具特性对比"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 MySQL 备份工具特性对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_Percona_XtraBackup的特性"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 Percona XtraBackup的特性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-_安装"><span class="toc-number">2.</span> <span class="toc-text">2. 安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-_用户手册"><span class="toc-number">3.</span> <span class="toc-text">3. 用户手册</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_The_innobackupex_Script"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 The innobackupex Script</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-1_前提"><span class="toc-number">3.1.1.</span> <span class="toc-text">3.1.1 前提</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-2_备份方式_：_全量备份"><span class="toc-number">3.1.2.</span> <span class="toc-text">3.1.2 备份方式 ： 全量备份</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-3_其他备份方式"><span class="toc-number">3.1.3.</span> <span class="toc-text">3.1.3 其他备份方式</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-4_部分表备份"><span class="toc-number">3.1.4.</span> <span class="toc-text">3.1.4 部分表备份</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-5_Compact_Backups"><span class="toc-number">3.1.5.</span> <span class="toc-text">3.1.5 Compact Backups</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-6_Encrypted_Backups"><span class="toc-number">3.1.6.</span> <span class="toc-text">3.1.6 Encrypted Backups</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-7_高级特性"><span class="toc-number">3.1.7.</span> <span class="toc-text">3.1.7 高级特性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-8_innobackupex_实现"><span class="toc-number">3.1.8.</span> <span class="toc-text">3.1.8 innobackupex 实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-2_xtrabackup_binary~~"><span class="toc-number">3.2.</span> <span class="toc-text">~~ 3.2 xtrabackup binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_The_xbstream_Binary"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 The xbstream Binary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-4_The_xbcrypt_binary~~"><span class="toc-number">3.4.</span> <span class="toc-text">~~ 3.4 The xbcrypt binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-5_The_xbcloud_Binary~~"><span class="toc-number">3.5.</span> <span class="toc-text">~~ 3.5 The xbcloud Binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-6_How_Percona_XtraBackup_Works~~"><span class="toc-number">3.6.</span> <span class="toc-text">~~ 3.6 How Percona XtraBackup Works~~</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1_innobackupex_how-tos"><span class="toc-number">4.</span> <span class="toc-text">4.1 innobackupex how-tos</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-1_Make_a_Local_Full_Backup_(Create,_Prepare_and_Restore)"><span class="toc-number">4.1.</span> <span class="toc-text">4.1.1 Make a Local Full Backup (Create, Prepare and Restore)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-2_Make_a_Streaming_Backup"><span class="toc-number">4.2.</span> <span class="toc-text">4.1.2 Make a Streaming Backup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-4_Making_a_Compressed_Backup"><span class="toc-number">4.3.</span> <span class="toc-text">4.1.4 Making a Compressed Backup</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3_How-Tos"><span class="toc-number">5.</span> <span class="toc-text">4.3 How-Tos</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-1_How_to_setup_a_slave_for_replication_in_6_simple_steps_with_Percona_Xtra-_Backup"><span class="toc-number">5.1.</span> <span class="toc-text">4.3.1 How to setup a slave for replication in 6 simple steps with Percona Xtra- Backup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-2_Verifying_Backups_with_replication_and_pt-checksum"><span class="toc-number">5.2.</span> <span class="toc-text">4.3.2 Verifying Backups with replication and pt-checksum</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-3_How_to_create_a_new_(or_repair_a_broken)_GTID_based_slave"><span class="toc-number">5.3.</span> <span class="toc-text">4.3.3 How to create a new (or repair a broken) GTID based slave</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-_KNOWN_ISSUES_AND_LIMITATIONS"><span class="toc-number">6.</span> <span class="toc-text">5. KNOWN ISSUES AND LIMITATIONS</span></a></li></ol>
+		</div>
+		
+		<h2 id="1-_介绍">1. 介绍</h2>
+<h3 id="1-1_MySQL_备份工具特性对比">1.1 MySQL 备份工具特性对比</h3>
+<table>
+<thead>
+<tr>
+<th>Features</th>
+<th>Percona XtraBackup</th>
+<th>MySQL Enterprise backup</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>License</td>
+<td>GPL</td>
+<td>Proprietary </td>
+</tr>
+<tr>
+<td>Price</td>
+<td>Free</td>
+<td>Included in subscription at $5000 per Server</td>
+</tr>
+<tr>
+<td>Streaming and encryption formats</td>
+<td>Open source</td>
+<td>Proprietary</td>
+</tr>
+<tr>
+<td>Supported MySQL flavors</td>
+<td>MySQL, Percona Server, MariaDB, Percona XtraDB Cluster, MariaDB Galera Cluster</td>
+<td>MySQL</td>
+</tr>
+<tr>
+<td>Supported operating systems</td>
+<td>Linux</td>
+<td>Linux, Solaris, Windows, OSX, FreeBSD.</td>
+</tr>
+<tr>
+<td>External graphical user interfaces to backup/recovery</td>
+<td>Zmanda Recovery Manager for MySQL</td>
+<td>MySQL Workbench, MySQL En- terprise Monitor</td>
+</tr>
+<tr>
+<td>Non-blocking InnoDB backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Blocking MyISAM backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Full compressed backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Encrypted backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Streaming backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Parallel local backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Parallel compression</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Parallel encryption</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Partial backups</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Throttling</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Point-in-time recovery support</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Backup history table</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Individual tables export</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Restoring tables to a different server</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>InnoDB secondary indexes defragmentation</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>rsync support to minimize lock time</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Improved FTWRL handling</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Incremental compressed backups</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Fast incremental backups</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Incremental backups with archived logs feature in Percona Server</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Backup locks</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Partial backups of individual partitions</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Parallel apply-log</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Safe slave backups</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Compact backups</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Data &amp; index file statistics</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Buffer pool state backups</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Individual partitions export</td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Backup progress table</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Offline backups</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Parallel copy-back</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Backup to tape media managers</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Backup image validation</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Incremental backups with REDO log only</td>
+<td>-</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Cloud backups support</td>
+<td>-</td>
+<td>Amazon S3</td>
+</tr>
+</tbody>
+</table>
+<h3 id="1-2_Percona_XtraBackup的特性">1.2 Percona XtraBackup的特性</h3>
+<blockquote>
+<p>下面简单罗列下，如需知道更多特性，请看后面的详细内容  </p>
+</blockquote>
+<ul>
+<li><p><strong>热备，可以不需要中断DB服务器</strong></p>
+</li>
+<li><p><strong>增量备份</strong></p>
+</li>
+<li><p><strong>流式备份（Stream compressed）到其他服务器</strong></p>
+</li>
+<li><p><strong>在线迁移表</strong></p>
+</li>
+<li><p><strong>可以非常简单高效的创建一个新的slave</strong></p>
+</li>
+<li><p><strong>备份任务不会给服务器带来很高的负载</strong></p>
+</li>
+</ul>
+<h2 id="2-_安装">2. 安装</h2>
+<blockquote>
+<p>下载一个linux-generic 版本的二进制包即可，方便简单。  </p>
+</blockquote>
+<h2 id="3-_用户手册">3. 用户手册</h2>
+<h3 id="3-1_The_innobackupex_Script">3.1 The innobackupex Script</h3>
+<blockquote>
+<p>innobackupex 是一个用perl写的工具，主要是封装了xtrabackup【C写的】<br>innobackupex 整合了 xtrabackup &amp; 其他功能如：文件copying and streaming，提供更多方便好用的功能<br>不管是innoDB，XtraDB,Myisam , 都提供point-in-time备份和恢复  </p>
+</blockquote>
+<h4 id="3-1-1_前提">3.1.1 前提</h4>
+<blockquote>
+<p>连接和权限</p>
+</blockquote>
+<p>￼￼￼￼mysql&gt; CREATE USER ’bkpuser’@’localhost’ IDENTIFIED BY ’xx‘；<br>mysql&gt; GRANT RELOAD, LOCK TABLES, REPLICATION CLIENT ON *.* TO ’bkpuser’@’localhost’;<br>mysql&gt; FLUSH PRIVILEGES;  </p>
+<h4 id="3-1-2_备份方式_：_全量备份">3.1.2 备份方式 ： 全量备份</h4>
+<p><code>3.1.2.1 Creating a Backup with innobackupex</code>  </p>
+<p>innobackupex 是一个可以组合xbstream &amp; xbcrypt 的全量备份MySQL数据库的工具  </p>
+<p>为了创建一个备份，除了基本的连接参数外，额外仅仅只需要一个备份路径参数即可，就这么简单  </p>
+<blockquote>
+<p>$ innobackupex —user=DBUSER —password=DBUSERPASS /path/to/BACKUP-DIR/  </p>
+</blockquote>
+<p>检查最后的输出来确保备份正确  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">￼innobackupex: <span class="operator"><span class="keyword">Backup</span> created <span class="keyword">in</span> directory ’/path/<span class="keyword">to</span>/<span class="keyword">BACKUP</span>-DIR/<span class="number">2013</span>-<span class="number">03</span>-<span class="number">25</span>_00-<span class="number">00</span>-<span class="number">09</span>’</span></div><div class="line">innobackupex: MySQL <span class="keyword">binlog</span> <span class="keyword">position</span>: filename ’mysql-<span class="keyword">bin</span><span class="number">.000003</span>’, <span class="keyword">position</span> <span class="number">1946</span></div><div class="line"><span class="number">111225</span> <span class="number">00</span>:<span class="number">00</span>:<span class="number">53</span>  innobackupex: completed OK!</div></pre></td></tr></table></figure>
+
+<p>在这个例子当中，默认备份文件名会以timestamp命名：/path/to/BACKUP-DIR/2013-03-25_00-00-09   </p>
+<ul>
+<li>其他选项</li>
+</ul>
+<p>—no-timestamp ： 备份结果不会存储在一个  stamped directory 中  </p>
+<blockquote>
+<p>$ innobackupex —user=DBUSER —password=DBUSERPASS /path/to/BACKUP-DIR/ —no-timestamp</p>
+</blockquote>
+<p> —defaults-file : 可以指定配置文件，唯一的限制就是这个参数必须是第一个option  </p>
+<blockquote>
+<p>$ innobackupex —defaults-file=/tmp/other-my.cnf —user=DBUSER —password=DBUSERPASS /path/to/BACKUP-DIR  </p>
+</blockquote>
+<p> <code>3.1.2.2 Preparing a Full Backup with innobackupex</code> </p>
+<p>这个阶段叫：prepare stage 。<br>创建备份后，这时候数据还不能被立刻使用。因为这时候还有很多uncommitted 事务没有被回滚，同样还有很多事务没有被replayed。<br>通过—apply-log 后，这些数据文件才能算是一致的数据。  </p>
+<blockquote>
+<p>$ innobackupex —apply-log /path/to/BACKUP-DIR  </p>
+</blockquote>
+<ul>
+<li>详解prepare stage</li>
+</ul>
+<p>innobackupex 通过backup-my.cnf文件来开始prepare  </p>
+<p>然后，innobackupex 回放已经提交【committed】的事务，回滚未提交【uncommitted】的事务<br>当以上步骤完成后，所有信息都准备完毕，重做日志会被re-created  </p>
+<p>相当于调用了两次xtrabackup —prepare 两次。  </p>
+<ul>
+<li>其他选项</li>
+</ul>
+<p>—use-memory option： prepare stage的专用参数，默认100M，使用内存越多，恢复速度越快。  </p>
+<blockquote>
+<p>$ innobackupex —apply-log —use-memory=4G /path/to/BACKUP-DIR  </p>
+</blockquote>
+<p><code>3.1.2.3 Restoring a Full Backup with innobackupex</code></p>
+<p>为了方便，innobackupex提供了 —copy-back选项，它可以自动帮助我们将备份文件copy到datadir  </p>
+<blockquote>
+<p>$ innobackupex —copy-back /path/to/BACKUP-DIR  </p>
+</blockquote>
+<p>它会根据服务器上的my.cnf 来将所有数据相关文件拷贝到指定的 datadir  </p>
+<p>你可以检查最后的输出  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">￼￼￼￼<span class="tag">innobackupex</span> : <span class="tag">finished</span> <span class="tag">copying</span> <span class="tag">back</span> <span class="tag">files</span>  </div><div class="line">111225 01<span class="pseudo">:01</span><span class="pseudo">:13</span> <span class="tag">innobackupex</span>: <span class="tag">completed</span> <span class="tag">OK</span>!</div></pre></td></tr></table></figure>
+
+<p>注意：一定要保证datadir为空目录，否则有可能报错，如果文件已经存在，就不会复制。  除非指定了 —force-non-empty-directories.<br>并且记住：restore的时候，必须保证mysql处于shutdown状态。<br>最后记住：重新给文件赋予正确的属组合权限  </p>
+<blockquote>
+<p>$ chown -R mysql:mysql /var/lib/mysql  </p>
+</blockquote>
+<h4 id="3-1-3_其他备份方式">3.1.3 其他备份方式</h4>
+<p><del><code>3.1.3.1 增量备份</code></del></p>
+<blockquote>
+<p>恢复速度太慢，忽略  </p>
+</blockquote>
+<h4 id="3-1-4_部分表备份">3.1.4 部分表备份</h4>
+<p>Percona xtrabackup 提供了部分表【partial】备份，顾名思义：只备份一部分表或库<br>前提是：你必须设置了 <code>innodb_file_per_table</code>   </p>
+<p>对于部分表备份，只有一个忠告：千万别将prepared backup copy back回家。<br>restoring partial backups，你应该importing 表，而不是 —copy-back选项。  </p>
+<p><code>3.1.4.1 Creating Partial Backups</code></p>
+<p>有三种备份方式： regular expressions（—include）， enumerating （—tables-file）以及提供databases （—databases）  </p>
+<ul>
+<li>regular expressions（—include）<blockquote>
+<p>格式：databasename.tablename.  </p>
+</blockquote>
+</li>
+</ul>
+<p>例如：</p>
+<blockquote>
+<p>$ innobackupex —include=’^mydatabase[.]mytable’ /path/to/backup  </p>
+</blockquote>
+<p>以上命令，只有被匹配的表才会被备份  </p>
+<ul>
+<li>Using the —tables-file option  </li>
+</ul>
+<blockquote>
+<p>可以使用文件列表，一行一个，格式： databasename.tablename   </p>
+</blockquote>
+<p>例如：</p>
+<blockquote>
+<p>echo “mydatabase.mytable” &gt; /tmp/tables.txt<br>innobackupex —tables-file=/tmp/tables.txt /path/to/backup  </p>
+</blockquote>
+<ul>
+<li>Using the —databases option  </li>
+</ul>
+<blockquote>
+<p>以空格为间隔符，指定表或者库  </p>
+</blockquote>
+<p>例如：</p>
+<blockquote>
+<p>$ innobackupex —databases=”mydatabase.mytable mysql” /path/to/backup  </p>
+</blockquote>
+<p>以上命令，创建了一个包含 mytable表 和 mysql 库的备份  </p>
+<p><code>3.1.4.2 Preparing Partial Backups</code></p>
+<p>对于部分表备份的prepare，步骤类似 restoring individual tables一样 ： 应用日志 并且 使用—export 选项：  </p>
+<blockquote>
+<p>innobackupex —apply-log —export /path/to/partial/backup  </p>
+</blockquote>
+<p>你会收到一部分warnings，因为这是部分表prepare和export，没有被prepare的表会从数据字典移除。</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">111225</span>  <span class="number">0</span>:<span class="number">54</span>:<span class="number">06</span>  InnoDB: Error: table ’mydatabase/mytablenotincludedinpartialb’  </div><div class="line">InnoDB: <span class="keyword">in</span> InnoDB data dictionary has tablespace <span class="property">id</span> <span class="number">6</span>,  </div><div class="line">InnoDB: <span class="keyword">but</span> tablespace <span class="keyword">with</span> <span class="keyword">that</span> <span class="property">id</span> <span class="keyword">or</span> <span class="property">name</span> <span class="keyword">does</span> <span class="keyword">not</span> exist. It will be removed <span class="keyword">from</span> data dictionary.</div></pre></td></tr></table></figure>
+
+<p><code>3.1.4.3 Restoring Partial Backups</code></p>
+<blockquote>
+<p>方法参考： restoring individual tables<br>当然你也可以将其copying back 到一个全新的server上，系统表空间可以被重建  </p>
+</blockquote>
+<p>例如：</p>
+<blockquote>
+<p>$ sudo mysql_install_db —user=mysql</p>
+</blockquote>
+<h4 id="3-1-5_Compact_Backups">3.1.5 Compact Backups</h4>
+<p>compact备份指的是： 不备份二级索引，这样空间占用少。<br>缺点是： prepare &amp; restore 的时候非常慢  ,  因为需要rebuild 二级索引</p>
+<p>例如：</p>
+<blockquote>
+<p>backup size without —compact  option<br>2.0G  2013-02-01_10-18-38  </p>
+<p>backup size taken with —compact option<br>1.4G  2013-02-01_10-29-48  </p>
+</blockquote>
+<p><code>Creating Compact Backups</code></p>
+<blockquote>
+<p>$ innobackupex —compact /data/backups   </p>
+</blockquote>
+<p>检查 xtrabackup_checkpoints，当指定了—compact， compact 是1，否则是0</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="variable">backup_type =</span> full-backuped</div><div class="line"><span class="variable">from_lsn =</span> <span class="number">0</span></div><div class="line"><span class="variable">to_lsn =</span> <span class="number">2888984349</span></div><div class="line"><span class="variable">last_lsn =</span> <span class="number">2888984349</span></div><div class="line"><span class="variable">compact =</span> <span class="number">1</span></div></pre></td></tr></table></figure>
+
+
+
+
+<p><code>Preparing Compact Backups</code></p>
+<p>prepare compact 备份，必须加上这个新参数：—rebuild-indexes  </p>
+<blockquote>
+<p>$ innobackupex —apply-log —rebuild-indexes /data/backups/2013-02-01_10-29-48</p>
+</blockquote>
+<p>日志结果：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">130201 10:40:20  InnoDB: Waiting for the background threads to <span class="operator"><span class="keyword">start</span></span></div><div class="line">Rebuilding indexes <span class="keyword">for</span> <span class="keyword">table</span> sbtest/sbtest1 (<span class="keyword">space</span> id: <span class="number">10</span>)</div><div class="line">  <span class="keyword">Found</span> <span class="keyword">index</span> k_1</div><div class="line">  Dropping <span class="number">1</span> <span class="keyword">index</span>(es).</div><div class="line">  Rebuilding <span class="number">1</span> <span class="keyword">index</span>(es).</div><div class="line">Rebuilding indexes <span class="keyword">for</span> <span class="keyword">table</span> sbtest/sbtest2 (<span class="keyword">space</span> id: <span class="number">11</span>)</div><div class="line">  <span class="keyword">Found</span> <span class="keyword">index</span> k_1</div><div class="line">  <span class="keyword">Found</span> <span class="keyword">index</span> c</div><div class="line">  <span class="keyword">Found</span> <span class="keyword">index</span> k</div><div class="line">  <span class="keyword">Found</span> <span class="keyword">index</span> c_2</div><div class="line">  Dropping <span class="number">4</span> <span class="keyword">index</span>(es).</div><div class="line">  Rebuilding <span class="number">4</span> <span class="keyword">index</span>(es).</div></pre></td></tr></table></figure>
+
+<p><code>Restoring Compact Backups</code></p>
+<blockquote>
+<p>$ innobackupex —copy-back /path/to/BACKUP-DIR</p>
+</blockquote>
+<h4 id="3-1-6_Encrypted_Backups"><del>3.1.6 Encrypted Backups</del></h4>
+<blockquote>
+<p>不常用  </p>
+</blockquote>
+<h4 id="3-1-7_高级特性">3.1.7 高级特性</h4>
+<p><code>3.1.7.1 Streaming and Compressing Backups</code></p>
+<p>Streaming 模式，将备份以 tar 或者 xbstream 的格式发送，而不是传统的直接copying 文件<br>你可以写自己的过滤规则来或者你想要的数据，这样灵活性更大。比如，你还可以使用自己的指定的压缩。<br>另一个使用streaming备份的好处就是： 自动加密  </p>
+<p>想要使用streaming 特性，必须使用 —stream 选项，并且提供这两种format （tar 或者 xbstream）以及存储temporary files的目录  </p>
+<blockquote>
+<p>$ innobackupex —stream=tar /tmp  </p>
+</blockquote>
+<p>当压缩功能打开时，xtrabackup 会用quicklz算法压缩innodb表，*.qp结尾。  </p>
+<p>当使用xbstream的时候，备份在 copying 文件 以及 compress 文件上，使用并行【parallel】功能来提升速度  </p>
+<ul>
+<li>使用xbstream的例子  </li>
+</ul>
+<p>将一个完整的全备直接备份成一个文件：  </p>
+<blockquote>
+<p>$ innobackupex —stream=xbstream /root/backup/ &gt; /root/backup/backup.xbstream  </p>
+</blockquote>
+<p>stream &amp; compress 模式开启：  </p>
+<blockquote>
+<p>￼$ innobackupex —stream=xbstream —compress /root/backup/ &gt; /root/backup/backup.xbstream  </p>
+</blockquote>
+<p>解压到/root/backup中：  </p>
+<blockquote>
+<p> $ xbstream -x &lt;  backup.xbstream -C /root/backup/  </p>
+</blockquote>
+<p>将一个压缩的备份传送到其他服务器并解压：  </p>
+<blockquote>
+<p>$ innobackupex —compress —stream=xbstream /root/backup/ | ssh user@otherhost “xbstream -x -C /root/backup/  </p>
+</blockquote>
+<ul>
+<li>使用tar的例子  </li>
+</ul>
+<blockquote>
+<p>$ innobackupex —stream=tar /root/backup/ &gt; /root/backup/out.tar<br>$ innobackupex —stream=tar ./ | ssh user@destination \ “cat - &gt; /data/backups/backup.tar”<br>￼￼￼$ innobackupex —stream=tar ./ | gzip - &gt; backup.tar.gz<br>$ innobackupex —stream=tar ./ | bzip2 - &gt; backup.tar.bz2<br>￼￼￼<br>￼￼￼￼￼<br>注意：以上streaming 模式并没有对备份进行prepare ，所以在restore 之前，必须prepare  </p>
+</blockquote>
+<p><code>3.1.8 Taking Backups in Replication Environments</code></p>
+<p>跟复制相关的备份需要关注的option  </p>
+<ul>
+<li>The —slave-info option</li>
+</ul>
+<p>当你在slave上备份的时候，这个参数特别有用。它会保留相关的复制信息如：对应的master binlog position 和 file。<br>也会将相关信息change master等信息写入 xtrabackup_slave_info  </p>
+<ul>
+<li>The —safe-slave-backup option</li>
+</ul>
+<p>为了确保一致性复制状态，这个选项会将sql_thread stop掉，并且等待开启备份直到slave_open_temp_tables 为0<br>如果没有open的tempory 表，那么备份就会开始，否则sql_thread就会一直stop，直到slave_open_temp_tables 为0<br>如果—safe-slave-backup-timeout（默认300s）时间超过后，slave_open_temp_tables还不为0，那么备份就会失败，sql thread 会被restart<br>如果从slave上备份，这个参数推荐使用  </p>
+<p><code>Accelerating with --parallel copy and –compress-threads</code></p>
+<p>—parallel 可以指定并行线程数来并发copy innodb数据文件  </p>
+<blockquote>
+<p>$ innobackupex —parallel=4 /path/to/backup  </p>
+</blockquote>
+<p>—compress-threads ： 这个参数只和xbstream绑定使用，并发压缩  </p>
+<blockquote>
+<p>$ innobackupex —stream=xbstream —compress —compress-threads=4 ./ &gt; backup.xbstream  </p>
+</blockquote>
+<p>在prepare之前，必须先解压xbstream  </p>
+<p><code>Accelerating with --rsync option</code>  </p>
+<p>这个参数是用来提升非innoDB引擎的备份，意义不是很大<br>注意： —rsync 不能与 —remote-host ，—stream 一起使用  </p>
+<p><code>Throttling backups with innobackupex</code></p>
+<p>如果压力特别大，这个参数可以限流，类似—sleep</p>
+<p><code>Restoring Individual Tables （5.6+ 才支持）</code></p>
+<ul>
+<li>exporting tables</li>
+</ul>
+<blockquote>
+<p>$ innobackupex —apply-log —export /path/to/backup  </p>
+</blockquote>
+<p>这个命令会为每个ibd表都增加一个.exp 的文件，有这个文件，才能够正确的import到online server  </p>
+<ul>
+<li>importing tables</li>
+</ul>
+<p>导入数据前，必须先在其他服务器上创建好同样的表结构，如果错误，会造成db server hang，小心  </p>
+<blockquote>
+<p>OTHERSERVER|mysql&gt; CREATE TABLE mytable (…) ENGINE=InnoDB;  </p>
+</blockquote>
+<p>然后discard 表空间</p>
+<blockquote>
+<p>OTHERSERVER|mysql&gt; ALTER TABLE mydatabase.mytable DISCARD TABLESPACE;</p>
+</blockquote>
+<p>最后，拷贝文件.mydatabase.mytable.ibd , mytale.exp 到数据目录，import到tablespace中  </p>
+<blockquote>
+<p>OTHERSERVER|mysql&gt; ALTER TABLE mydatabase.mytable IMPORT TABLESPACE;</p>
+</blockquote>
+<p><del><code>Point-In-Time recovery</code></del></p>
+<blockquote>
+<p>基于binlog</p>
+</blockquote>
+<p><del><code>Improved FLUSH TABLES WITH READ LOCK handling</code></del></p>
+<blockquote>
+<p>percona server 才支持  </p>
+</blockquote>
+<p><code>Waiting for queries to finish</code></p>
+<p><code>Killing the blocking queries</code></p>
+<p><code>Store backup history on the server</code></p>
+<h4 id="3-1-8_innobackupex_实现">3.1.8 innobackupex 实现</h4>
+<p><code>Making a Backup</code></p>
+<blockquote>
+<ol>
+<li>innobackupex 调用 xtrabackup —suspend-at-end   </li>
+<li>xtrabackup 开始拷贝 innodb 数据文件  </li>
+<li>当xtrabackup拷贝完成innodb文件后，会创建  xtrabackup_suspended_2  </li>
+<li>当innobackupex看到xtrabackup_suspended_2文件被创建后，会调用命令flush table with read lock  </li>
+<li>innobackupex开始检查db server支持的特性，如：gtid，backup locks，changed page bitmap等  </li>
+<li>然后开始拷贝非innodb文件  </li>
+<li>当所有的文件都备份完成后，结束redo 事务的拷贝。  </li>
+<li>接下来释放锁  </li>
+<li>删除xtrabackup_suspended_2文件 , 并且退出  </li>
+</ol>
+</blockquote>
+<p>再这些过程中，还创建了如下文件  </p>
+<p>xtrabackup_checkpoints : 记录了lsn和备份类型<br>xtrabackup_binlog_info ： 记录了备份开始时的binary日志信息<br>xtrabackup_binlog_pos_innodb ： 记录了备份innodb redo事务时刻的binary log信息<br>xtrabackup_slave_info ： 记录了slave上show slave status相关信息<br>backup-my.cnf ： 记录了部分需要备份的信息<br>xtrabackup_binary ： 记录了这段备份期间执行过的事务  </p>
+<p><code>Restoring a backup</code></p>
+<blockquote>
+<p>copy-back or  move-back<br>它自己不会记录日志，需要我们指定管道记录日志  </p>
+</blockquote>
+<p><code>References</code></p>
+<blockquote>
+<p>罗列了全的innobackupex相关的参数和选项  </p>
+</blockquote>
+<h3 id="~~_3-2_xtrabackup_binary~~">~~ 3.2 xtrabackup binary~~</h3>
+<blockquote>
+<p>我们只用innobackupex即可  </p>
+</blockquote>
+<h3 id="3-3_The_xbstream_Binary"><del>3.3 The xbstream Binary</del></h3>
+<h3 id="~~_3-4_The_xbcrypt_binary~~">~~ 3.4 The xbcrypt binary~~</h3>
+<blockquote>
+<p>用的少  </p>
+</blockquote>
+<h3 id="~~_3-5_The_xbcloud_Binary~~">~~ 3.5 The xbcloud Binary~~</h3>
+<blockquote>
+<p>用的少</p>
+</blockquote>
+<h3 id="~~_3-6_How_Percona_XtraBackup_Works~~">~~ 3.6 How Percona XtraBackup Works~~</h3>
+<h2 id="4-1_innobackupex_how-tos">4.1 innobackupex how-tos</h2>
+<h3 id="4-1-1_Make_a_Local_Full_Backup_(Create,_Prepare_and_Restore)">4.1.1 Make a Local Full Backup (Create, Prepare and Restore)</h3>
+<h3 id="4-1-2_Make_a_Streaming_Backup">4.1.2 Make a Streaming Backup</h3>
+<p><del>### 4.1.3 Making an Incremental Backup</del>  </p>
+<blockquote>
+<p>恢复慢，用的少</p>
+</blockquote>
+<h3 id="4-1-4_Making_a_Compressed_Backup">4.1.4 Making a Compressed Backup</h3>
+<p><del>### 4.1.5 Backing Up and Restoring Individual Partitions</del></p>
+<blockquote>
+<p>用的少  </p>
+</blockquote>
+<p><del>## 4.2 xtrabackup how-tos</del></p>
+<blockquote>
+<p>innobackupex 就够了  </p>
+</blockquote>
+<h2 id="4-3_How-Tos">4.3 How-Tos</h2>
+<h3 id="4-3-1_How_to_setup_a_slave_for_replication_in_6_simple_steps_with_Percona_Xtra-_Backup">4.3.1 How to setup a slave for replication in 6 simple steps with Percona Xtra- Backup</h3>
+<h3 id="4-3-2_Verifying_Backups_with_replication_and_pt-checksum">4.3.2 Verifying Backups with replication and pt-checksum</h3>
+<h3 id="4-3-3_How_to_create_a_new_(or_repair_a_broken)_GTID_based_slave">4.3.3 How to create a new (or repair a broken) GTID based slave</h3>
+<h2 id="5-_KNOWN_ISSUES_AND_LIMITATIONS">5. KNOWN ISSUES AND LIMITATIONS</h2>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/04/19/xtrabackup_doc/" data-title="Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/04/20/xtrabackup_inside/" title="">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  (no title)</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/04/07/idb_biger/"  title="MySQL实战系列：大字段如何优化">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL实战系列：大字段如何优化
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/04/19/xtrabackup_doc/" data-title="Percona XtraBackup 核心文档" data-url="https://Keithlan.github.io/2016/04/19/xtrabackup_doc/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#1-_介绍"><span class="toc-number">1.</span> <span class="toc-text">1. 介绍</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_MySQL_备份工具特性对比"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 MySQL 备份工具特性对比</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_Percona_XtraBackup的特性"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 Percona XtraBackup的特性</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-_安装"><span class="toc-number">2.</span> <span class="toc-text">2. 安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-_用户手册"><span class="toc-number">3.</span> <span class="toc-text">3. 用户手册</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_The_innobackupex_Script"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 The innobackupex Script</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-1_前提"><span class="toc-number">3.1.1.</span> <span class="toc-text">3.1.1 前提</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-2_备份方式_：_全量备份"><span class="toc-number">3.1.2.</span> <span class="toc-text">3.1.2 备份方式 ： 全量备份</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-3_其他备份方式"><span class="toc-number">3.1.3.</span> <span class="toc-text">3.1.3 其他备份方式</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-4_部分表备份"><span class="toc-number">3.1.4.</span> <span class="toc-text">3.1.4 部分表备份</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-5_Compact_Backups"><span class="toc-number">3.1.5.</span> <span class="toc-text">3.1.5 Compact Backups</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-6_Encrypted_Backups"><span class="toc-number">3.1.6.</span> <span class="toc-text">3.1.6 Encrypted Backups</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-7_高级特性"><span class="toc-number">3.1.7.</span> <span class="toc-text">3.1.7 高级特性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-1-8_innobackupex_实现"><span class="toc-number">3.1.8.</span> <span class="toc-text">3.1.8 innobackupex 实现</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-2_xtrabackup_binary~~"><span class="toc-number">3.2.</span> <span class="toc-text">~~ 3.2 xtrabackup binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_The_xbstream_Binary"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 The xbstream Binary</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-4_The_xbcrypt_binary~~"><span class="toc-number">3.4.</span> <span class="toc-text">~~ 3.4 The xbcrypt binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-5_The_xbcloud_Binary~~"><span class="toc-number">3.5.</span> <span class="toc-text">~~ 3.5 The xbcloud Binary~~</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#~~_3-6_How_Percona_XtraBackup_Works~~"><span class="toc-number">3.6.</span> <span class="toc-text">~~ 3.6 How Percona XtraBackup Works~~</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-1_innobackupex_how-tos"><span class="toc-number">4.</span> <span class="toc-text">4.1 innobackupex how-tos</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-1_Make_a_Local_Full_Backup_(Create,_Prepare_and_Restore)"><span class="toc-number">4.1.</span> <span class="toc-text">4.1.1 Make a Local Full Backup (Create, Prepare and Restore)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-2_Make_a_Streaming_Backup"><span class="toc-number">4.2.</span> <span class="toc-text">4.1.2 Make a Streaming Backup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1-4_Making_a_Compressed_Backup"><span class="toc-number">4.3.</span> <span class="toc-text">4.1.4 Making a Compressed Backup</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#4-3_How-Tos"><span class="toc-number">5.</span> <span class="toc-text">4.3 How-Tos</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-1_How_to_setup_a_slave_for_replication_in_6_simple_steps_with_Percona_Xtra-_Backup"><span class="toc-number">5.1.</span> <span class="toc-text">4.3.1 How to setup a slave for replication in 6 simple steps with Percona Xtra- Backup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-2_Verifying_Backups_with_replication_and_pt-checksum"><span class="toc-number">5.2.</span> <span class="toc-text">4.3.2 Verifying Backups with replication and pt-checksum</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3-3_How_to_create_a_new_(or_repair_a_broken)_GTID_based_slave"><span class="toc-number">5.3.</span> <span class="toc-text">4.3.3 How to create a new (or repair a broken) GTID based slave</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#5-_KNOWN_ISSUES_AND_LIMITATIONS"><span class="toc-number">6.</span> <span class="toc-text">5. KNOWN ISSUES AND LIMITATIONS</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>3</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>3</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

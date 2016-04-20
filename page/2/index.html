@@ -68,6 +68,76 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/10/11/DBA_think_1/" title="我们的分享：上海站1" itemprop="url">
+      
+        我们的分享：上海站1
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >简介
+
+分享主题：对DBA的一些思考分享地点：上海市东方路1217号陆家嘴金融服务广场分享时间：2015-10-13 15:00:00分享嘉宾：兰春
+
+DBA的认知
+
+开发：DBA整天都在做啥？除了执行下SQL，其他也没啥事吧
+
+DBA：一天到晚忙死了，但是也不知道忙了个啥，整天</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2015-10-11T07:32:24.000Z" itemprop="datePublished">Oct 11 2015</time>
+      
+          <a href="/2015/10/11/DBA_think_1/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2015/08/18/how_to_backup_recovery/" title="MySQL 备份与恢复" itemprop="url">
+      
+        MySQL 备份与恢复
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。接下来，我们聊聊备份恢复的那些事儿   
+
+备份和恢复业界指标
+
+常用备份方式
+
+备份&amp;amp;恢复速度
+ 
+恢复架构图
+  
+恢复的原理和实践
+
+mysqlbinlog + script
+
+11) 这种方法，我想</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2015-08-18T07:32:24.000Z" itemprop="datePublished">Aug 18 2015</time>
+      
+          <a href="/2015/08/18/how_to_backup_recovery/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/17/22_performance_schema/" title="Mysql5.6 Performance_schema 深入浅出" itemprop="url">
       
         Mysql5.6 Performance_schema 深入浅出
@@ -181,29 +251,21 @@ mysqlsla 能解决什么问题？
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/14/mysqlsla_source_read/" title="mysqlsla 源码解析" itemprop="url">
+        <a href="/2015/07/14/mysql_ulimit/" title="ulimit 和 mysql 的故事" itemprop="url">
       
-        mysqlsla 源码解析
+        ulimit 和 mysql 的故事
       </a>
     </h1>
     
      
-       <p itemprop="description" >知识结构
-
-
-目的： 通过mysqlsla的源码分析，能够更加深入理解其内部实现机制
-
-mysqlsla 主要分为三个大的packages，我们先大致了解一下package 都包含什么，都做什么
-
-分析 main 函数，一步步了解主要流程
-
-针对一条线进行分析，比如slow lo</p>
+       <p itemprop="description" >背景
+123前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
       
     
     <p class="article-more-link">
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/14/mysqlsla_source_read/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysql_ulimit/">阅读更多&raquo;</a>
       
     </p>
 
@@ -238,6 +300,35 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/07/14/mysql_error_1293/" title="深入浅出timestamp" itemprop="url">
+      
+        深入浅出timestamp
+      </a>
+    </h1>
+    
+     
+       <p itemprop="description" >前提
+1对于timestamp相关的错误，之前也有耳闻，但是并没有详细去了解，导致昨天有位同事描述的错误场景不能及时回答，这说明自己对Mysql的理解还是知之甚少。故，这里详细谈谈timestamp
+
+错误场景
+
+好了，这里直奔主题吧。昨天有位同事遇到的错误ERROR 1293 </p>
+      
+    
+    <p class="article-more-link">
+      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+      
+          <a href="/2015/07/14/mysql_error_1293/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">
       
         MySQL 5.6 中 In 优化的那些事
@@ -253,86 +344,6 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
           <a href="/2015/07/14/mysql_in/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_ulimit/" title="ulimit 和 mysql 的故事" itemprop="url">
-      
-        ulimit 和 mysql 的故事
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >背景
-123前些天，mysql 自带的监控脚本无故卡死，报错信息如下： Resource temporarily unavailable然后将mysql 用户下的 ulimit 设置为8192 ， 则正常。虽然暂时解决了问题，但是背后的原理还没弄清楚，这里打算详细了解一下。</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_ulimit/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_shutdown_err/" title="mysql shutdown 异常处理和分析" itemprop="url">
-      
-        mysql shutdown 异常处理和分析
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >先了解一下mysql的shutdown流程
-
-
-The shutdown process is initiated.
-The server creates a shutdown thread if necessary.
-The server stops accepting new</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_shutdown_err/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_error_1048/" title="Mysql Error 1048 奇遇记" itemprop="url">
-      
-        Mysql Error 1048 奇遇记
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >前提
-
-上周遇到次奇葩的同步错误，error 1048 ， 看似是简单的not null导致，但是为什么master可以执行，slave不行呢？为什么5.1的slave可以，5.6的slave不行呢？ 带着很多疑问，准备来一窥究竟</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_error_1048/">阅读更多&raquo;</a>
       
     </p>
 
@@ -382,7 +393,7 @@ The server stops accepting new</p>
 		
 			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
 		
-			<li><a href="/categories/分享/" title="分享">分享<sup>2</sup></a></li>
+			<li><a href="/categories/分享/" title="分享">分享<sup>3</sup></a></li>
 		
 		</ul>
 </div>
@@ -391,7 +402,7 @@ The server stops accepting new</p>
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -406,7 +417,7 @@ The server stops accepting new</p>
 		
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>2</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>3</sup></a></li>
 		
 			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
 		

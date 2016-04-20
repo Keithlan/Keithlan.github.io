@@ -1,0 +1,475 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="xtrabackup 详解
+如果想知道如何使用xtrabackup，请翻阅之前的文章 xtrabackup核心文档
+xtrabackup原理深入浅出
+为什么要使用xtrabackup
+
+常用的备份有哪些
+
+
+
+性能对比
+
+
+
+逻辑备份 vs 物理备份
+  逻辑备份优点: 占用空间小，安全  逻辑备份">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/04/20/xtrabackup_inside/" title="" itemprop="url"></a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-04-20T07:34:30.000Z" itemprop="datePublished">Apr 20 2016</time>
+    Updated:<time datetime="2016-04-20T07:32:46.000Z" itemprop="dateModified">Apr 20 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#xtrabackup_详解"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup 详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">1.2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">1.2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">1.2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">1.2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol></li></ol>
+		</div>
+		
+		<h1 id="xtrabackup_详解">xtrabackup 详解</h1>
+<p>如果想知道如何使用xtrabackup，请翻阅之前的文章 <a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/tools/percona-toolkits/xtrabackup/xtrabackup_doc.md" target="_blank" rel="external">xtrabackup核心文档</a></p>
+<h2 id="xtrabackup原理深入浅出">xtrabackup原理深入浅出</h2>
+<h3 id="为什么要使用xtrabackup">为什么要使用xtrabackup</h3>
+<ul>
+<li><strong>常用的备份有哪些</strong></li>
+</ul>
+<p><img src="image/back_type.png" alt="type" title="type"></p>
+<ul>
+<li><strong>性能对比</strong></li>
+</ul>
+<p><img src="image/back_time.png" alt="time" title="time"></p>
+<ul>
+<li><p><strong>逻辑备份 vs 物理备份</strong></p>
+<p>  逻辑备份优点: 占用空间小，安全<br>  逻辑备份缺点: 恢复速度慢<br>  物理备份优点: 备份，恢复速度快<br>  物理备份缺点: 占用空间大  </p>
+</li>
+<li><p><strong>如何选择，全凭业务场景</strong></p>
+<pre><code>如果类似facebook这种量级（PB，EB），考虑成本，建议逻辑备份   
+如果只是上<span class="literal">T</span>级别，建议物理备份  
+本人用的是物理备份，还有一个原因就是： 逻辑备份会遭到DDL的破坏  
+试想，晚上经常有DDL这样的操作，备份任务不可能随意调整，这样带来的运维成本很大  
+</code></pre></li>
+<li><p><strong>物理备份：InnoDB vs  Myisam</strong></p>
+<blockquote>
+<p>Myisam引擎，只需要flush tables后，就可以随意拷贝文件<br>InnoDB可通过xtrabackup来拷贝文件  </p>
+</blockquote>
+<p>  在5.6之前，我比较喜欢用Myisam引擎来做备份，原因是就是备份和恢复的速度以及随意拷贝的便利性<br>  在5.6之后，由于可传输表空间的出现，让恢复单表变得简单，我更加愿意用InnoDB备份。关于可传输表空间，可阅读<a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/backup_recovery/transportable.md" target="_blank" rel="external">transportable tablespace详解</a><br>  用Myisam的一个致命弱点是：如果要还原成innoDB表，需要转换表引擎，痛苦的开始<br>  至于InnoDB和Myisam的选择，就不用纠结了，因为之后的MySQL会废弃掉Myisam  </p>
+</li>
+</ul>
+<h3 id="什么是一致性备份">什么是一致性备份</h3>
+<blockquote>
+<p>简单来说，就是备份的数据都处在同一时间点  </p>
+</blockquote>
+<p><img src="image/non-consis.jpg" alt="non-consis" title="non-consis"></p>
+<p><img src="image/consis.jpg" alt="consis" title="consis"> </p>
+<h3 id="percona_xtrabackup基本概念">percona xtrabackup基本概念</h3>
+<blockquote>
+<p>innobackupex 是一个perl写的脚本，为了方便，封装了xtrabackup，所以一般备份都用innobackupex<br>xtrabackup 只备份innoDB表  ，其余的都交给innobackupex<br>新版本如：2.4，2.3.xx 已经将innodbex用c 重写了，然后链接到xtrabackup    </p>
+</blockquote>
+<h3 id="xtrabackup_for_5-6_备份原理">xtrabackup for 5.6 备份原理</h3>
+<blockquote>
+<ol>
+<li>innobackupex 调用 xtrabackup —suspend-at-end   </li>
+<li>xtrabackup 开始拷贝 innodb 数据文件,共享表空间 </li>
+<li>当xtrabackup拷贝完innodb文件后，会创建  xtrabackup_suspended_2  </li>
+<li>当innobackupex看到xtrabackup_suspended_2文件被创建后，进行加锁<br>  a. FLUSH NO_WRITE_TO_BINLOG TABLES<br>  b. FLUSH TABLES WITH READ LOCK  </li>
+<li>innobackupex开始检查db server支持的特性，如：gtid，backup locks，changed page bitmap等  </li>
+<li>然后开始拷贝非innodb文件，以及表结构frm  </li>
+<li>当所有的文件都备份完成后，结束redo 事务的拷贝。  </li>
+<li>接下来释放锁<br> a. FLUSH NO_WRITE_TO_BINLOG ENGINE LOGS<br> b. UNLOCK TABLES  </li>
+<li>删除xtrabackup_suspended_2文件 , 并且退出  </li>
+</ol>
+</blockquote>
+<p><img src="image/innobackup.jpg" alt="innobackup" title="innobackup"></p>
+<p>从上述流程图可以看出，FLUSH TABLES WITH READ LOCK【FTWRL】  这个时间点，就是备份恢复的时间点，即一致性点<br>因为数据再拷贝的过程中是不一致的，MySQL利用其自身的crash recover机制，用redo来保证最终一致性  </p>
+<h2 id="生产环境如何备份">生产环境如何备份</h2>
+<blockquote>
+<p>备份的意图：备份master或者slave上的数据，然后传输到一个挂有大磁盘的服务器上，保留若干天  </p>
+</blockquote>
+<h3 id="问题1，如何传输到其他服务器呢？">问题1，如何传输到其他服务器呢？</h3>
+<ol>
+<li>这个问题，xtrabackup也考虑到了，用xbstream + ssh 的方式，但是有一个致命的缺点，就是无法断点续传，如果网络断掉，那就悲剧  </li>
+<li>另外一个方式就是：先xtrabackup到本地一个目录，然后用rsync【支持断点续传】来传送到远端服务器。 这种方法的致命缺点是：本地磁盘需要浪费一半的空间,且copy了两遍备份数据   </li>
+</ol>
+<p>以上两种方式都存在缺陷，那么我们不得不思考第三种方式，是否可以直接copy到远端机器呢？  </p>
+<ul>
+<li>如果是在master上备份，那么直接copy是不行的，因为redo一直再变且轮询  </li>
+</ul>
+<p><img src="image/master.jpg" alt="master" title="master"></p>
+<ul>
+<li>如果是在slave上，或者etl&amp;backup机器上呢？ 不难发现，xtrabackup记录了redo的变化，如果我们人为的让redo不再增长，stop slave，这样的备份原理是否和xtrabackup一样呢？  </li>
+</ul>
+<p><img src="image/slave.jpg" alt="slave" title="slave">  </p>
+<p>这样做的好处是，不用浪费一半的空间，也不需要传送2次   </p>
+<h3 id="你所不知道的秘密">你所不知道的秘密</h3>
+<p><img src="image/commit.jpg" alt="commit" title="commit"></p>
+<p>通过以上流程图，可以发现一个重要的线索：我们的物理备份，是不会备份binlog的【重要】<br>所以，友谊的小船说翻就翻  </p>
+<p><img src="image/commit_1.jpg" alt="commit_1" title="commit_1"></p>
+<p>对于5.1 &amp; 5.5，用xtrabackup for 5.1 or 5.5 ，如果innodb_flush_log_at_trx_commit=1 ,应该没问题  </p>
+<p><img src="image/commit_2.jpg" alt="commit_2" title="commit_2"></p>
+<p>对于5.6 ， 用xtrabackup for 5.1 or 5.5 ， 即便如果innodb_flush_log_at_trx_commit=1，有可能会丢失事务  </p>
+<p><img src="image/commit_3.jpg" alt="commit_3" title="commit_3"></p>
+<p>对于5.6 ， 用xtrabackup for 5.6， 不会丢失事务  </p>
+<h3 id="重要">重要</h3>
+<p>所以，如果你想通过stop slave的方式，直接拷贝文件的话，必须执行   </p>
+<p>FLUSH NO_WRITE_TO_BINLOG TABLES<br>FLUSH NO_WRITE_TO_BINLOG ENGINE LOGS  </p>
+<p>这样，就跟xtrabackup没什么区别了  </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/04/19/xtrabackup_doc/"  title="Percona XtraBackup 核心文档">
+ <strong>NEXT:</strong><br/> 
+ <span>Percona XtraBackup 核心文档
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/04/20/xtrabackup_inside/" data-title="" data-url="https://Keithlan.github.io/2016/04/20/xtrabackup_inside/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#xtrabackup_详解"><span class="toc-number">1.</span> <span class="toc-text">xtrabackup 详解</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#xtrabackup原理深入浅出"><span class="toc-number">1.1.</span> <span class="toc-text">xtrabackup原理深入浅出</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么要使用xtrabackup"><span class="toc-number">1.1.1.</span> <span class="toc-text">为什么要使用xtrabackup</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是一致性备份"><span class="toc-number">1.1.2.</span> <span class="toc-text">什么是一致性备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#percona_xtrabackup基本概念"><span class="toc-number">1.1.3.</span> <span class="toc-text">percona xtrabackup基本概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#xtrabackup_for_5-6_备份原理"><span class="toc-number">1.1.4.</span> <span class="toc-text">xtrabackup for 5.6 备份原理</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境如何备份"><span class="toc-number">1.2.</span> <span class="toc-text">生产环境如何备份</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#问题1，如何传输到其他服务器呢？"><span class="toc-number">1.2.1.</span> <span class="toc-text">问题1，如何传输到其他服务器呢？</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#你所不知道的秘密"><span class="toc-number">1.2.2.</span> <span class="toc-text">你所不知道的秘密</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#重要"><span class="toc-number">1.2.3.</span> <span class="toc-text">重要</span></a></li></ol></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>3</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>3</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
