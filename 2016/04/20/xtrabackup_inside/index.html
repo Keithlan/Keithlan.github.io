@@ -90,7 +90,7 @@ xtrabackup原理深入浅出
     </p>
   <p class="article-time">
     <time datetime="2016-04-20T08:32:24.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-04-20T08:44:16.000Z" itemprop="dateModified">Apr 20 2016</time>
+    Updated:<time datetime="2016-04-21T02:45:39.000Z" itemprop="dateModified">Apr 21 2016</time>
     
   </p>
 </header>
@@ -127,7 +127,7 @@ xtrabackup原理深入浅出
 <blockquote>
 <p>Myisam引擎，只需要flush tables后，就可以随意拷贝文件<br>InnoDB可通过xtrabackup来拷贝文件  </p>
 </blockquote>
-<p>  在5.6之前，我比较喜欢用Myisam引擎来做备份，原因是就是备份和恢复的速度以及随意拷贝的便利性<br>  在5.6之后，由于可传输表空间的出现，让恢复单表变得简单，我更加愿意用InnoDB备份。关于可传输表空间，可阅读<a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/backup_recovery/transportable.md" target="_blank" rel="external">transportable tablespace详解</a><br>  用Myisam的一个致命弱点是：如果要还原成innoDB表，需要转换表引擎，痛苦的开始<br>  至于InnoDB和Myisam的选择，就不用纠结了，因为之后的MySQL会废弃掉Myisam  </p>
+<p>  在5.6之前，我比较喜欢用Myisam引擎来做备份，原因是就是备份和恢复的速度以及随意拷贝的便利性<br>  在5.6之后，由于可传输表空间的出现，让恢复单表变得简单，我更加愿意用InnoDB备份。关于可传输表空间，可阅读<a href="http://keithlan.github.io/2016/04/21/transportable/" target="_blank" rel="external">transportable tablespace详解</a><br>  用Myisam的一个致命弱点是：如果要还原成innoDB表，需要转换表引擎，痛苦的开始<br>  至于InnoDB和Myisam的选择，就不用纠结了，因为之后的MySQL会废弃掉Myisam  </p>
 </li>
 </ul>
 <h3 id="什么是一致性备份">什么是一致性备份</h3>
