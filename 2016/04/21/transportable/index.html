@@ -9,10 +9,10 @@
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="Copying File-Per-Table Tablespaces to Another ServerTransportable Tablespace ExamplesTransportable Tablespace Internals
+    <meta name="description" content="Copying File-Per-Table Tablespaces to Another ServerTransportable Tablespace ExamplesTransportable Tablespace Internals  
 
 背景
-大家先来回顾一下，如果要将innoDB中的一个表 M">
+大家先来回顾一下，如果要将innoDB中的一个表">
     
     
     
@@ -72,15 +72,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/03/27/transportable/" title="InnoDB可传输表空间" itemprop="url">InnoDB可传输表空间</a>
+      <a href="/2016/04/21/transportable/" title="InnoDB可传输表空间" itemprop="url">InnoDB可传输表空间</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-03-27T07:32:24.000Z" itemprop="datePublished">Mar 27 2016</time>
-    Updated:<time datetime="2016-03-30T02:37:29.000Z" itemprop="dateModified">Mar 30 2016</time>
+    <time datetime="2016-04-21T02:32:24.000Z" itemprop="datePublished">Apr 21 2016</time>
+    Updated:<time datetime="2016-04-21T02:43:24.000Z" itemprop="dateModified">Apr 21 2016</time>
     
   </p>
 </header>
@@ -93,35 +93,35 @@
 		</div>
 		
 		<blockquote>
-<p>Copying File-Per-Table Tablespaces to Another Server<br>Transportable Tablespace Examples<br>Transportable Tablespace Internals</p>
+<p>Copying File-Per-Table Tablespaces to Another Server<br>Transportable Tablespace Examples<br>Transportable Tablespace Internals  </p>
 </blockquote>
 <h2 id="背景">背景</h2>
-<p>大家先来回顾一下，如果要将innoDB中的一个表 Moving or Copying 到另外一台(machine|instance)上，如何做？</p>
+<p>大家先来回顾一下，如果要将innoDB中的一个表 Moving or Copying 到另外一台(machine|instance)上，如何做？  </p>
 <blockquote>
 <ol>
-<li>MySQL Enterprise Backup (no need consider)</li>
-<li>Copying Data Files (Cold Backup Method)</li>
-<li>Export and Import (mysqldump,mydumper,mysqlpump)</li>
+<li>MySQL Enterprise Backup (no need consider)  </li>
+<li>Copying Data Files (Cold Backup Method)  </li>
+<li>Export and Import (mysqldump,mydumper,mysqlpump)  </li>
 </ol>
 </blockquote>
-<p>现在我们有第四种方案</p>
+<p>现在我们有第四种方案  </p>
 <blockquote>
 <ol>
-<li>Transportable Tablespaces</li>
+<li>Transportable Tablespaces  </li>
 </ol>
 </blockquote>
 <h2 id="它有什么优势">它有什么优势</h2>
 <blockquote>
 <ol>
-<li>To run reports without putting extra load on a production server</li>
-<li>To set up identical data for a table on a new slave server</li>
-<li>To restore a backed-up version of a table or partition after a problem or mistake</li>
-<li>As a faster way of moving data around than importing the results of a mysqldump command. The data is available immediately, rather than having to be re-inserted and the indexes rebuilt</li>
-<li>To move a file-per-table tablespace to a server with storage medium that better suits system requirements. For example, you may want to have busy tables on an SSD device, or large tables on a high-capacity HDD device</li>
-<li>新备份（类似Myisam的备份）</li>
+<li>To run reports without putting extra load on a production server  </li>
+<li>To set up identical data for a table on a new slave server  </li>
+<li>To restore a backed-up version of a table or partition after a problem or mistake  </li>
+<li>As a faster way of moving data around than importing the results of a mysqldump command. The data is available immediately, rather than having to be re-inserted and the indexes rebuilt  </li>
+<li>To move a file-per-table tablespace to a server with storage medium that better suits system requirements. For example, you may want to have busy tables on an SSD device, or large tables on a high-capacity HDD device  </li>
+<li>新备份（类似Myisam的备份） </li>
 </ol>
 </blockquote>
-<pre><code>    1. Myisam 只有<span class="operator"><span class="keyword">flush</span> <span class="keyword">table</span>了，就可以随意copy
+<pre><code>    1. Myisam 只有<span class="operator"><span class="keyword">flush</span> <span class="keyword">table</span>了，就可以随意copy  
     <span class="number">2.</span> 既然如此，为什么<span class="keyword">InnoDB</span>不行呢？
         <span class="number">2.1</span> 原因一： <span class="keyword">InnoDB</span>的所有信息都有数据字典维护，数据字典在共享表空间中
         <span class="number">2.2</span> 原因二： 你没有办法控制<span class="keyword">innoDB</span>文件sync到disk
@@ -129,48 +129,48 @@
 </code></pre><h2 id="哪些需要注意">哪些需要注意</h2>
 <blockquote>
 <ol>
-<li>必须开启 innodb_file_per_table</li>
-<li>当这个表处于quiesced状态,甚至不能被select</li>
-<li>两边实例的page size 一致</li>
-<li>5.7 版本之前，不支持分区表transport</li>
-<li>外键相关的表，必须设置 foreign_key_checks=0 才能成功</li>
-<li>ALTER TABLE … IMPORT TABLESPACE 不需要.cfg metadata file . 但是，这样的话，MySQL就不会对schema进行verificate</li>
-<li>5.6以及更高版本，import&amp;export 版本必须在同一个series</li>
-<li>在replication环境中，master &amp; slave 都必须开启 innodb_file_per_table</li>
-<li>对于InnoDB general tablespace，不支持discard &amp; import tablespace</li>
-<li>如果两边服务器的table row_format设置的不一样，会导致schema mismatch error</li>
-<li>加密过的InnoDB tablespace 必须要拷贝.cfp 文件</li>
+<li>必须开启 innodb_file_per_table  </li>
+<li>当这个表处于quiesced状态,甚至不能被select    </li>
+<li>两边实例的page size 一致  </li>
+<li>5.7 版本之前，不支持分区表transport  </li>
+<li>外键相关的表，必须设置 foreign_key_checks=0 才能成功  </li>
+<li>ALTER TABLE … IMPORT TABLESPACE 不需要.cfg metadata file . 但是，这样的话，MySQL就不会对schema进行verificate  </li>
+<li>5.6以及更高版本，import&amp;export 版本必须在同一个series  </li>
+<li>在replication环境中，master &amp; slave 都必须开启 innodb_file_per_table  </li>
+<li>对于InnoDB general tablespace，不支持discard &amp; import tablespace  </li>
+<li>如果两边服务器的table row_format设置的不一样，会导致schema mismatch error  </li>
+<li>加密过的InnoDB tablespace 必须要拷贝.cfp 文件  </li>
 </ol>
 </blockquote>
 <h2 id="Transportable_Tablespace_Examples">Transportable Tablespace Examples</h2>
 <h3 id="Ex1:_Copying_an_InnoDB_Partitioned_Table_From_One_Server_To_Another"><del>Ex1: Copying an InnoDB Partitioned Table From One Server To Another</del></h3>
 <h3 id="Ex2:_Copying_an_InnoDB_Table_From_One_Server_To_Another">Ex2: Copying an InnoDB Table From One Server To Another</h3>
 <blockquote>
-<p>这个例子演示了一个regular InnoDB table的传输过程</p>
+<p>这个例子演示了一个regular InnoDB table的传输过程  </p>
 </blockquote>
 <ol>
 <li><p>在source server A上，创建一个表</p>
 <pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
- mysql&gt; CREATE TABLE t(c1 INT) engine=InnoDB;
+ mysql&gt; CREATE TABLE t(c1 INT) engine=InnoDB; 
 </code></pre></li>
-<li><p>在destination server B上，也创建同样的表结构</p>
+<li><p>在destination server B上，也创建同样的表结构  </p>
 <pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
  mysql&gt; CREATE TABLE t(c1 INT) engine=InnoDB;
 </code></pre></li>
-<li><p>在destination server B上，discard 该表（这一步是必须的）</p>
+<li><p>在destination server B上，discard 该表（这一步是必须的） </p>
 <pre><code> mysql&gt; ALTER <span class="keyword">TABLE</span> t DISCARD TABLESPACE;
 </code></pre></li>
-<li><p>在source server A上，执行 FLUSH TABLES … FOR EXPORT , 该表这时候处于quiesce状态，只读，且创建.cfg metadata文件</p>
+<li><p>在source server A上，执行 FLUSH TABLES … FOR EXPORT , 该表这时候处于quiesce状态，只读，且创建.cfg metadata文件  </p>
 <pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
  mysql&gt; FLUSH TABLES t <span class="keyword">FOR</span> EXPORT;
-</code></pre><p> 此时，.cfg 文件在InnoDB的data directory中</p>
+</code></pre><p> 此时，.cfg 文件在InnoDB的data directory中  </p>
 </li>
 <li><p>拷贝.ibd &amp; .cfg 从source server A 到 在destination server B</p>
 <pre><code> shell&gt; scp <span class="regexp">/path/</span>to<span class="regexp">/datadir/</span>test<span class="regexp">/t.{ibd,cfg} destination-server:/</span>path<span class="regexp">/to/</span>datadir<span class="regexp">/test</span>
 </code></pre></li>
-<li><p>在source server A， 执行unlock tables 来释放FLUSH TABLES … FOR EXPORT 加的locks</p>
-<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
- mysql&gt; UNLOCK TABLES;
+<li><p>在source server A， 执行unlock tables 来释放FLUSH TABLES … FOR EXPORT 加的locks  </p>
+<pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;  
+ mysql&gt; UNLOCK TABLES;  
 </code></pre></li>
 <li><p>在destination server B上，导入tablespace</p>
 <pre><code> mysql&gt; <span class="keyword">use</span> <span class="title">test</span>;
@@ -179,19 +179,19 @@
 </ol>
 <h2 id="Transportable_Tablespace_Internals">Transportable Tablespace Internals</h2>
 <ol>
-<li><p>ALTER TABLE … DISCARD TABLESPACE Internals</p>
-<pre><code>1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.
-1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.
+<li><p>ALTER TABLE … DISCARD TABLESPACE Internals </p>
+<pre><code>1.1 The table <span class="keyword">is</span> locked <span class="keyword">in</span> X <span class="keyword">mode</span>.  
+1.2 The tablespace <span class="keyword">is</span> detached <span class="keyword">from</span> the table.  
 </code></pre></li>
 <li><p>FLUSH TABLES … FOR EXPORT  Internals</p>
-<pre><code><span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.
+<pre><code><span class="number">2.1</span> The table being flushed <span class="keyword">for</span> export <span class="keyword">is</span> locked <span class="keyword">in</span> <span class="keyword">shared</span> mode.  
 <span class="number">2.2</span> The purge coordinator thread <span class="keyword">is</span> stopped.
 <span class="number">2.3</span> Dirty pages are synchronized <span class="keyword">to</span> disk.
 <span class="number">2.4</span> Table metadata <span class="keyword">is</span> written <span class="keyword">to</span> the <span class="keyword">binary</span> .cfg file.
 </code></pre></li>
 </ol>
 <ol>
-<li><p>UNLOCK TABLES</p>
+<li><p>UNLOCK TABLES </p>
 <pre><code>3.1 The binary .cfg file is deleted.
 3.2 The shared <span class="operator"><span class="keyword">lock</span> <span class="keyword">on</span> the <span class="keyword">table</span> <span class="keyword">or</span> <span class="keyword">tables</span> being imported <span class="keyword">is</span> released <span class="keyword">and</span> the <span class="keyword">purge</span> coordinator thread <span class="keyword">is</span> restarted.</span>
 </code></pre></li>
@@ -227,12 +227,12 @@
 </code></pre></li>
 <li><p><strong>这样传输表的速度快吗？对io负载大吗？</strong></p>
 <pre><code>  <span class="number">1</span>. 这几步中，最慢的是<span class="preprocessor"><span class="keyword">import</span>，其他几乎是瞬间完成。比较<span class="keyword">import</span>做的事情也很多吗，anyway，都比mysqldump要快很多很多倍。</span>
-  <span class="number">2</span>. 至于io负载，当然是有的，但是还是要优于mysqlimport很多很多哇。
+  <span class="number">2</span>. 至于io负载，当然是有的，但是还是要优于mysqlimport很多很多哇。  
 </code></pre></li>
 <li><p><strong>如果两边表结构不一致，可以导入过来吗？</strong></p>
 <pre><code>  <span class="number">1.</span> 很遗憾，会报错
-      <span class="type">ERROR</span> <span class="number">1808</span> (<span class="type">HY000</span>): <span class="type">Schema</span> mismatch (<span class="type">Number</span> <span class="keyword">of</span> columns don't match, table has <span class="number">5</span> columns but the tablespace meta-<span class="typedef"><span class="keyword">data</span> file has 4 columns)</span>
-  <span class="number">2.</span> 所以，这里也有一个缺陷就是，如果你有ibd文件，还不一定能够恢复，你必须还要知道该表的表结构才行
+      <span class="type">ERROR</span> <span class="number">1808</span> (<span class="type">HY000</span>): <span class="type">Schema</span> mismatch (<span class="type">Number</span> <span class="keyword">of</span> columns don't match, table has <span class="number">5</span> columns but the tablespace meta-<span class="typedef"><span class="keyword">data</span> file has 4 columns)  </span>
+  <span class="number">2.</span> 所以，这里也有一个缺陷就是，如果你有ibd文件，还不一定能够恢复，你必须还要知道该表的表结构才行  
 </code></pre></li>
 <li><p><strong><code>特别注意: 必须使用.cfg来帮助认证schema，否则很可能导致MySQL卡死</code></strong></p>
 <pre><code>  原始表结构如下：
@@ -311,20 +311,20 @@
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-feature/">MySQL feature</a>
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2016/03/27/transportable/" data-title="InnoDB可传输表空间 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/04/21/transportable/" data-title="InnoDB可传输表空间 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -333,19 +333,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/04/06/auto_incre_reduce/" title="auto_increment的后裔">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  auto_increment的后裔</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/03/14/wrong_index/"  title="SQL优化：执行计划出错之重复索引干扰">
+<a href="/2016/04/20/xtrabackup_inside/"  title="Xtrabackup 的秘密">
  <strong>NEXT:</strong><br/> 
- <span>SQL优化：执行计划出错之重复索引干扰
+ <span>Xtrabackup 的秘密
 </span>
 </a>
 </div>
@@ -355,7 +347,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2016/03/27/transportable/" data-title="InnoDB可传输表空间" data-url="https://Keithlan.github.io/2016/03/27/transportable/"></div>
+<div class="ds-thread" data-thread-key="/2016/04/21/transportable/" data-title="InnoDB可传输表空间" data-url="https://Keithlan.github.io/2016/04/21/transportable/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -413,9 +405,9 @@ var duoshuoQuery = {short_name:keithlan};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
 		
-			<li><a href="/categories/分享/" title="分享">分享<sup>3</sup></a></li>
+			<li><a href="/categories/分享/" title="分享">分享<sup>4</sup></a></li>
 		
 		</ul>
 </div>
@@ -424,7 +416,7 @@ var duoshuoQuery = {short_name:keithlan};
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -437,9 +429,9 @@ var duoshuoQuery = {short_name:keithlan};
 		
 			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
 		
-			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>5</sup></a></li>
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>3</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>4</sup></a></li>
 		
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
 		
