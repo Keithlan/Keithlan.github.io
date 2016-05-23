@@ -95,7 +95,7 @@ select xx for update ， 加锁的读。读取的是最新的数据
     </p>
   <p class="article-time">
     <time datetime="2016-05-23T09:32:24.000Z" itemprop="datePublished">May 23 2016</time>
-    Updated:<time datetime="2016-05-23T09:40:29.000Z" itemprop="dateModified">May 23 2016</time>
+    Updated:<time datetime="2016-05-23T09:42:18.000Z" itemprop="dateModified">May 23 2016</time>
     
   </p>
 </header>
@@ -182,7 +182,7 @@ select xx for update ， 加锁的读。读取的是最新的数据
 </blockquote>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="header">root:test&gt; select * from lc for update;</span></div><div class="line">+------+</div><div class="line"><span class="header">| id   |</span></div><div class="line">+------+</div><div class="line">|    1 |</div><div class="line"><span class="header">|    2 |</span></div><div class="line">+------+</div><div class="line">2 rows in set (7.48 sec)</div></pre></td></tr></table></figure>
 
-<p>总结： RC模式，同一个事务中，执行多次一致性锁定读，得到的结果不一样。所以RC模式存在幻影读的现象。<br>同理： RR模式，一致性锁定读，执行多次一致性锁定读，得到的结果一样。  所以RR模式不存在幻影读的现象。<br>原理： 产生幻影读的原理，跟gap lock &amp; next key lock 相关，如果想知道什么是gap lock &amp; next key lock,且听下回分享  </p>
+<p>总结： RC模式，同一个事务中，执行多次一致性锁定读，得到的结果不一样。所以RC模式存在幻影读的现象。<br>同理： RR模式，同一个事务中，执行多次一致性锁定读，得到的结果一样。  所以RR模式不存在幻影读的现象。<br>原理： 产生幻影读的原理，跟gap lock &amp; next key lock 相关，如果想知道什么是gap lock &amp; next key lock,且听下回分享  </p>
   
 	</div>
 		<footer class="article-footer clearfix">
