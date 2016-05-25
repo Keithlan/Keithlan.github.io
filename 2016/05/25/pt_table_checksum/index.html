@@ -4,23 +4,22 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>auto_increment的后裔 | Focus on MySQL,Focus on Focus</title>
+    <title>pt-table-checksum原理详解 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="记一次auto_increment即将引发的悲剧  
+    <meta name="description" content="环境
 
-实战
-先来看看架构图吧
+MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15  
 
+它能做什么
 
-x表将数据写入A，这时候A的id是自增长的    
-A再将自己的自增长的id（发号器），写入到 B, 注意是指定id写入。insert into B(id) values(xx);  
-同时也将数据写入到C  
+业界最流行的MySQL主从数据对比工具，数据一致性检测最好的的工具，没有之一  
 
+如何使用
 
-">
+./pt-table-checksum -hxx">
     
     
     
@@ -80,15 +79,15 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/04/06/auto_incre_reduce/" title="auto_increment的后裔" itemprop="url">auto_increment的后裔</a>
+      <a href="/2016/05/25/pt_table_checksum/" title="pt-table-checksum原理详解" itemprop="url">pt-table-checksum原理详解</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-04-06T11:20:24.000Z" itemprop="datePublished">Apr 6 2016</time>
-    Updated:<time datetime="2016-04-06T11:21:09.000Z" itemprop="dateModified">Apr 6 2016</time>
+    <time datetime="2016-05-25T09:14:24.000Z" itemprop="datePublished">May 25 2016</time>
+    Updated:<time datetime="2016-05-25T09:15:10.000Z" itemprop="dateModified">May 25 2016</time>
     
   </p>
 </header>
@@ -97,82 +96,106 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
 		</div>
 		
-		<blockquote>
-<p>记一次auto_increment即将引发的悲剧  </p>
-</blockquote>
-<h2 id="实战">实战</h2>
-<h3 id="先来看看架构图吧">先来看看架构图吧</h3>
+		<h2 id="环境">环境</h2>
 <blockquote>
-<ol>
-<li>x表将数据写入A，这时候A的id是自增长的    </li>
-<li>A再将自己的自增长的id（发号器），写入到 B, 注意是指定id写入。insert into B(id) values(xx);  </li>
-<li>同时也将数据写入到C  </li>
-</ol>
+<p>MySQL: MySQL 5.6.27<br>OS: centos 6.6<br>tool: pt-table-checksum 2.2.15  </p>
 </blockquote>
-<p><img src="/image/mysql_error/step1.jpg" alt="auto_1" title="auto_1"></p>
-<h3 id="最终的想法是这样的">最终的想法是这样的</h3>
+<h2 id="它能做什么">它能做什么</h2>
 <blockquote>
-<ol>
-<li>主表A将发号器id写入C (id 在一个小区间增长: 1 ~ 100000)</li>
-<li>主表B将发号器id也写入C (id 在一个大区间增长: 10000000 ~ ? )  </li>
-<li>很多人疑惑的是：为什么一开始id不区分开来呢？ 因为一开始业务没有拆分，需要保证A,B一致。直到某个阶段，才将B设置alter table B auto_increment = 10000000  </li>
-<li>这个时候，由于指定id写入的原因，A，B的id还是一致的，直到X表分发数据到不同表。如：xx写入A，yy写入B，这个时候由于A，B的auto_increment不一样，所以id就会有所区分(A的id自增长在小的区间，B的id自增长在大的区间)。  </li>
-</ol>
+<p>业界最流行的MySQL主从数据对比工具，数据一致性检测最好的的工具，没有之一  </p>
 </blockquote>
-<p><img src="/image/mysql_error/step2.jpg" alt="auto_2" title="auto_2"></p>
-<h3 id="错误场景重现">错误场景重现</h3>
+<h2 id="如何使用">如何使用</h2>
 <blockquote>
-<p>那么问题就来了，如果这时候B的auto_incrememt再次变回到小区间1 ~ 100000，会导致什么问题呢？<br>问题严重啦： 这时候由于A，B 都往C表写同一个区间的数据，会导致很多脏数据，结果就悲剧了咯。。。<br>真实场景重现如下  </p>
+<p>./pt-table-checksum -hxx -P 3306 -u backup -p backup    —no-check-binlog-format —databases=xx_db,yy_db,zz_db —no-check-replication-filters  </p>
 </blockquote>
-<p><img src="/image/mysql_error/step3.jpg" alt="auto_3" title="auto_3"></p>
-<h2 id="分析">分析</h2>
-<blockquote>
-<p>问题的关键处在auto_increment变小  </p>
-</blockquote>
-<h3 id="那么什么场景下回导致auto_increment变小呢？">那么什么场景下回导致auto_increment变小呢？</h3>
-<blockquote>
-<ol>
-<li>参考： <a href="http://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-handling.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.6/en/innodb-auto-increment-handling.html</a></li>
-<li>alter table xx auto_increment = yy;  </li>
-<li>truncate table   </li>
-<li>restart mysql  </li>
-</ol>
-</blockquote>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* <span class="keyword">If</span> you specify an AUTO_INCREMENT column <span class="keyword">for</span> an InnoDB table, the table handle <span class="keyword">in</span> the InnoDB data dictionary contains a special counter called the <span class="keyword">auto</span>-increment counter that <span class="keyword">is</span> used <span class="keyword">in</span> assigning <span class="keyword">new</span> values <span class="keyword">for</span> the column. This counter <span class="keyword">is</span> stored only <span class="keyword">in</span> main memory, <span class="keyword">not</span> <span class="keyword">on</span> disk.</div><div class="line"></div><div class="line"><span class="keyword">To</span> initialize an <span class="keyword">auto</span>-increment counter after a server restart, InnoDB executes the equivalent <span class="keyword">of</span> the following statement <span class="keyword">on</span> the first insert <span class="keyword">into</span> a table containing an AUTO_INCREMENT column.</div><div class="line"></div><div class="line"><span class="keyword">SELECT</span> MAX(ai_col) <span class="keyword">FROM</span> table_name <span class="keyword">FOR</span> UPDATE;</div><div class="line"></div><div class="line">* A server restart also cancels the effect <span class="keyword">of</span> the AUTO_INCREMENT = N table <span class="keyword">option</span> <span class="keyword">in</span> CREATE TABLE <span class="keyword">and</span> ALTER TABLE statements, which you can use <span class="keyword">with</span> InnoDB tables <span class="keyword">to</span> <span class="keyword">set</span> the initial counter value <span class="keyword">or</span> alter the current counter value.</div></pre></td></tr></table></figure>
+<h2 id="如何找到不一致的地方">如何找到不一致的地方</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* slave上执行:</div><div class="line"><span class="operator"><span class="keyword">SELECT</span> db, tbl, <span class="keyword">SUM</span>(this_cnt) <span class="keyword">AS</span> total_rows, <span class="keyword">COUNT</span>(*) <span class="keyword">AS</span> chunks  </span></div><div class="line"><span class="keyword">FROM</span> percona.checksums  </div><div class="line"><span class="keyword">WHERE</span> (  </div><div class="line"> master_cnt &lt;&gt; this_cnt  </div><div class="line"> <span class="keyword">OR</span> master_crc &lt;&gt; this_crc  </div><div class="line"> <span class="keyword">OR</span> <span class="keyword">ISNULL</span>(master_crc) &lt;&gt; <span class="keyword">ISNULL</span>(this_crc))  </div><div class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> db, tbl;</div></pre></td></tr></table></figure>
 
-<h2 id="解决方案">解决方案</h2>
+
+<h2 id="原理">原理</h2>
+<blockquote>
+<p>大致的原理网上都能看到，这里会描述几个核心的点<br>这里假设就一个库，一张表，100条记录<br>pt-table-checksum进行比对的时候，不是一条条记录比的，而是一个个chunk进行对比<br>这里我们将100条记录分为10个chunk，一个chunk 10条记录。<br>每个chunk对比完后，再进行下一个chunk对比，直到全部结束。所以，这里我们就以一个chunk来描述下面的原理即可  </p>
+</blockquote>
+<ol>
+<li>master&gt; /<em>!50108 SET @@binlog_format := ‘STATEMENT’</em>/ 设置binlog-format为statement  </li>
+<li>master&gt; SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ 这是隔离级别为RR，利用RR的特性让数据在这一刻静止，就不用加锁了。      </li>
+<li>master&gt; checksums表：REPLACE INTO select设置this_cnt, this_crc(传递到slave，这其实设置slave每个chunk的cnt,crc)，算法来自：COALESCE(LOWER(CONV(BIT_XOR(CAST(CRC32(<code>主键</code>) AS UNSIGNED)), 10, 16)), 0)  </li>
+<li>slave&gt; 当同步追上后，开始执行REPLACE INTO select，然后设置slave每个chunk的cnt,crc  </li>
+<li>master&gt; checksums表：update master_cnt,master_crc ，这是设置master每个chunk的cnt，crc  </li>
+<li>slave&gt; 当同步追上后，开始执行update master_cnt,master_crc ，这是设置master每个chunk的cnt，crc   </li>
+</ol>
+<p>以上，基本完成。 接下来只需要去checksums表中找 master_cnt &lt;&gt; this_cnt or OR master_crc &lt;&gt; this_crc 的记录就行  </p>
+<h2 id="常问的问题">常问的问题</h2>
+<ul>
+<li><p><strong>一般在什么场景下使用pt-table-checksum？会在生产环境的master上用吗？</strong></p>
 <blockquote>
 <ol>
-<li>手动插入一条数据到B，让其最大值在10000000+1, 这样就不会出问题。  </li>
+<li>如果不太在乎master和slave之间的一致性的话，在master上设置ROW模式后，就基本可以保证数据一致了。  </li>
+<li>pt-table-checksum虽然很智能，但还是会对服务器造成一定的影响，所以一般不会用在master上,除非迫不得已  </li>
+<li>一般检查数据一致性，我们都会在两台slave上进行对比，如果两台slave ok，基本就ok了  </li>
 </ol>
 </blockquote>
-<h2 id="总结">总结</h2>
+</li>
+<li><p><strong>听说该工具只对statement格式有用，如果是row格式，还能检查一致性吗？为什么？</strong></p>
 <blockquote>
-<p>官方文档要多看<br>官方文档要多看<br>官方文档要多看<br>重要的事情说三遍  </p>
+<ol>
+<li>如果是row模式，pt-table-checksum会报错，但是加上—no-check-binlog-format 即可  </li>
+<li>此工具会自动设置row-format=statement，所以用户不用担心。即便设置row，也没事  </li>
+</ol>
 </blockquote>
+</li>
+<li><p><strong>它是怎么做到master和slave的记录对比的，master不是一直再更新吗？会有锁吗？</strong></p>
+<blockquote>
+<ol>
+<li>详细原理，请看上面的原理分析。  </li>
+<li>master一直再更新没错，但是不会有锁，利用RR隔离级别的特性就能保证当前事务的数据是不会变的  </li>
+</ol>
+</blockquote>
+</li>
+<li><p><strong>RR隔离级别是什么鬼？为什么能够保证当前事务的数据不变呢？</strong></p>
+<blockquote>
+<ol>
+<li>可参看之前的分享: <a href="http://keithlan.github.io/2016/05/23/acid/" target="_blank" rel="external">SELECT 你知多少</a>  </li>
+</ol>
+</blockquote>
+</li>
+</ul>
+<h2 id="重要">重要</h2>
+<ul>
+<li><p><strong>风险1</strong></p>
+<blockquote>
+<p>这里设置了SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ 直到对比完成，才结束这个session.<br>那这样意味什么呢？意味着如果这个session不结束，这个事务对应的undo一直不会被purge，会导致undo不断变大，即ibdata会一直变大。<br>措施：尽量在低峰期执行  </p>
+</blockquote>
+</li>
+<li><p><strong>风险2</strong></p>
+<blockquote>
+<p>这里是通过RR隔离级别来保证select CRC的值一致的，那么如果RR被破坏了呢？<br>没错，这样的对比，很容易被DDL所破坏。<br>措施：DDL是可以人为控制时间窗口和周期的  </p>
+</blockquote>
+</li>
+</ul>
   
 	</div>
 		<footer class="article-footer clearfix">
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2016/04/06/auto_incre_reduce/" data-title="auto_increment的后裔 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/05/25/pt_table_checksum/" data-title="pt-table-checksum原理详解 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -181,19 +204,11 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/04/07/idb_biger/" title="MySQL实战系列：大字段如何优化">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  MySQL实战系列：大字段如何优化</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/03/14/wrong_index/"  title="SQL优化：执行计划出错之重复索引干扰">
+<a href="/2016/05/23/acid/"  title="select你知多少">
  <strong>NEXT:</strong><br/> 
- <span>SQL优化：执行计划出错之重复索引干扰
+ <span>select你知多少
 </span>
 </a>
 </div>
@@ -203,7 +218,7 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2016/04/06/auto_incre_reduce/" data-title="auto_increment的后裔" data-url="https://Keithlan.github.io/2016/04/06/auto_incre_reduce/"></div>
+<div class="ds-thread" data-thread-key="/2016/05/25/pt_table_checksum/" data-title="pt-table-checksum原理详解" data-url="https://Keithlan.github.io/2016/05/25/pt_table_checksum/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -224,7 +239,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
   </div>
 
 <div id="asidepart">
