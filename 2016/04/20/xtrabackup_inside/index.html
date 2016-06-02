@@ -90,7 +90,7 @@ xtrabackup原理深入浅出
     </p>
   <p class="article-time">
     <time datetime="2016-04-20T08:32:24.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-05-26T07:03:41.000Z" itemprop="dateModified">May 26 2016</time>
+    Updated:<time datetime="2016-06-02T05:34:56.000Z" itemprop="dateModified">Jun 2 2016</time>
     
   </p>
 </header>
@@ -203,11 +203,22 @@ xtrabackup原理深入浅出
 
 <p>那么错误日志中的The log sequence numbers xx in ibdata files ，又是啥呢？  </p>
 <p>经过测试：kill -9 mysqld<br>得到的结论是： 只要是非正常关闭的MySQL，都会出现这样的报错，即便是没有任何数据的MySQL<br>所以，我猜测，ibdata files中记录的lsn，从MySQL一启动，里面的lsn就会比redo中的lsn小，是专用于检测是否正常关闭MySQL的吗？<br>anyway，这都不影响我们innoDB在线拷贝的大局了。  </p>
-<p>好了，通过以上测试，我们已经明白，stop slave后，等一会会，当Log sequence number == Pages flushed up to 的时候，就可以认为数据全部刷新到磁盘了，这样就和Myisam没有任何区别  </p>
+<p>好了，通过以上测试，我们已经明白，stop slave后，等一会会，当脏页刷新完的时候，就可以认为数据全部刷新到磁盘了，这样就和Myisam没有任何区别  </p>
+<p>ok，这里又引入了一个值得思考的问题，那就是： 怎么判断脏页已经刷完了呢？  </p>
+<blockquote>
+<p>检查4个lsn，当四个lsn都相等的时候，肯定刷完了。</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">Log sequence <span class="keyword">number</span> <span class="number">2446945</span></div><div class="line">Log flushed <span class="keyword">up</span> <span class="keyword">to</span>   <span class="number">2446945</span></div><div class="line">Pages flushed <span class="keyword">up</span> <span class="keyword">to</span> <span class="number">2446945</span></div><div class="line">Last checkpoint at  <span class="number">2446945</span></div><div class="line"></div><div class="line">没错，当<span class="number">4</span>个lsn都相等的时候，的确可以表示脏页已经刷完。</div><div class="line"></div><div class="line">但是，当<span class="number">4</span>个lsn不完全相等的时候，也有可能表示脏页刷完了。比如：</div><div class="line"></div><div class="line">Log sequence <span class="keyword">number</span> <span class="number">2446945</span></div><div class="line">Log flushed <span class="keyword">up</span> <span class="keyword">to</span>   <span class="number">2446945</span></div><div class="line">Pages flushed <span class="keyword">up</span> <span class="keyword">to</span> <span class="number">2446945</span></div><div class="line">Last checkpoint at  <span class="number">2446747</span> --不一样</div><div class="line"></div><div class="line">我来解读一下：</div><div class="line">Last checkpoint 指的是最后一个脏页的oldest modification</div><div class="line">Pages flushed <span class="keyword">up</span> <span class="keyword">to</span> 指的是最后一个脏页的newest modification</div><div class="line"></div><div class="line">当我们再刷最后一个脏页的时候，这个脏页被多次更新，那么就表示该脏页的newest modification &gt; oldest modification .</div><div class="line">所以就不相等了，但是的确脏页也都刷新完了。</div></pre></td></tr></table></figure>
+
+<blockquote>
+<p> 检查Modified db pages的值，这个值就表示flush list中还有多少个page没有被刷新，如果全为0，表示flush list中脏页全部刷新。</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">假设一个实例有<span class="number">2</span>个<span class="keyword">BUFFER</span> POOL instance，那么就要检查两个Modified db pages 是否都为<span class="number">0</span></div><div class="line"></div><div class="line"><span class="comment">---BUFFER POOL 0</span></div><div class="line"><span class="keyword">Buffer</span> pool size   <span class="number">655359</span></div><div class="line">Free buffers       <span class="number">1000</span></div><div class="line">Database pages     <span class="number">636541</span></div><div class="line">Old database pages <span class="number">234953</span></div><div class="line">Modified db pages  <span class="number">0</span>  <span class="comment">-- 表示这个buffer pool中的脏页已经刷新完</span></div><div class="line">Pending reads <span class="number">0</span></div><div class="line"></div><div class="line"><span class="comment">---BUFFER POOL 1</span></div><div class="line"><span class="keyword">Buffer</span> pool size   <span class="number">655359</span></div><div class="line">Free buffers       <span class="number">1000</span></div><div class="line">Database pages     <span class="number">636426</span></div><div class="line">Old database pages <span class="number">234910</span></div><div class="line">Modified db pages  <span class="number">0</span> <span class="comment">-- 表示这个buffer pool中的脏页已经刷新完</span></div><div class="line">Pending reads <span class="number">0</span></div><div class="line"></div><div class="line">两个都刷新完，表示flush list中已经没有脏页了。</div></pre></td></tr></table></figure>
+
 <ul>
 <li>第二种方式</li>
 </ul>
-<p>stop slave后，如果Log sequence number == Pages flushed up to 不相等呢？不相等，我们还能拷贝吗？<br>答案是：当然可以。<br>lsn不相等，意味着，我们crash-recover的时候需要通过redo来恢复数据，稍微慢点而已，不影响大局。  </p>
+<p>stop slave后，如果脏页没有刷新完呢？不相等，我们还能拷贝吗？<br>答案是：当然可以。<br>lsn不相等，意味着，我们crash-recover的时候需要通过redo来恢复数据，稍微慢点而已，不影响大局。  </p>
 <h3 id="重要">重要</h3>
 <p>所以，不管以上两种方式的哪一种，如果你想通过stop slave的方式，直接拷贝文件的话，最好执行下  </p>
 <p>FLUSH NO_WRITE_TO_BINLOG TABLES<br>FLUSH NO_WRITE_TO_BINLOG ENGINE LOGS  </p>
