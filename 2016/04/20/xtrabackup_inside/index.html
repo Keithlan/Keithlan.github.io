@@ -90,7 +90,7 @@ xtrabackup原理深入浅出
     </p>
   <p class="article-time">
     <time datetime="2016-04-20T08:32:24.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-06-02T05:34:56.000Z" itemprop="dateModified">Jun 2 2016</time>
+    Updated:<time datetime="2016-06-02T16:31:44.000Z" itemprop="dateModified">Jun 3 2016</time>
     
   </p>
 </header>
@@ -199,7 +199,7 @@ xtrabackup原理深入浅出
 
 <p>当你看到Crash recovery finished完成后，基本也就ok了。  </p>
 <p>好了，这里还有一个疑问我不太清楚，就是到底有多少个LSN  </p>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">Log sequence <span class="built_in">number</span> <span class="number">2446945</span>  <span class="comment">-- redo log buffer 的lsn，内存中记录  </span></div><div class="line">Log flushed up <span class="built_in">to</span>   <span class="number">2446945</span>  <span class="comment">-- redo log file 的lsn，redo的每个lock block都会记录  </span></div><div class="line">Pages flushed up <span class="built_in">to</span> <span class="number">2446945</span>  <span class="comment">-- flush list中page's newest modification(lsn)，每个page的头部都会记录  </span></div><div class="line">Last checkpoint <span class="keyword">at</span>  <span class="number">2446945</span>  <span class="comment">-- checkpoint 的lsn，第一个redo的头部固定位置，存在头部的两个地方</span></div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">Log sequence <span class="built_in">number</span> <span class="number">2446945</span>  <span class="comment">-- redo log buffer 中的lsn，内存中记录</span></div><div class="line">Log flushed up <span class="built_in">to</span>   <span class="number">2446945</span>  <span class="comment">-- redo log file 的lsn，redo的每个lock block都会记录</span></div><div class="line">Pages flushed up <span class="built_in">to</span> <span class="number">2446945</span>  <span class="comment">-- flush list中最后一个指针对应的page's newest modification(lsn)【last checkpoint newest modification】, 每个page的头部都会记录</span></div><div class="line">Last checkpoint <span class="keyword">at</span>  <span class="number">2446945</span>  <span class="comment">-- flush list中最后一个指针对应的page's oldest modification(lsn)【last checkpoint oldest modification】, 第一个redo的头部固定位置，存在头部的两个地方</span></div></pre></td></tr></table></figure>
 
 <p>那么错误日志中的The log sequence numbers xx in ibdata files ，又是啥呢？  </p>
 <p>经过测试：kill -9 mysqld<br>得到的结论是： 只要是非正常关闭的MySQL，都会出现这样的报错，即便是没有任何数据的MySQL<br>所以，我猜测，ibdata files中记录的lsn，从MySQL一启动，里面的lsn就会比redo中的lsn小，是专用于检测是否正常关闭MySQL的吗？<br>anyway，这都不影响我们innoDB在线拷贝的大局了。  </p>
