@@ -88,7 +88,7 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
     </p>
   <p class="article-time">
     <time datetime="2016-04-06T11:20:24.000Z" itemprop="datePublished">Apr 6 2016</time>
-    Updated:<time datetime="2016-04-06T11:21:09.000Z" itemprop="dateModified">Apr 6 2016</time>
+    Updated:<time datetime="2016-06-12T09:21:42.000Z" itemprop="dateModified">Jun 12 2016</time>
     
   </p>
 </header>
@@ -97,7 +97,7 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第二种奇葩问题"><span class="toc-number">4.</span> <span class="toc-text">第二种奇葩问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol>
 		</div>
 		
 		<blockquote>
@@ -149,9 +149,18 @@ A再将自己的自增长的id（发号器），写入到 B, 注意是指定id�
 <li>手动插入一条数据到B，让其最大值在10000000+1, 这样就不会出问题。  </li>
 </ol>
 </blockquote>
+<h2 id="第二种奇葩问题">第二种奇葩问题</h2>
+<blockquote>
+<ol>
+<li>一张刚创建的innoDB表，目前自增是1.     </li>
+<li>插入3条记录后，auto_increment=4.   </li>
+<li>然后再删除掉这三条记录,auto_increment=4 没变   </li>
+<li>关闭MySQL，当MySQL再次起来的时候，会发现auto_increment值从4，变成1  </li>
+</ol>
+</blockquote>
 <h2 id="总结">总结</h2>
 <blockquote>
-<p>官方文档要多看<br>官方文档要多看<br>官方文档要多看<br>重要的事情说三遍  </p>
+<p>业务不要依赖auto_increment值，它并不是总是递增  </p>
 </blockquote>
   
 	</div>
@@ -224,7 +233,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">1.</span> <span class="toc-text">实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#先来看看架构图吧"><span class="toc-number">1.1.</span> <span class="toc-text">先来看看架构图吧</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#最终的想法是这样的"><span class="toc-number">1.2.</span> <span class="toc-text">最终的想法是这样的</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#错误场景重现"><span class="toc-number">1.3.</span> <span class="toc-text">错误场景重现</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析"><span class="toc-number">2.</span> <span class="toc-text">分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#那么什么场景下回导致auto_increment变小呢？"><span class="toc-number">2.1.</span> <span class="toc-text">那么什么场景下回导致auto_increment变小呢？</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#解决方案"><span class="toc-number">3.</span> <span class="toc-text">解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#第二种奇葩问题"><span class="toc-number">4.</span> <span class="toc-text">第二种奇葩问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li></ol>
   </div>
 
 <div id="asidepart">
