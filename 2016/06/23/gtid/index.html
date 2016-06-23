@@ -1,0 +1,679 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7杀手级新特性：GTID原理与实战 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、理论篇
+1.1 GTID是什么(what)
+1.1.1 GTID组成和架构
+
+GTID 架构
+
+a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: 在一组复制中，全局唯一    
+12345678910">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/06/23/gtid/" title="MySQL5.7杀手级新特性：GTID原理与实战" itemprop="url">MySQL5.7杀手级新特性：GTID原理与实战</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-06-23T09:54:24.000Z" itemprop="datePublished">Jun 23 2016</time>
+    Updated:<time datetime="2016-06-23T09:54:05.000Z" itemprop="dateModified">Jun 23 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、理论篇"><span class="toc-number">1.</span> <span class="toc-text">一、理论篇</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_GTID是什么(what)"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 GTID是什么(what)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-1_GTID组成和架构"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1.1 GTID组成和架构</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-2_GTID和Binlog的关系"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.1.2 GTID和Binlog的关系</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-3_重要参数的持久化"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.1.3 重要参数的持久化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-4_开启GTID的必备条件"><span class="toc-number">1.1.4.</span> <span class="toc-text">1.1.4 开启GTID的必备条件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-5_新的复制协议_COM_BINLOG_DUMP_GTID"><span class="toc-number">1.1.5.</span> <span class="toc-text">1.1.5 新的复制协议  COM_BINLOG_DUMP_GTID</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_GTID有什么好处(why)"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 GTID有什么好处(why)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-1_classic_replication_[运维之痛]"><span class="toc-number">1.2.1.</span> <span class="toc-text">1.2.1 classic replication [运维之痛]</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-2_GTID_replication_[so_easy]"><span class="toc-number">1.2.2.</span> <span class="toc-text">1.2.2 GTID replication [so easy]</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_GTID的Limitation"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 GTID的Limitation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4_MySQL5-7_GTID_crash-safe"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 MySQL5.7 GTID crash-safe</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、实战篇(how)"><span class="toc-number">2.</span> <span class="toc-text">二、实战篇(how)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_使用GTID搭建Replication"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 使用GTID搭建Replication</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-1_从0开始搭建"><span class="toc-number">2.1.1.</span> <span class="toc-text">2.1.1 从0开始搭建</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、后续分享：_Automatic_failover_with_mysqlfailover+GTID"><span class="toc-number">3.</span> <span class="toc-text">四、后续分享： Automatic failover with mysqlfailover+GTID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_Planned_promotion_(switchover)"><span class="toc-number">3.1.</span> <span class="toc-text">4.1 Planned promotion (switchover)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_Unplanned_promotion_(failover)"><span class="toc-number">3.2.</span> <span class="toc-text">4.2 Unplanned promotion (failover)</span></a></li></ol></li></ol>
+		</div>
+		
+		<h2 id="一、理论篇">一、理论篇</h2>
+<h3 id="1-1_GTID是什么(what)">1.1 GTID是什么(what)</h3>
+<h4 id="1-1-1_GTID组成和架构">1.1.1 GTID组成和架构</h4>
+<ul>
+<li><strong>GTID 架构</strong></li>
+</ul>
+<p>a) GTID =  server_uuid:transaction_id<br>b) server_uuid 来源于 auto.cnf<br>c) GTID: 在一组复制中，全局唯一    </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">gtid_set:</div><div class="line">    uuid_set [, uuid_set] <span class="keyword">...</span></div><div class="line">    | <span class="string">''</span></div><div class="line"></div><div class="line">uuid_set:</div><div class="line">    uuid:interval[:interval]<span class="keyword">...</span></div><div class="line"></div><div class="line">uuid:</div><div class="line">    hhhhhhhh-hhhh-hhhh-hhhh-hhhhhhhhhhhh</div><div class="line"></div><div class="line">h:</div><div class="line">    [<span class="number">0</span>-<span class="number">9</span>|A-<span class="literal">F</span>]</div><div class="line"></div><div class="line">interval:</div><div class="line">    n[-n]</div><div class="line"></div><div class="line">    (n &gt;= <span class="number">1</span>)</div></pre></td></tr></table></figure>
+
+
+
+
+
+
+<h4 id="1-1-2_GTID和Binlog的关系">1.1.2 GTID和Binlog的关系</h4>
+<ul>
+<li>GTID在binlog中的结构</li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/binlog_gtid.jpg" alt="gtid_binlog" title="gtid_binlog"></p>
+<ul>
+<li>GTID event 结构</li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/gtid_event.jpg" alt="gtid_event" title="gtid_event"></p>
+<ul>
+<li><p>Previous_gtid_log_event</p>
+<blockquote>
+<ol>
+<li>Previous_gtid_log_event 在每个binlog 头部都会有   </li>
+<li>每次binlog rotate的时候存储在binlog头部  </li>
+<li>Previous-GTIDs在binlog中只会存储在这台机器上执行过的所有binlog，不包括手动设置gtid_purged值。   </li>
+<li>换句话说，如果你手动set global gtid_purged=xx； 那么xx是不会记录在Previous_gtid_log_event中的。  </li>
+</ol>
+</blockquote>
+</li>
+<li><p><strong>GTID和Binlog之间的关系是怎么对应的呢</strong></p>
+</li>
+</ul>
+<p>如何才能找到GTID=?对应的binlog文件呢？  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">* 假设有<span class="number">4</span>个binlog: bin.<span class="number">001</span>,bin.<span class="number">002</span>,bin.<span class="number">003</span>,bin.<span class="number">004</span></div><div class="line">* bin.<span class="number">001</span> : <span class="variable">Previous-GTIDs=</span>empty; binlog_event有：<span class="number">1</span>-<span class="number">40</span>  </div><div class="line">* bin.<span class="number">002</span> : <span class="variable">Previous-GTIDs=</span><span class="number">1</span>-<span class="number">40</span>;  binlog_event有：<span class="number">41</span>-<span class="number">80</span> </div><div class="line">* bin.<span class="number">003</span> : <span class="variable">Previous-GTIDs=</span><span class="number">1</span>-<span class="number">80</span>;  binlog_event有：<span class="number">81</span>-<span class="number">120</span>  </div><div class="line">* bin.<span class="number">004</span> : <span class="variable">Previous-GTIDs=</span><span class="number">1</span>-<span class="number">120</span>;  binlog_event有：<span class="number">121</span>-<span class="number">160</span>  </div><div class="line"></div><div class="line"><span class="number">1</span>. 假设现在我们要找<span class="variable">GTID=</span>$A，那么MySQL的扫描顺序为： 从最后一个binlog开始扫描（即：bin.<span class="number">004</span>）      </div><div class="line"><span class="number">2</span>. bin.<span class="number">004</span>的<span class="variable">Previous-GTIDs=</span><span class="number">1</span>-<span class="number">120</span>，如果$<span class="variable">A=</span><span class="number">140</span> &gt; Previous-GTIDs,那么肯定在bin.<span class="number">004</span>中  </div><div class="line"><span class="number">3</span>. bin.<span class="number">004</span>的<span class="variable">Previous-GTIDs=</span><span class="number">1</span>-<span class="number">120</span>，如果$<span class="variable">A=</span><span class="number">88</span> 包含在Previous-GTIDs中,那么继续对比上一个binlog文件 bin.<span class="number">003</span>,然后再循环前面<span class="number">2</span>个步骤，直到找到为止</div></pre></td></tr></table></figure>
+
+<h4 id="1-1-3_重要参数的持久化">1.1.3 重要参数的持久化</h4>
+<ul>
+<li><strong>GTID相关参数</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>gtid_executed</td>
+<td>执行过的所有GTID</td>
+</tr>
+<tr>
+<td>gtid_purged</td>
+<td>丢弃掉的GTID  </td>
+</tr>
+<tr>
+<td>gtid_mode</td>
+<td>gtid模式  </td>
+</tr>
+<tr>
+<td>gtid_next</td>
+<td>session级别的变量，下一个gtid  </td>
+</tr>
+<tr>
+<td>gtid_owned</td>
+<td>正在运行的gtid    </td>
+</tr>
+<tr>
+<td>enforce_gtid_consistency</td>
+<td>保证GTID安全的参数    </td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>重要参数如何持久化</strong></li>
+</ul>
+<p>1) 如何持久化gtid_executed  [ log-bin=on,log_slave_update=on ]  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. gtid_executed = mysql.gtid_executed 【<span class="keyword">normal</span>】</div><div class="line"><span class="built_in">or</span></div><div class="line"><span class="number">2</span>. gtid_executed = mysql.gtid_executed +  last_binlog中最后没写到mysql.gtid_executed中的gtid_event  【<span class="keyword">recover</span>】</div></pre></td></tr></table></figure>
+
+
+
+<p>2) 如何持久化重置的gtid_purged值?  </p>
+<blockquote>
+<p>reset master; set global gtid_purged=$A:a-b;  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 由于有可能手动设置过gtid_purged=<span class="variable">$A</span><span class="symbol">:a-b</span>, binlog.index中，last_binlog的<span class="constant">Previous</span>-<span class="constant">GTIDs</span>并不会包含<span class="variable">$A</span><span class="symbol">:a-b</span>  </div><div class="line"><span class="number">2</span>. 由于有可能手动设置过gtid_purged=<span class="variable">$A</span><span class="symbol">:a-b</span>, binlog.index中，first_binlog的<span class="constant">Previous</span>-<span class="constant">GTIDs</span>肯定不会出现<span class="variable">$A</span><span class="symbol">:a-b</span>  </div><div class="line"><span class="number">3</span>. 重置的gtid_purged = <span class="variable">@@global</span>.gtid_executed(mysql.<span class="symbol">gtid_executed:</span>注意，考虑到这个表的更新触发条件，所以这里用<span class="variable">@@global</span>.gtid_executed代替) - last_binlog的<span class="constant">Previous</span>-<span class="constant">GTIDs</span>  - last_binlog所有的gtid_event  </div><div class="line"><span class="number">4</span>. 下面就用 <span class="variable">$reset_gtid_purged</span> 来表示重置的gtid</div></pre></td></tr></table></figure>
+
+
+
+<p>3）如何持久化gtid_purged [ log-bin=on,log_slave_update=on ]</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">gtid_purged=binlog.<span class="keyword">index</span>:first_binlog的Previous-GTIDs  + <span class="variable">$reset_gtid_purged</span></div></pre></td></tr></table></figure>
+
+
+<h4 id="1-1-4_开启GTID的必备条件">1.1.4 开启GTID的必备条件</h4>
+<ul>
+<li><strong>MySQL 5.6</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">gtid_mode=<span class="keyword">ON</span>(必选)    </div><div class="line">log_bin=<span class="keyword">ON</span>(必选)    </div><div class="line"><span class="built_in">log</span>-slave-updates=<span class="keyword">ON</span>(必选)    </div><div class="line">enforce-gtid-consistency(必选)</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>MySQL 5.7</strong><blockquote>
+<p>MySQL5.7.13 or higher   </p>
+</blockquote>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">gtid_mode=<span class="keyword">ON</span>(必选)  </div><div class="line">enforce-gtid-consistency（必选）</div><div class="line">log_bin=<span class="keyword">ON</span>（可选）--高可用切换，最好设置<span class="keyword">ON</span>  </div><div class="line"><span class="built_in">log</span>-slave-updates=<span class="keyword">ON</span>（可选）--高可用切换，最好设置<span class="keyword">ON</span></div></pre></td></tr></table></figure>
+
+<h4 id="1-1-5_新的复制协议_COM_BINLOG_DUMP_GTID">1.1.5 新的复制协议  COM_BINLOG_DUMP_GTID</h4>
+<ul>
+<li><strong>Slave sends to master range of identifiers of executed transactions to master</strong>  </li>
+<li><strong>Master send all other transactions to slave</strong>  </li>
+<li><strong>同样的GTID不能被执行两次，如果有同样的GTID，会自动被skip掉。</strong>  </li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/com_binlog_dump_gtid.jpg" alt="com_binlog_dump_gtid" title="com_binlog_dump_gtid.jpg"></p>
+<p>slave1 : 将自身的UUID1:1 发送给 master，然后接收到了 UUID1:2,UUID1:3 event<br>slave2 : 将自身的UUID1:1,UUID1:2 发送给 master，然后接收到了UUID1:3 event   </p>
+<h3 id="1-2_GTID有什么好处(why)">1.2 GTID有什么好处(why)</h3>
+<h4 id="1-2-1_classic_replication_[运维之痛]">1.2.1 classic replication [运维之痛]</h4>
+<p><img src="/image/mysql_innodb_arch/classic_rpl.jpg" alt="classic_rpl" title="classic_rpl"></p>
+<h4 id="1-2-2_GTID_replication_[so_easy]">1.2.2 GTID replication [so easy]</h4>
+<p><img src="/image/mysql_innodb_arch/GTID_rpl.jpg" alt="gtid_rpl" title="gtid_rpl"></p>
+<h3 id="1-3_GTID的Limitation">1.3 GTID的Limitation</h3>
+<ul>
+<li><strong>不安全的事务</strong><blockquote>
+<p>设置enforce-gtid-consistency=ON  </p>
+</blockquote>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> ... <span class="keyword">SELECT</span> statements  </span></div><div class="line"><span class="number">2.</span> <span class="keyword">CREATE</span> <span class="keyword">TEMPORARY</span> <span class="keyword">TABLE</span> <span class="keyword">or</span> <span class="keyword">DROP</span> <span class="keyword">TEMPORARY</span> <span class="keyword">TABLE</span> statements inside transactions</div><div class="line"><span class="number">3.</span> 同时更新 事务引擎 和 非事务引擎。</div></pre></td></tr></table></figure>
+
+
+
+
+<h3 id="1-4_MySQL5-7_GTID_crash-safe">1.4 MySQL5.7 GTID crash-safe</h3>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/replication-solutions-unexpected-slave-halt.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/replication-solutions-unexpected-slave-halt.html</a>  </p>
+</blockquote>
+<p>关于crash safe ， 可以参考官方文档列出的安全配置  </p>
+<ul>
+<li><strong>单线程复制</strong><blockquote>
+<p>Non-GTID 推荐配置： relay_log_recovery=1，relay_log_info_repository=TABLE，master_info_repository=TABLE<br>GTID 推荐配置：MASTER_AUTO_POSITION=on，relay_log_recovery=0  </p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/safe_1.jpg" alt="safe_1" title="safe_1"></p>
+<ul>
+<li><strong>多线程复制</strong><blockquote>
+<p>Non-GTID 推荐配置： relay_log_recovery=1, sync_relay_log=1,relay_log_info_repository=TABLE，master_info_repository=TABLE<br>GTID 推荐配置： MASTER_AUTO_POSITION=on, relay_log_recovery=0  </p>
+</blockquote>
+</li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/safe_multi.jpg" alt="safe_multi" title="safe_multi"></p>
+<h2 id="二、实战篇(how)">二、实战篇(how)</h2>
+<h3 id="2-1_使用GTID搭建Replication">2.1 使用GTID搭建Replication</h3>
+<h4 id="2-1-1_从0开始搭建">2.1.1 从0开始搭建</h4>
+<ul>
+<li><strong>step 1: 让所有server处于同一个点</strong></li>
+</ul>
+<figure class="highlight mysql>"><figcaption><span>SET @@global.read_only = ON;</span></figcaption><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">```</div><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 2: 关闭所有MySQL<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>shell&gt; mysqladmin -uusername -p shutdown</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 3: 重启所有MySQL，并开启GTID<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>shell&gt; mysqld —gtid-mode=ON —log-bin —enforce-gtid-consistency &amp; </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">当然，在my.cnf中配置好最佳  </div><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 4: change master<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>mysql&gt; CHANGE MASTER TO </p>
+<pre><code> &gt;     <span class="variable">MASTER_HOST =</span> host,
+ &gt;     <span class="variable">MASTER_PORT =</span> port,
+ &gt;     <span class="variable">MASTER_USER =</span> user,
+ &gt;     <span class="variable">MASTER_PASSWORD =</span> password,
+ &gt;     <span class="variable">MASTER_AUTO_POSITION =</span> <span class="number">1</span>;
+</code></pre><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure>
+
+<p>mysql&gt; START SLAVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 5: 让master 可读可写<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>mysql&gt; SET @@global.read_only = OFF;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">#### 2.1.2 从备份中恢复&搭建</span></div><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 1: 备份<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>mysqldump xx 获取并且记录gtid_purged值<br>or<br>冷备份 —获取并且记录gtid_executed值，这个就相当于mysqldump中得到的gtid_purged  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 2: 在新服务器上reset master，导入备份<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>reset master; —清空gtid信息<br>导入备份； —如果是逻辑导入，请设置sql_log_bin=off<br>set global gtid_purged=xx;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 3: change master<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>mysql&gt; CHANGE MASTER TO </p>
+<pre><code> &gt;     <span class="variable">MASTER_HOST =</span> host,
+ &gt;     <span class="variable">MASTER_PORT =</span> port,
+ &gt;     <span class="variable">MASTER_USER =</span> user,
+ &gt;     <span class="variable">MASTER_PASSWORD =</span> password,
+ &gt;     <span class="variable">MASTER_AUTO_POSITION =</span> <span class="number">1</span>;
+</code></pre><figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div></pre></td></tr></table></figure>
+
+<p>mysql&gt; START SLAVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div><div class="line"><span class="vbnet"></span></div><div class="line"><span class="preprocessor">### 2.2 如何从classic replication 升级成 GTID replication  </span></div><div class="line"></div><div class="line"><span class="preprocessor">#### 2.2.1 offline 方式升级</span></div><div class="line">&gt; offline 的方式升级最简单。全部关机，然后配置好GTID，重启，change master <span class="keyword">to</span> MASTER_AUTO_POSITION=<span class="number">1</span>。  </div><div class="line"></div><div class="line"></div><div class="line"><span class="preprocessor">#### 2.2.2 online 方式升级</span></div><div class="line">&gt; 这里先介绍几个重要GTID_MODE的value  </div><div class="line"></div><div class="line">* GTID_MODE = <span class="keyword">OFF</span> : 不产生Normal_GTID，只接受ANONYMOUS_GTID  </div><div class="line">* GTID_MODE = OFF_PERMISSIVE : 不产生Normal_GTID，ANONYMOUS_GTID & Normal_GTID 可以容忍</div><div class="line">* GTID_MODE = ON_PERMISSIVE  : 产生Normal_GTID，ANONYMOUS_GTID & Normal_GTID 可以容忍  </div><div class="line">* GTID_MODE = <span class="keyword">ON</span> : 产生Normal_GTID，只接受Normal_GTID  </div><div class="line"></div><div class="line">* master和slave的gtid_mode 组合搭配矩阵图  </div><div class="line">&gt; 水平的GTID_MODE为：master ， 垂直的GTID_MODE为：slave</div><div class="line"></div><div class="line">Master/Slave gtid_mode|<span class="keyword">OFF</span>|OFF_PERMISSIVE|ON_PERMISSIVE|<span class="keyword">ON</span></div><div class="line">----|----|----|----|----</div><div class="line"><span class="keyword">OFF</span>|Y|Y|N|N</div><div class="line">OFF_PERMISSIVE|Y|Y|Y|Y(auto_position可以开启)</div><div class="line">ON_PERMISSIVE|Y|Y|Y|Y(auto_position可以开启)</div><div class="line"><span class="keyword">ON</span>|N|N|Y|Y(auto_position可以开启)</div><div class="line"></div><div class="line">归纳总结：  </div><div class="line"><span class="number">1</span>） 当master产生Normal_GTID的时候（ON_PERMISSIVE，<span class="keyword">ON</span>），如果slave的gtid_mode不能容忍Normal_GTID（<span class="keyword">OFF</span>，OFF_PERMISSIVE），那么就会报错   </div><div class="line"><span class="number">2</span>） 当master产生ANONYMOUS_GTID的时候（OFF_PERMISSIVE，<span class="keyword">OFF</span>），如果slave的gtid_mode不能容忍ANONYMOUS_GTID（ON_PERMISSIVE，<span class="keyword">ON</span>），那么就会报错  </div><div class="line"><span class="number">3</span>） 设置auto_position的条件： 当master gtid_mode=<span class="keyword">ON</span>时，slave可以为OFF_PERMISSIVE，ON_PERMISSIVE，<span class="keyword">ON</span>。除此之外，都不能设置auto_position = <span class="keyword">on</span>  </div><div class="line"></div><div class="line">下面罗列下，如何online 升级为GTID模式。</div><div class="line"></div><div class="line">* **<span class="keyword">step</span> <span class="number">1</span>: 每台server执行**</div><div class="line">&gt; 检查错误日志，直到没有错误出现，才能进行下一步</div></pre></td></tr></table></figure>
+
+<p>SET @@GLOBAL.ENFORCE_GTID_CONSISTENCY = WARN;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 2: 每台server执行<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>SET @@GLOBAL.ENFORCE_GTID_CONSISTENCY = ON;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 3: 每台server执行<span class="keyword">*</span><span class="keyword">*</span></div><div class="line">&gt; 不用关心一组复制集群的server的执行顺序，只需要保证每个Server都执行了，才能进行下一步</div></pre></td></tr></table></figure>
+
+<p>SET @@GLOBAL.GTID_MODE = OFF_PERMISSIVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 4: 每台server执行<span class="keyword">*</span><span class="keyword">*</span></div><div class="line">&gt; 不用关心一组复制集群的server的执行顺序，只需要保证每个Server都执行了，才能进行下一步</div></pre></td></tr></table></figure>
+
+<p>SET @@GLOBAL.GTID_MODE = ON_PERMISSIVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 5: 在每台server上执行，如果ONGOING_ANONYMOUS_TRANSACTION_COUNT=0就可以<span class="keyword">*</span><span class="keyword">*</span></div><div class="line">&gt; 不需要一直为0，只要出现过0一次，就ok</div></pre></td></tr></table></figure>
+
+<p>SHOW STATUS LIKE ‘ONGOING_ANONYMOUS_TRANSACTION_COUNT’;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 6： 确保所有anonymous事务传递到slave上了<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<ol>
+<li>master</li>
+</ol>
+<p>SHOW MASTER STATUS;  </p>
+<ol>
+<li>每个slave  </li>
+</ol>
+<p>SELECT MASTER_POS_WAIT(file, position);  </p>
+<p>或者，等一段时间，只要不是大的延迟，一般都没问题  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 7: 每台Server上执行<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>SET @@GLOBAL.GTID_MODE = ON;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 8: 在每台server上将my.cnf中添加好gtid配置<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>gtid_mode=ON(必选)<br>enforce-gtid-consistency（必选）<br>log_bin=ON（可选）—高可用切换，最好设置ON<br>log-slave-updates=ON（可选）—高可用切换，最好设置ON     </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>step 9: change master<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>STOP SLAVE;<br>CHANGE MASTER TO MASTER_AUTO_POSITION = 1;<br>START SLAVE;    </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">### 2.3 GTID failover</span></div><div class="line"></div><div class="line"><span class="comment">#### 2.3.1 MySQL crash</span></div><div class="line">&gt; 配置好loss-less semi-sync replication，可以更可靠的保证数据零丢失。  </div><div class="line">&gt; 以下说的都是crash 后，起不来的情况  </div><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>binlog 在master还有日志没有传递到 slave<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<ol>
+<li>选取最新的slave，change master to maseter_auto_position同步好  </li>
+<li>mysqlbinlog 将没传递过来的binlog在新master上replay  </li>
+<li>打开新master的surper_read_only=off;</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>binlog 已经传递到slave<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<ol>
+<li>选取最新的slave，change master to maseter_auto_position同步好  </li>
+<li>打开新master的surper_read_only=off;</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="preprocessor">#### 2.3.2 OS crash</span></div></pre></td></tr></table></figure>
+
+<ol>
+<li>选取最新的slave，change master to maseter_auto_position同步好  </li>
+<li>打开新master的surper_read_only=off;</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt"></span></span></div><div class="line">以上操作，在传统模式复制下，只能通过MHA来实现，MHA比较复杂。  </div><div class="line">现在，在GTID模式下，实现起来非常简单，且非常方便。  </div><div class="line"></div><div class="line">### 2.4 GTID 运维和错误处理</div><div class="line">&gt; <span class="number">1</span>. 使用<span class="constant">GTID</span>后，对原来传统的运维有不同之处了，需要调整过来。  </div><div class="line"><span class="input"><span class="prompt">&gt; 2. 使用Row模式且复制配置正确的情况下，基本上很少发现有复制出错的情况。  </span></span></div><div class="line">&gt; <span class="number">3</span>. slave 设置 super_read_only=on  </div><div class="line"><span class="input"><span class="prompt"></span></span></div><div class="line">#### 2.4.1 错误场景: Errant transaction</div><div class="line">&gt; 出现这种问题基本有两种情况  </div><div class="line"><span class="input"><span class="prompt">&gt; 1. 复制参数没有配置正确，当slave crash后，会出现重复键问题  </span></span></div><div class="line">&gt; <span class="number">2</span>. <span class="constant">DBA</span>操作不正确，不小心在slave上执行了事务   </div><div class="line"></div><div class="line">对于第一个重复键问题</div><div class="line"></div><div class="line">* **传统模式**</div></pre></td></tr></table></figure>
+
+<ul>
+<li>skip transation; </li>
+</ul>
+<p>SQL&gt; SET GLOBAL SQL_SLAVE_SKIP_COUNTER=1;<br>SQL&gt; START SLAVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>GTID模式<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<p>SQL&gt; SET GTID_NEXT=’b9b4712a-df64-11e3-b391-60672090eb04:7’;   —设置需要跳过的gtid event<br>SQL&gt; BEGIN;COMMIT;<br>SQL&gt; SET GTID_NEXT=’AUTOMATIC’;<br>SQL&gt; START SLAVE;</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div><div class="line"><span class="ruby"><span class="input"><span class="prompt">对于第二种不小心多执行了事务</span></span></span></div><div class="line">&gt; 这种情况就比较难了，这样已经导致了数据不一致，大多数情况，建议slave重做  </div><div class="line">&gt; 如何避免： slave 设置 super_read_only=on  </div><div class="line"><span class="input"><span class="prompt"></span></span></div><div class="line"></div><div class="line">### 重点： 当发生inject empty transction后，有可能会丢失事务  </div><div class="line">&gt; 这里说下inject empty transction的隐患  </div><div class="line"></div><div class="line"><span class="number">1</span>. 当slave上inject empty transction，说明有一个master的事务被忽略了（这里假设是 <span class="variable">$uuid</span><span class="symbol">:</span><span class="number">100</span>）</div><div class="line"><span class="number">2</span>. 事务丢失一：如果此时此刻master挂了，这个slave被选举为新master，那么其他的slave如果还没有执行到<span class="variable">$uuid</span><span class="symbol">:</span><span class="number">100</span>,就会丢失掉<span class="variable">$uuid</span><span class="symbol">:</span><span class="number">100</span>这个事务。</div><div class="line"><span class="number">3</span>. 事务丢失二：如果从备份中重新搭建一个slave，需要重新执行之前的所有事务，而此时，master挂了， 又回到了事务丢失一的场景。   </div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"> </div><div class="line"><span class="comment">## 三、QA</span></div><div class="line"></div><div class="line"><span class="comment">### 3.1 如何重置gtid_executed，gtid_purged。</span></div><div class="line"></div><div class="line">* **设置gtid_executed**</div></pre></td></tr></table></figure>
+
+<p>目前只能够reset master</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="keyword">*</span> <span class="keyword">*</span><span class="keyword">*</span>设置gtid_purged<span class="keyword">*</span><span class="keyword">*</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>当gtid_executed 非空的时候，不能设置gtid_purged</li>
+<li>当gtid_executed 为空的时候（即刚刚备份好的镜像，刚搭建的mysql），可以直接SET @@GLOBAL.GTID_PURGED=’0ad6eae9-2d66-11e6-864f-ecf4bbf1f42c:1-3’;</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="preprocessor">### 3.2 如果auto.cnf 被删掉了，对于GTID的复制会有什么影响？</span></div></pre></td></tr></table></figure>
+
+<p>如果被删掉，重启后，server-uuid 会变</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">### 3.3 手动设置 set @<span class="yardoctag">@gtid</span>_purged = xx:yy, mysql会去主动修改binlog的头么</span></div></pre></td></tr></table></figure>
+
+<p>不会</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="preprocessor">### 3.4 GTID和复制过滤规则之间如何协同工作？MySQL，test还能愉快的过滤掉吗？</span></div></pre></td></tr></table></figure>
+
+<p>可以，改过滤的会自己过滤，不用担心<br>```</p>
+<h2 id="四、后续分享：_Automatic_failover_with_mysqlfailover+GTID">四、后续分享： Automatic failover with mysqlfailover+GTID</h2>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/replication-solutions-switch.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/replication-solutions-switch.html</a>  </p>
+</blockquote>
+<h3 id="4-1_Planned_promotion_(switchover)">4.1 Planned promotion (switchover)</h3>
+<h3 id="4-2_Unplanned_promotion_(failover)">4.2 Unplanned promotion (failover)</h3>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/06/23/gtid/" data-title="MySQL5.7杀手级新特性：GTID原理与实战 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/05/25/pt_table_checksum/"  title="pt-table-checksum原理详解">
+ <strong>NEXT:</strong><br/> 
+ <span>pt-table-checksum原理详解
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/06/23/gtid/" data-title="MySQL5.7杀手级新特性：GTID原理与实战" data-url="https://Keithlan.github.io/2016/06/23/gtid/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、理论篇"><span class="toc-number">1.</span> <span class="toc-text">一、理论篇</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_GTID是什么(what)"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 GTID是什么(what)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-1_GTID组成和架构"><span class="toc-number">1.1.1.</span> <span class="toc-text">1.1.1 GTID组成和架构</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-2_GTID和Binlog的关系"><span class="toc-number">1.1.2.</span> <span class="toc-text">1.1.2 GTID和Binlog的关系</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-3_重要参数的持久化"><span class="toc-number">1.1.3.</span> <span class="toc-text">1.1.3 重要参数的持久化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-4_开启GTID的必备条件"><span class="toc-number">1.1.4.</span> <span class="toc-text">1.1.4 开启GTID的必备条件</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-1-5_新的复制协议_COM_BINLOG_DUMP_GTID"><span class="toc-number">1.1.5.</span> <span class="toc-text">1.1.5 新的复制协议  COM_BINLOG_DUMP_GTID</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_GTID有什么好处(why)"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 GTID有什么好处(why)</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-1_classic_replication_[运维之痛]"><span class="toc-number">1.2.1.</span> <span class="toc-text">1.2.1 classic replication [运维之痛]</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#1-2-2_GTID_replication_[so_easy]"><span class="toc-number">1.2.2.</span> <span class="toc-text">1.2.2 GTID replication [so easy]</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_GTID的Limitation"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 GTID的Limitation</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4_MySQL5-7_GTID_crash-safe"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 MySQL5.7 GTID crash-safe</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、实战篇(how)"><span class="toc-number">2.</span> <span class="toc-text">二、实战篇(how)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_使用GTID搭建Replication"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 使用GTID搭建Replication</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#2-1-1_从0开始搭建"><span class="toc-number">2.1.1.</span> <span class="toc-text">2.1.1 从0开始搭建</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、后续分享：_Automatic_failover_with_mysqlfailover+GTID"><span class="toc-number">3.</span> <span class="toc-text">四、后续分享： Automatic failover with mysqlfailover+GTID</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_Planned_promotion_(switchover)"><span class="toc-number">3.1.</span> <span class="toc-text">4.1 Planned promotion (switchover)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_Unplanned_promotion_(failover)"><span class="toc-number">3.2.</span> <span class="toc-text">4.2 Unplanned promotion (failover)</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>7</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>7</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
