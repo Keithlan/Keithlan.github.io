@@ -1,0 +1,501 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7 新特性： Multi-threaded Slave 多线程复制 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/5.7/en/replication-options-slave.html  
+
+什么是MTS
+
+一句话概括：通过组提交的方式 master怎么并行，slave就怎么并行。  
+
+
+关键因素：组提交  
+
+12345678910111">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/06/28/MTS/" title="MySQL5.7 新特性： Multi-threaded Slave 多线程复制" itemprop="url">MySQL5.7 新特性： Multi-threaded Slave 多线程复制</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-06-28T09:04:24.000Z" itemprop="datePublished">Jun 28 2016</time>
+    Updated:<time datetime="2016-06-28T09:15:15.000Z" itemprop="dateModified">Jun 28 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是MTS"><span class="toc-number">1.</span> <span class="toc-text">什么是MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要用MTS"><span class="toc-number">2.</span> <span class="toc-text">为什么要用MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#开启MTS的重要参数"><span class="toc-number">3.</span> <span class="toc-text">开启MTS的重要参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要组件"><span class="toc-number">4.</span> <span class="toc-text">重要组件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Binlog_和_MTS"><span class="toc-number">5.</span> <span class="toc-text">Binlog 和 MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#顺序"><span class="toc-number">6.</span> <span class="toc-text">顺序</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/5.7/en/replication-options-slave.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/5.7/en/replication-options-slave.html</a>  </p>
+</blockquote>
+<h2 id="什么是MTS">什么是MTS</h2>
+<blockquote>
+<p>一句话概括：通过组提交的方式 master怎么并行，slave就怎么并行。  </p>
+</blockquote>
+<ul>
+<li>关键因素：组提交  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"># 组提交</div><div class="line"></div><div class="line">## 哪些需要组提交</div><div class="line"></div><div class="line"></div><div class="line">1. transaction <span class="operator"><span class="keyword">prepare</span></span></div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span> <span class="keyword">write</span></div><div class="line"><span class="number">3.</span> <span class="keyword">transaction</span> <span class="keyword">commit</span></div><div class="line"></div><div class="line"></div><div class="line">## MySQL <span class="number">5.1</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">1.</span> <span class="keyword">transaction</span> <span class="keyword">prepare</span>  #fsync</div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span> <span class="keyword">write</span>  		#fsync</div><div class="line"><span class="number">3.</span> <span class="keyword">transaction</span> <span class="keyword">commit</span>  	#fsync</div><div class="line">总结：每个事务都需要三次fsync</div><div class="line"></div><div class="line"></div><div class="line">## MySQL <span class="number">5.5</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">1.</span> <span class="keyword">transaction</span> <span class="keyword">prepare</span>  #fsync</div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span> <span class="keyword">write</span>         #<span class="keyword">group</span> fsync</div><div class="line"><span class="number">3.</span> <span class="keyword">transaction</span> <span class="keyword">commit</span>   #fsync</div><div class="line">总结：<span class="keyword">binlog</span> 可以组提交了</div><div class="line"></div><div class="line"></div><div class="line">## MySQL <span class="number">5.6</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">1.</span> <span class="keyword">transaction</span> <span class="keyword">prepare</span>  # fsync</div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span> <span class="keyword">write</span>         # <span class="keyword">group</span> fsync</div><div class="line"><span class="number">3.</span> <span class="keyword">transaction</span> <span class="keyword">commit</span>   # 不需要fsync了，因为<span class="number">1</span>，<span class="number">2</span>都fsync，就能保证整个事务提交</div><div class="line">总结：少了最后一步的fsync，性能提升很多</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">## MySQL <span class="number">5.7</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">1.</span> <span class="keyword">transaction</span> <span class="keyword">prepare</span>  # 不fsync</div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span> <span class="keyword">write</span>         # 在写入<span class="keyword">binlog</span>之前，去<span class="keyword">group</span> fsync <span class="keyword">prepare</span> <span class="keyword">log</span>。 然后再<span class="keyword">group</span> fsync <span class="keyword">binlog</span></div><div class="line"><span class="number">3.</span> <span class="keyword">transaction</span> <span class="keyword">commit</span>   # 不需要fsync了，因为<span class="number">1</span>，<span class="number">2</span>都fsync，就能保证整个事务提交</div><div class="line">总结：相当于<span class="number">1</span>，<span class="number">2</span> 合在一起组提交，性能提升更多</div></pre></td></tr></table></figure>
+
+<h2 id="为什么要用MTS">为什么要用MTS</h2>
+<blockquote>
+<p>一句话概括：解决单线程复制的延迟问题<br>note1：当master有多个线程在写数据，那么MTS效果会非常好<br>note2：如果master对大表进行DDL，这样的延迟是没办法避免的  </p>
+</blockquote>
+<h2 id="开启MTS的重要参数">开启MTS的重要参数</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>comment</th>
+<th>默认配置</th>
+<th>推荐配置</th>
+<th>调整方式</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>slave_parallel_workers</td>
+<td>applier threads数量</td>
+<td>0</td>
+<td>16</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>slave_parallel_type</td>
+<td>并行方式</td>
+<td>DATABASE</td>
+<td>LOGICAL_CLOCK</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>slave_preserve_commit_order</td>
+<td>并行排序提交</td>
+<td>0</td>
+<td>1</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>master_info_repository</td>
+<td>master_info持久化方式</td>
+<td>FILE</td>
+<td>DATABASE</td>
+<td>static</td>
+</tr>
+<tr>
+<td>relay_log_info_repository</td>
+<td>relay_info持久化方式</td>
+<td>FILE</td>
+<td>DATABASE</td>
+<td>static</td>
+</tr>
+<tr>
+<td>relay_log_recovery</td>
+<td>重新获取relay log</td>
+<td>0</td>
+<td>1</td>
+<td>static</td>
+</tr>
+</tbody>
+</table>
+<h2 id="重要组件">重要组件</h2>
+<blockquote>
+<ol>
+<li>IO thread并没有改变  </li>
+<li>SQL thread 会变成Coordinator线程  </li>
+<li>会新增很多work线程来受Coordinator调度  </li>
+</ol>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">+<span class="comment">-----+-------------+-----------+------+---------+------+--------------------------------------------------------+------------------+</span></div><div class="line">| Id  | User        | Host      | db   | Command | Time | State                                                  | Info             |</div><div class="line">+<span class="comment">-----+-------------+-----------+------+---------+------+--------------------------------------------------------+------------------+</span></div><div class="line">| <span class="number">127</span> | root        | localhost | <span class="constant">NULL</span> | Query   |    <span class="number">0</span> | starting                                               | show processlist |</div><div class="line">| <span class="number">128</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> master <span class="built_in">to</span> <span class="built_in">send</span> event                       | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">129</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">456</span> | Slave has <span class="built_in">read</span> all relay <span class="built_in">log</span>; waiting <span class="keyword">for</span> more updates | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">130</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">131</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">132</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">133</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">134</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">135</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">136</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">137</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">138</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">139</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">140</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">141</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">142</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">| <span class="number">143</span> | <span class="keyword">system</span> user |           | <span class="constant">NULL</span> | Connect |  <span class="number">457</span> | Waiting <span class="keyword">for</span> <span class="operator">an</span> event <span class="built_in">from</span> Coordinator                  | <span class="constant">NULL</span>             |</div><div class="line">+<span class="comment">-----+-------------+-----------+------+---------+------+--------------------------------------------------------+------------------+</span></div><div class="line"><span class="number">17</span> rows <span class="operator">in</span> <span class="built_in">set</span> (<span class="number">0.00</span> <span class="built_in">sec</span>)</div></pre></td></tr></table></figure>
+
+
+<h2 id="Binlog_和_MTS">Binlog 和 MTS</h2>
+<blockquote>
+<p>同一个last_committed 可以并行执行<br>同一个last_committed 中的sequence_number 默认是无序的  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">10</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">259</span> <span class="keyword">CRC32</span> <span class="number">0x9565260a</span> 	GTID	last_committed=<span class="number">0</span>	sequence_number=<span class="number">1</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">427</span> <span class="keyword">CRC32</span> <span class="number">0xaa1d4add</span> 	GTID	last_committed=<span class="number">0</span>	sequence_number=<span class="number">2</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">682</span> <span class="keyword">CRC32</span> <span class="number">0x0715f36a</span> 	GTID	last_committed=<span class="number">0</span>	sequence_number=<span class="number">3</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">937</span> <span class="keyword">CRC32</span> <span class="number">0x2998c5ed</span> 	GTID	last_committed=<span class="number">0</span>	sequence_number=<span class="number">4</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">1192</span> <span class="keyword">CRC32</span> <span class="number">0xd58951f3</span> 	GTID	last_committed=<span class="number">4</span>	sequence_number=<span class="number">5</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">1447</span> <span class="keyword">CRC32</span> <span class="number">0xbf77ba5f</span> 	GTID	last_committed=<span class="number">4</span>	sequence_number=<span class="number">6</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">1702</span> <span class="keyword">CRC32</span> <span class="number">0x3e74905f</span> 	GTID	last_committed=<span class="number">4</span>	sequence_number=<span class="number">7</span></div><div class="line">#<span class="number">160628</span> <span class="number">16</span>:<span class="number">29</span>:<span class="number">25</span> server id <span class="number">12616406</span>  end_log_pos <span class="number">1957</span> <span class="keyword">CRC32</span> <span class="number">0xc31cbd6d</span> 	GTID	last_committed=<span class="number">4</span>	sequence_number=<span class="number">8</span></div></pre></td></tr></table></figure>
+
+<h2 id="顺序">顺序</h2>
+<ul>
+<li><strong>当slave_preserve_commit_order=0时</strong></li>
+</ul>
+<blockquote>
+<p>没有办法保证顺序，在恢复的过程中会有问题,到时候你怎么start slave 呢？<br>start slave until SQL_AFTER_MTS_GAPS  ; reset slave  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Master执行顺序: <span class="variable">last_committed=</span><span class="number">0</span>,<span class="variable">sequence_number=</span><span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>  </div><div class="line">slave执行顺序： 有可能就是 <span class="variable">last_committed=</span><span class="number">0</span>,<span class="variable">sequence_number=</span><span class="number">1</span>,<span class="number">4</span>,<span class="number">3</span>,<span class="number">2</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>当slave_preserve_commit_order=1时</strong></li>
+</ul>
+<blockquote>
+<p>后一个sequence_number提交的时候，会等待前一个sequence_number完成。<br>Waiting for preceding transaction to commit  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Master执行顺序: <span class="variable">last_committed=</span><span class="number">0</span>,<span class="variable">sequence_number=</span><span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>  </div><div class="line">slave执行顺序： 有可能就是 <span class="variable">last_committed=</span><span class="number">0</span>,<span class="variable">sequence_number=</span><span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span></div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/06/28/MTS/" data-title="MySQL5.7 新特性： Multi-threaded Slave 多线程复制 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/06/23/gtid/"  title="MySQL5.7杀手级新特性：GTID原理与实战">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7杀手级新特性：GTID原理与实战
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/06/28/MTS/" data-title="MySQL5.7 新特性： Multi-threaded Slave 多线程复制" data-url="https://Keithlan.github.io/2016/06/28/MTS/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是MTS"><span class="toc-number">1.</span> <span class="toc-text">什么是MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要用MTS"><span class="toc-number">2.</span> <span class="toc-text">为什么要用MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#开启MTS的重要参数"><span class="toc-number">3.</span> <span class="toc-text">开启MTS的重要参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要组件"><span class="toc-number">4.</span> <span class="toc-text">重要组件</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Binlog_和_MTS"><span class="toc-number">5.</span> <span class="toc-text">Binlog 和 MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#顺序"><span class="toc-number">6.</span> <span class="toc-text">顺序</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>8</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>8</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
