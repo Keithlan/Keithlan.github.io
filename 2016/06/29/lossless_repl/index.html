@@ -1,0 +1,516 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7新特性：lossless replication 无损复制 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/5.7/en/replication-semisync.html  
+
+MySQL的三种复制方式
+
+
+asynchronous 异步复制  
+fully synchronous 全同步复制  
+Semisynchronous 半同步复">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/06/29/lossless_repl/" title="MySQL5.7新特性：lossless replication 无损复制" itemprop="url">MySQL5.7新特性：lossless replication 无损复制</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-06-29T10:30:24.000Z" itemprop="datePublished">Jun 29 2016</time>
+    Updated:<time datetime="2016-06-29T10:30:43.000Z" itemprop="dateModified">Jun 29 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL的三种复制方式"><span class="toc-number">1.</span> <span class="toc-text">MySQL的三种复制方式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#asynchronous_replication"><span class="toc-number">1.1.</span> <span class="toc-text">asynchronous replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#fully_synchronous_replication"><span class="toc-number">1.2.</span> <span class="toc-text">fully synchronous replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#semisynchronous_replication"><span class="toc-number">1.3.</span> <span class="toc-text">semisynchronous replication</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要参数"><span class="toc-number">2.</span> <span class="toc-text">重要参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何开启lossless_replication"><span class="toc-number">3.</span> <span class="toc-text">如何开启lossless replication</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实践是检验真理的唯一标准"><span class="toc-number">4.</span> <span class="toc-text">实践是检验真理的唯一标准</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_commit_：_三阶段提交过程"><span class="toc-number">4.1.</span> <span class="toc-text">InnoDB commit ： 三阶段提交过程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#测试点"><span class="toc-number">4.2.</span> <span class="toc-text">测试点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#性能"><span class="toc-number">5.</span> <span class="toc-text">性能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#semi-sync_vs_lossless_semi-sync_的性能对比"><span class="toc-number">5.1.</span> <span class="toc-text">semi-sync  vs lossless semi-sync 的性能对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CAP理论"><span class="toc-number">6.</span> <span class="toc-text">CAP理论</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/5.7/en/replication-semisync.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/5.7/en/replication-semisync.html</a>  </p>
+</blockquote>
+<h2 id="MySQL的三种复制方式">MySQL的三种复制方式</h2>
+<blockquote>
+<ol>
+<li>asynchronous 异步复制  </li>
+<li>fully synchronous 全同步复制  </li>
+<li>Semisynchronous 半同步复制  </li>
+</ol>
+</blockquote>
+<h3 id="asynchronous_replication">asynchronous replication</h3>
+<blockquote>
+<p>原理：在异步复制中，master写数据到binlog且sync，slave request binlog后写入relay-log并flush disk<br>优点：复制的性能最好<br>缺点：master挂掉后，slave可能会丢失事务<br>代表：MySQL原生的复制  </p>
+</blockquote>
+<p><img src="image/async.jpg" alt="async" title="async"></p>
+<h3 id="fully_synchronous_replication">fully synchronous replication</h3>
+<blockquote>
+<p>原理：在全同步复制中，master写数据到binlog且sync，所有slave request binlog后写入relay-log并flush disk，并且回放完日志且commit<br>优点：数据不会丢失<br>缺点：会阻塞master session，性能太差，非常依赖网络<br>代表：MySQL-Cluster  </p>
+</blockquote>
+<p><img src="image/sync.jpg" alt="sync" title="sync"></p>
+<h3 id="semisynchronous_replication">semisynchronous replication</h3>
+<ul>
+<li><strong>普通的半同步复制</strong></li>
+</ul>
+<blockquote>
+<p>原理: 在半同步复制中，master写数据到binlog且sync，且commit，然后一直等待ACK。当至少一个slave request bilog后写入到relay-log并flush disk，就返回ack（不需要回放完日志）<br>优点：会有数据丢失风险（低）<br>缺点：会阻塞master session，性能差，非常依赖网络，<br>代表：after commit, 原生的半同步<br>重点：由于master是在三段提交的最后commit阶段完成后才等待，所以master的其他session是可以看到这个提交事务的，所以这时候master上的数据和slave不一致，master crash后，slave数据丢失  </p>
+</blockquote>
+<p><img src="image/semi.jpg" alt="semi" title="semi"></p>
+<ul>
+<li><strong>增强版的半同步复制（lossless replication）</strong></li>
+</ul>
+<blockquote>
+<p>原理: 在半同步复制中，master写数据到binlog且sync，然后一直等待ACK. 当至少一个slave request bilog后写入到relay-log并flush disk，就返回ack（不需要回放完日志）<br>优点：数据零丢失（前提是让其一直是lossless replication），性能好<br>缺点：会阻塞master session，非常依赖网络<br>代表：after sync, 原生的半同步<br>重点：由于master是在三段提交的第二阶段sync binlog完成后才等待, 所以master的其他session是看不见这个提交事务的，所以这时候master上的数据和slave一致，master crash后，slave没有丢失数据  </p>
+</blockquote>
+<p><img src="image/lossless.jpg" alt="lossless" title="lossless"></p>
+<h2 id="重要参数">重要参数</h2>
+<table>
+<thead>
+<tr>
+<th>参数</th>
+<th>comment</th>
+<th>默认值</th>
+<th>推荐值</th>
+<th>是否动态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>rpl_semi_sync_master_wait_for_slave_count</td>
+<td>至少有N个slave接收到日志</td>
+<td>1</td>
+<td>1</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>rpl_semi_sync_master_wait_point</td>
+<td>等待的point</td>
+<td>AFTER_SYNC</td>
+<td>AFTER_SYNC</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>rpl_semi_sync_master_timeout</td>
+<td>切换复制的timeout</td>
+<td>10000（10s）</td>
+<td>1000(1s)</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>rpl_semi_sync_master_enabled</td>
+<td>是否开启半同步</td>
+<td>OFF</td>
+<td>ON</td>
+<td>dynamic</td>
+</tr>
+<tr>
+<td>rpl_semi_sync_slave_enabled</td>
+<td>是否开启半同步</td>
+<td>OFF</td>
+<td>ON</td>
+<td>dynamic</td>
+</tr>
+</tbody>
+</table>
+<h2 id="如何开启lossless_replication">如何开启lossless replication</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">########semi sync replication settings########</span></div><div class="line"><span class="variable">plugin_dir=</span>/usr/local/mysql/lib/plugin</div><div class="line"><span class="variable">plugin_load =</span> <span class="string">"rpl_semi_sync_master=semisync_master.so;rpl_semi_sync_slave=semisync_slave.so"</span></div><div class="line"><span class="variable">loose_rpl_semi_sync_master_enabled =</span> <span class="number">1</span></div><div class="line"><span class="variable">loose_rpl_semi_sync_slave_enabled =</span> <span class="number">1</span></div><div class="line"><span class="variable">loose_rpl_semi_sync_master_timeout =</span> <span class="number">1000</span></div></pre></td></tr></table></figure>
+
+<h2 id="实践是检验真理的唯一标准">实践是检验真理的唯一标准</h2>
+<blockquote>
+<p>如何检验上述after_sync,after_commit<br>如何检验上述原理的正确性  </p>
+</blockquote>
+<h3 id="InnoDB_commit_：_三阶段提交过程">InnoDB commit ： 三阶段提交过程</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">A阶段. wite <span class="operator"><span class="keyword">prepare</span> <span class="keyword">log</span> <span class="comment">-- 写入Xid</span></span></div><div class="line">B阶段. <span class="keyword">write</span> <span class="keyword">binlog</span></div><div class="line">C阶段. <span class="keyword">write</span> <span class="keyword">commit</span> <span class="keyword">log</span></div></pre></td></tr></table></figure>
+
+<h3 id="测试点">测试点</h3>
+<blockquote>
+<p>master上当一个事务Waiting for semi-sync ACK from slave的时候，后来的事务是在A,B,C哪个阶段卡住呢？  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line">0，RC模式</div><div class="line"></div><div class="line">1. semi-sync C阶段等待</div><div class="line"></div><div class="line">假设设置time-out=100000s，当事务一提交了一个大事务，在write <span class="operator"><span class="keyword">commit</span> <span class="keyword">log</span>(C阶段)时候等待，</span></div><div class="line">那么第二个事务在敲<span class="keyword">commit</span>命令的时候，是卡在哪个阶段呢？是卡在 wite <span class="keyword">prepare</span> <span class="keyword">log</span>（A阶段）？还是<span class="keyword">write</span> <span class="keyword">binlog</span>（B阶段）？还是<span class="keyword">write</span> <span class="keyword">commit</span> <span class="keyword">log</span>（C阶段）</div><div class="line"></div><div class="line">测试：semi-sync vs  loss-less semi-sync</div><div class="line"></div><div class="line">【semi-sync】 C阶段等待</div><div class="line"><span class="number">0</span>, 开启事务<span class="number">1</span>，然后在<span class="keyword">slave</span>上执行<span class="keyword">stop</span> <span class="keyword">slave</span>，制造timeout的情况，让其阻塞。(Waiting <span class="keyword">for</span> semi-sync ACK <span class="keyword">from</span> <span class="keyword">slave</span>)</div><div class="line"><span class="number">1</span>，在开启一个事务<span class="number">2</span>，事务<span class="number">2</span>插入一条特殊记录（XXXXX）。  (Waiting <span class="keyword">for</span> semi-sync ACK <span class="keyword">from</span> <span class="keyword">slave</span>)</div><div class="line"><span class="number">2</span>，在开启一个事务<span class="number">3</span>。</div><div class="line"><span class="number">2.1</span>，测试案例：这个时候，<span class="keyword">kill</span> -<span class="number">9</span> mysqld，造成人为的mysql crash</div><div class="line"><span class="number">3</span>，假设卡在A阶段，那么事务<span class="number">3</span>，肯定是看不到事务<span class="number">1</span>,<span class="number">2</span>写入的记录（XXXXX）,且重启mysql后，事务<span class="number">2</span>不会提交。</div><div class="line"><span class="number">4</span>，假设卡在C阶段，那么事务<span class="number">3</span>，肯定是可以看见事务<span class="number">1</span>，<span class="number">2</span>写入的记录（XXXXX）。</div><div class="line"></div><div class="line">经过测试：</div><div class="line"><span class="number">1</span>，是卡在C阶段，也就是说事务<span class="number">3</span>是可以看见事务<span class="number">1</span>，事务<span class="number">2</span>的。</div><div class="line"><span class="number">2</span>，MySQL crash重启后，事务<span class="number">1</span>，事务<span class="number">2</span>的dml都已经提交成功，说明不是卡在A阶段</div><div class="line"></div><div class="line">【loss-less semi-sync】B阶段等待</div><div class="line"></div><div class="line"><span class="number">0</span>, 开启事务<span class="number">1</span>，然后在<span class="keyword">slave</span>上执行<span class="keyword">stop</span> <span class="keyword">slave</span>，制造timeout的情况，让其阻塞。(Waiting <span class="keyword">for</span> semi-sync ACK <span class="keyword">from</span> <span class="keyword">slave</span>)</div><div class="line"><span class="number">1</span>，在开启一个事务<span class="number">2</span>，事务<span class="number">2</span>插入一条特殊记录（XXXXX）。(Waiting <span class="keyword">for</span> semi-sync ACK <span class="keyword">from</span> <span class="keyword">slave</span>)</div><div class="line"><span class="number">2</span>，在开启一个事务<span class="number">3</span></div><div class="line"><span class="number">3</span>，假设卡在A阶段，那么事务<span class="number">3</span>，肯定是看不到事务<span class="number">1</span>,<span class="number">2</span>写入的记录（XXXXX）,且重启mysql后，事务<span class="number">2</span>不会提交。。</div><div class="line"><span class="number">4</span>，假设卡在B阶段，那么事务<span class="number">3</span>，肯定是可以看见事务<span class="number">1</span>,<span class="number">2</span>写入的记录（XXXXX）,且重启mysql后，事务<span class="number">1</span>，<span class="number">2</span>都会提交。。</div><div class="line"><span class="number">5</span>, 假设卡在C阶段，那么事务<span class="number">3</span>，肯定是可以看见事务<span class="number">3</span>写入的记录（XXXXX）。</div><div class="line"></div><div class="line">经过测试：</div><div class="line"><span class="number">1</span>，是卡在B阶段，也就是说事务<span class="number">3</span>，既看不见事务<span class="number">1</span>的提交内容，也看不见事务<span class="number">2</span>的提交内容，且重启mysql后，事务<span class="number">1</span>，<span class="number">2</span>都已经提交。。</div><div class="line"><span class="number">2</span>，MySQL crash重启后，事务<span class="number">1</span>，事务<span class="number">2</span>的dml都已经提交成功，说明不是卡在A阶段。</div></pre></td></tr></table></figure>
+
+<h2 id="性能">性能</h2>
+<h3 id="semi-sync_vs_lossless_semi-sync_的性能对比">semi-sync  vs lossless semi-sync 的性能对比</h3>
+<blockquote>
+<p>根据以上的测试，可以得知，lossless只卡在B阶段，普通的semi-sync是卡在C阶段。<br>lossless的性能远远好于普通的semi-sync，即（after_sync 优于 after_commit）<br>因为lossless 卡在B阶段的时候可以堆积事务，可以在C阶段进行group commit。<br>普通的semi-sync，卡在C阶段,事务都已经commit了，并没有堆积的过程。</p>
+</blockquote>
+<h2 id="CAP理论">CAP理论</h2>
+<blockquote>
+<p>一致性【C】<br>可用性【A】<br>分区容忍性【P】<br>理论：CAP 三者不可兼得，必须要牺牲一个  </p>
+</blockquote>
+<p>分区，是一定存在的，不是你想不要就不要的。所以，这里只剩下两种组合  </p>
+<ul>
+<li><strong>CP 牺牲可用性</strong></li>
+</ul>
+<blockquote>
+<p>这种做法，就是保留强一致性，牺牲可用性<br>案例：可以将rpl_semi_sync_master_timeout设置成一个无限大的值，比如：100天，那么master和slave就强一致了，但是可用性就大打折扣  </p>
+</blockquote>
+<ul>
+<li><strong>AP 牺牲一致性</strong></li>
+</ul>
+<blockquote>
+<p>这种做法，就是保留高可用性，牺牲一致性<br>案例：比如原生的异步复制就是这样咯。可以快速做到切换，但是一致性就没有保障  </p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/06/29/lossless_repl/" data-title="MySQL5.7新特性：lossless replication 无损复制 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/06/28/MTS/"  title="MySQL5.7 新特性： Multi-threaded Slave 多线程复制">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7 新特性： Multi-threaded Slave 多线程复制
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/06/29/lossless_repl/" data-title="MySQL5.7新特性：lossless replication 无损复制" data-url="https://Keithlan.github.io/2016/06/29/lossless_repl/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL的三种复制方式"><span class="toc-number">1.</span> <span class="toc-text">MySQL的三种复制方式</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#asynchronous_replication"><span class="toc-number">1.1.</span> <span class="toc-text">asynchronous replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#fully_synchronous_replication"><span class="toc-number">1.2.</span> <span class="toc-text">fully synchronous replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#semisynchronous_replication"><span class="toc-number">1.3.</span> <span class="toc-text">semisynchronous replication</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要参数"><span class="toc-number">2.</span> <span class="toc-text">重要参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何开启lossless_replication"><span class="toc-number">3.</span> <span class="toc-text">如何开启lossless replication</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实践是检验真理的唯一标准"><span class="toc-number">4.</span> <span class="toc-text">实践是检验真理的唯一标准</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_commit_：_三阶段提交过程"><span class="toc-number">4.1.</span> <span class="toc-text">InnoDB commit ： 三阶段提交过程</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#测试点"><span class="toc-number">4.2.</span> <span class="toc-text">测试点</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#性能"><span class="toc-number">5.</span> <span class="toc-text">性能</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#semi-sync_vs_lossless_semi-sync_的性能对比"><span class="toc-number">5.1.</span> <span class="toc-text">semi-sync  vs lossless semi-sync 的性能对比</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CAP理论"><span class="toc-number">6.</span> <span class="toc-text">CAP理论</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>9</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>9</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
