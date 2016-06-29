@@ -84,7 +84,7 @@ Semisynchronous 半同步复">
     </p>
   <p class="article-time">
     <time datetime="2016-06-29T10:30:24.000Z" itemprop="datePublished">Jun 29 2016</time>
-    Updated:<time datetime="2016-06-29T10:30:43.000Z" itemprop="dateModified">Jun 29 2016</time>
+    Updated:<time datetime="2016-06-29T10:31:56.000Z" itemprop="dateModified">Jun 29 2016</time>
     
   </p>
 </header>
@@ -111,12 +111,12 @@ Semisynchronous 半同步复">
 <blockquote>
 <p>原理：在异步复制中，master写数据到binlog且sync，slave request binlog后写入relay-log并flush disk<br>优点：复制的性能最好<br>缺点：master挂掉后，slave可能会丢失事务<br>代表：MySQL原生的复制  </p>
 </blockquote>
-<p><img src="image/async.jpg" alt="async" title="async"></p>
+<p><img src="/image/mysql_innodb_arch/async.jpg" alt="async" title="async"></p>
 <h3 id="fully_synchronous_replication">fully synchronous replication</h3>
 <blockquote>
 <p>原理：在全同步复制中，master写数据到binlog且sync，所有slave request binlog后写入relay-log并flush disk，并且回放完日志且commit<br>优点：数据不会丢失<br>缺点：会阻塞master session，性能太差，非常依赖网络<br>代表：MySQL-Cluster  </p>
 </blockquote>
-<p><img src="image/sync.jpg" alt="sync" title="sync"></p>
+<p><img src="/image/mysql_innodb_arch/sync.jpg" alt="sync" title="sync"></p>
 <h3 id="semisynchronous_replication">semisynchronous replication</h3>
 <ul>
 <li><strong>普通的半同步复制</strong></li>
@@ -124,14 +124,14 @@ Semisynchronous 半同步复">
 <blockquote>
 <p>原理: 在半同步复制中，master写数据到binlog且sync，且commit，然后一直等待ACK。当至少一个slave request bilog后写入到relay-log并flush disk，就返回ack（不需要回放完日志）<br>优点：会有数据丢失风险（低）<br>缺点：会阻塞master session，性能差，非常依赖网络，<br>代表：after commit, 原生的半同步<br>重点：由于master是在三段提交的最后commit阶段完成后才等待，所以master的其他session是可以看到这个提交事务的，所以这时候master上的数据和slave不一致，master crash后，slave数据丢失  </p>
 </blockquote>
-<p><img src="image/semi.jpg" alt="semi" title="semi"></p>
+<p><img src="/image/mysql_innodb_arch/semi.jpg" alt="semi" title="semi"></p>
 <ul>
 <li><strong>增强版的半同步复制（lossless replication）</strong></li>
 </ul>
 <blockquote>
 <p>原理: 在半同步复制中，master写数据到binlog且sync，然后一直等待ACK. 当至少一个slave request bilog后写入到relay-log并flush disk，就返回ack（不需要回放完日志）<br>优点：数据零丢失（前提是让其一直是lossless replication），性能好<br>缺点：会阻塞master session，非常依赖网络<br>代表：after sync, 原生的半同步<br>重点：由于master是在三段提交的第二阶段sync binlog完成后才等待, 所以master的其他session是看不见这个提交事务的，所以这时候master上的数据和slave一致，master crash后，slave没有丢失数据  </p>
 </blockquote>
-<p><img src="image/lossless.jpg" alt="lossless" title="lossless"></p>
+<p><img src="/image/mysql_innodb_arch/lossless.jpg" alt="lossless" title="lossless"></p>
 <h2 id="重要参数">重要参数</h2>
 <table>
 <thead>
