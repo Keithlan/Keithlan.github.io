@@ -1,0 +1,464 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7新特性：mysqlrpladmin + GTID | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="http://dev.mysql.com/doc/mysql-utilities/1.6/en/mysqlrpladmin.html传统的复制切换，由于是base file和position的，切换非常复杂，是个技术活MHA最大的优点就是日志补偿机制，现在有了GTID，日志补偿分分钟的事情，完全可以">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/06/29/mysqlrpladmin/" title="MySQL5.7新特性：mysqlrpladmin + GTID" itemprop="url">MySQL5.7新特性：mysqlrpladmin + GTID</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-06-29T10:30:24.000Z" itemprop="datePublished">Jun 29 2016</time>
+    Updated:<time datetime="2016-07-01T08:59:21.000Z" itemprop="dateModified">Jul 1 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#基本命令"><span class="toc-number">1.</span> <span class="toc-text">基本命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重点函数"><span class="toc-number">2.</span> <span class="toc-text">重点函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态检查_health"><span class="toc-number">3.</span> <span class="toc-text">状态检查 health</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#health"><span class="toc-number">3.1.</span> <span class="toc-text">health</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#elect"><span class="toc-number">3.2.</span> <span class="toc-text">elect</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#主动切换"><span class="toc-number">4.</span> <span class="toc-text">主动切换</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover"><span class="toc-number">4.1.</span> <span class="toc-text">switchover</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover_+_—demote-master"><span class="toc-number">4.2.</span> <span class="toc-text">switchover + —demote-master</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover_的Bug"><span class="toc-number">4.3.</span> <span class="toc-text">switchover 的Bug</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#故障切换"><span class="toc-number">5.</span> <span class="toc-text">故障切换</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#failover"><span class="toc-number">5.1.</span> <span class="toc-text">failover</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#QA"><span class="toc-number">5.2.</span> <span class="toc-text">QA</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="http://dev.mysql.com/doc/mysql-utilities/1.6/en/mysqlrpladmin.html" target="_blank" rel="external">http://dev.mysql.com/doc/mysql-utilities/1.6/en/mysqlrpladmin.html</a><br>传统的复制切换，由于是base file和position的，切换非常复杂，是个技术活<br>MHA最大的优点就是日志补偿机制，现在有了GTID，日志补偿分分钟的事情，完全可以替代MHA  </p>
+</blockquote>
+<h2 id="基本命令">基本命令</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">Available Commands:</div><div class="line"></div><div class="line">  elect       - perform best slave election and report best slave</div><div class="line">  failover    - conduct failover from master to best slave</div><div class="line">  gtid        - <span class="operator"><span class="keyword">show</span> <span class="keyword">status</span> <span class="keyword">of</span> <span class="keyword">global</span> <span class="keyword">transaction</span> id <span class="keyword">variables</span></span></div><div class="line">                also displays uuids <span class="keyword">for</span> <span class="keyword">all</span> servers</div><div class="line">  health      - display the replication health</div><div class="line">  <span class="keyword">reset</span>       - <span class="keyword">stop</span> <span class="keyword">and</span> <span class="keyword">reset</span> <span class="keyword">all</span> slaves</div><div class="line">  <span class="keyword">start</span>       - <span class="keyword">start</span> <span class="keyword">all</span> slaves</div><div class="line">  <span class="keyword">stop</span>        - <span class="keyword">stop</span> <span class="keyword">all</span> slaves</div><div class="line">  switchover  - perform <span class="keyword">slave</span> promotion</div><div class="line"></div><div class="line">  Note:</div><div class="line">        elect, gtid <span class="keyword">and</span> health require <span class="comment">--master and either</span></div><div class="line">        <span class="comment">--slaves or --discover-slaves-login;</span></div><div class="line"></div><div class="line">        failover requires <span class="comment">--slaves;</span></div><div class="line"></div><div class="line">        switchover requires <span class="comment">--master, --new-master and either</span></div><div class="line">        <span class="comment">--slaves or --discover-slaves-login;</span></div><div class="line"></div><div class="line">        <span class="keyword">start</span>, <span class="keyword">stop</span> <span class="keyword">and</span> <span class="keyword">reset</span> require <span class="comment">--slaves (and --master is optional)</span></div></pre></td></tr></table></figure>
+
+<h2 id="重点函数">重点函数</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS()</span></div><div class="line"><span class="keyword">select</span> <span class="keyword">GTID_SUBTRACT</span>()</div></pre></td></tr></table></figure>
+
+<p>下面会重点分析和实现部分重要的操作  </p>
+<h2 id="状态检查_health">状态检查 health</h2>
+<h3 id="health">health</h3>
+<blockquote>
+<p>—master<br>—slaves</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">mysqlrpladmin --master=rpl<span class="emphasis">_admin:rpl_</span>admin@$host1:3306 --slaves=rpl<span class="emphasis">_admin:rpl_</span>admin@$host2,rpl<span class="emphasis">_admin:rpl_</span>admin@$host3  health</div><div class="line"></div><div class="line"># Checking privileges.</div><div class="line">#</div><div class="line"><span class="header"># Replication Topology Health:</span></div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line"><span class="header">| host            | port  | role    | state  | gtid_mode  | health  |</span></div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line">| $host1          | 3306  | MASTER  | UP     | ON         | OK      |</div><div class="line">| $host3          | 3306  | SLAVE   | UP     | ON         | OK      |</div><div class="line"><span class="header">| $host2          | 3306  | SLAVE   | UP     | ON         | OK      |</span></div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line"># ...done.</div></pre></td></tr></table></figure>
+
+<h3 id="elect">elect</h3>
+<blockquote>
+<p>选举报告最新的从<br>—master<br>—slaves<br>—candidates  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">mysqlrpladmin --master=rpl<span class="emphasis">_admin:rpl_</span>admin@$host3:3306 --slaves=rpl<span class="emphasis">_admin:rpl_</span>admin@$host2,rpl<span class="emphasis">_admin:rpl_</span>admin@$host1  elect</div><div class="line"></div><div class="line"><span class="label">WARNING: </span>Using a password on the command line interface can be insecure.</div><div class="line"># Checking privileges.</div><div class="line"># Electing candidate slave from known slaves.</div><div class="line"># Best slave found is located on $host2:3306.</div><div class="line"># ...done.</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>加上—candidates=rpl_admin:rpl_admin@$host1</strong></li>
+</ul>
+<blockquote>
+<p>如果想指定选举哪个，就candidates指定哪个  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="title">mysqlrpladmin</span> --master=rpl_admin:rpl_admin@<span class="variable">$host3</span>:<span class="number">3306</span> --slaves=rpl_admin:rpl_admin@<span class="variable">$host2</span>,rpl_admin:rpl_admin@<span class="variable">$host1</span> --candidates=rpl_admin:rpl_admin@<span class="variable">$host1</span>  elect</div><div class="line"></div><div class="line">WARNING: Using a password <span class="built_in">on</span> the command line interface can be insecure.</div><div class="line"><span class="comment"># Checking privileges.</span></div><div class="line"><span class="comment"># Electing candidate slave from known slaves.</span></div><div class="line"><span class="comment"># Best slave found is located on $host1:3306.</span></div><div class="line"><span class="comment"># ...done.</span></div></pre></td></tr></table></figure>
+
+<h2 id="主动切换">主动切换</h2>
+<blockquote>
+<p>为了维护，主动更换主从关系  </p>
+</blockquote>
+<h3 id="switchover">switchover</h3>
+<blockquote>
+<p>—master<br>—slaves<br>—new-master<br>switchover<br>下线master，从剩余的slave中，重新搭建主从关系  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">mysqlrpladmin --master=rpl_admin:rpl_admin@$host1:<span class="number">3306</span> --slaves=rpl_admin:rpl_admin@$host2,rpl_admin:rpl_admin@$host3 --<span class="keyword">new</span>-master=rpl_admin:rpl_admin@$host3:<span class="number">3306</span>  switchover</div><div class="line"></div><div class="line"><span class="preprocessor"># Checking privileges.</span></div><div class="line"><span class="preprocessor"># Performing switchover from master at $host1:3306 to slave at $host3:3306.</span></div><div class="line"><span class="preprocessor"># Checking candidate slave prerequisites.</span></div><div class="line"><span class="preprocessor"># Checking slaves configuration to master.</span></div><div class="line"><span class="preprocessor"># Waiting for slaves to catch up to old master.</span></div><div class="line"><span class="preprocessor"># Stopping slaves.</span></div><div class="line"><span class="preprocessor"># Performing STOP on all slaves.</span></div><div class="line"><span class="preprocessor"># Switching slaves to new master.</span></div><div class="line"><span class="preprocessor"># Starting all slaves.</span></div><div class="line"><span class="preprocessor"># Performing START on all slaves.</span></div><div class="line"><span class="preprocessor"># Checking slaves for errors.</span></div><div class="line"><span class="preprocessor"># Switchover complete.</span></div><div class="line"><span class="preprocessor">#</span></div><div class="line"><span class="preprocessor"># Replication Topology Health:</span></div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line">| host            | port  | role    | state  | gtid_mode  | health  |</div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line">| $host3	      | <span class="number">3306</span>  |<span class="constant"> MASTER </span> |<span class="constant"> UP </span>    |<span class="constant"> ON </span>        |<span class="constant"> OK </span>     |</div><div class="line">| $host2		  | <span class="number">3306</span>  |<span class="constant"> SLAVE </span>  |<span class="constant"> UP </span>    |<span class="constant"> ON </span>        |<span class="constant"> OK </span>     |</div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line"><span class="preprocessor"># ...done.</span></div><div class="line"></div><div class="line"></div><div class="line">同事，老master $host1已经下线</div></pre></td></tr></table></figure>
+
+<h3 id="switchover_+_—demote-master">switchover + —demote-master</h3>
+<blockquote>
+<p>—master<br>—slaves<br>—new-master<br>—demote-master<br>switchover<br>降级master为slave，并且重新搭建主从关系</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">mysqlrpladmin --master=rpl_admin:rpl_admin@$host3:<span class="number">3306</span> --slaves=rpl_admin:rpl_admin@$host2,rpl_admin:rpl_admin@$host1 --<span class="keyword">new</span>-master=rpl_admin:rpl_admin@$host1:<span class="number">3306</span> --demote-master switchover</div><div class="line"></div><div class="line"><span class="preprocessor"># Checking privileges.</span></div><div class="line"><span class="preprocessor"># Performing switchover from master at $host3:3306 to slave at $host1:3306.</span></div><div class="line"><span class="preprocessor"># Checking candidate slave prerequisites.</span></div><div class="line"><span class="preprocessor"># Checking slaves configuration to master.</span></div><div class="line"><span class="preprocessor"># Waiting for slaves to catch up to old master.</span></div><div class="line"><span class="preprocessor"># Stopping slaves.</span></div><div class="line"><span class="preprocessor"># Performing STOP on all slaves.</span></div><div class="line"><span class="preprocessor"># Demoting old master to be a slave to the new master.</span></div><div class="line"><span class="preprocessor"># Switching slaves to new master.</span></div><div class="line"><span class="preprocessor"># Starting all slaves.</span></div><div class="line"><span class="preprocessor"># Performing START on all slaves.</span></div><div class="line"><span class="preprocessor"># Checking slaves for errors.</span></div><div class="line"><span class="preprocessor"># Switchover complete.</span></div><div class="line"><span class="preprocessor">#</span></div><div class="line"><span class="preprocessor"># Replication Topology Health:</span></div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line">| host            | port  | role    | state  | gtid_mode  | health  |</div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line">| $host1          | <span class="number">3306</span>  |<span class="constant"> MASTER </span> |<span class="constant"> UP </span>    |<span class="constant"> ON </span>        |<span class="constant"> OK </span>     |</div><div class="line">| $host2          | <span class="number">3306</span>  |<span class="constant"> SLAVE </span>  |<span class="constant"> UP </span>    |<span class="constant"> ON </span>        |<span class="constant"> OK </span>     |</div><div class="line">| $host3          | <span class="number">3306</span>  |<span class="constant"> SLAVE </span>  |<span class="constant"> UP </span>    |<span class="constant"> ON </span>        |<span class="constant"> OK </span>     |</div><div class="line">+-----------------+-------+---------+--------+------------+---------+</div><div class="line"><span class="preprocessor"># ...done.</span></div></pre></td></tr></table></figure>
+
+<h3 id="switchover_的Bug">switchover 的Bug</h3>
+<ul>
+<li><strong>无故创建一个user</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">假设：<span class="comment">--rpl-user=rpl</span></div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">USER</span> <span class="string">'rpl'</span>@<span class="string">'$host'</span> <span class="keyword">IDENTIFIED</span> <span class="keyword">WITH</span> <span class="string">'mysql_native_password'</span> <span class="keyword">AS</span> <span class="string">'xx'</span>;</span></div><div class="line"></div><div class="line">问题：创建的这个用户，权限是usage，并不是replication slave.  所以会导致连接报错</div></pre></td></tr></table></figure>
+
+<h2 id="故障切换">故障切换</h2>
+<blockquote>
+<p>master已经挂了，没办法访问，只能用failover命令<br>这是被动切换  </p>
+</blockquote>
+<h3 id="failover">failover</h3>
+<blockquote>
+<p>—slaves<br>—candidates  </p>
+</blockquote>
+<ul>
+<li>1.5 failover的bug</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">mysqlrpladmin  <span class="comment">--slaves=rpl_admin:rpl_admin@$host1,rpl_admin:rpl_admin@$host2 --candidates=rpl_admin:rpl_admin@$host2 failover --verbose</span></div><div class="line"></div><div class="line"><span class="comment"># Checking privileges.</span></div><div class="line"><span class="comment"># Performing failover.</span></div><div class="line"><span class="comment"># Checking eligibility of slave $host2:3306 for candidate.</span></div><div class="line"><span class="comment">#   GTID_MODE=ON ... Ok</span></div><div class="line"><span class="comment">#   Replication user exists ... Ok</span></div><div class="line">ERROR: The server $host2:<span class="number">3306</span> does <span class="operator">not</span> comply <span class="built_in">to</span> <span class="operator">the</span> latest GTID feature support. Errors:</div><div class="line">    Missing gtid_executed <span class="keyword">system</span> <span class="built_in">variable</span>.</div><div class="line"></div><div class="line"><span class="keyword">http</span>://bugs.mysql.com/bug.php?id=<span class="number">80189</span></div><div class="line"></div><div class="line"><span class="number">1.6</span>版本会fixed掉</div></pre></td></tr></table></figure>
+
+<h3 id="QA">QA</h3>
+<ul>
+<li><strong>—discover-slaves-login=rpl_admin:rpl_admin  为什么不用这个命令</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1) 建议不用这个命令，发现不及时   </div><div class="line">2）需要每台服务器配置report_host,report_port</div></pre></td></tr></table></figure>
+
+<h2 id="总结">总结</h2>
+<ol>
+<li>未来就是用mysql-utilities来替代所有第三方工具  </li>
+<li>目前1.5版本还有点问题，期待1.6 快点到来  </li>
+</ol>
+<p><img src="image/utilities.jpg" alt="utilities" title="utilities"></p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/06/29/mysqlrpladmin/" data-title="MySQL5.7新特性：mysqlrpladmin + GTID | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/06/29/lossless_repl/"  title="MySQL5.7新特性：lossless replication 无损复制">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7新特性：lossless replication 无损复制
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/06/29/mysqlrpladmin/" data-title="MySQL5.7新特性：mysqlrpladmin + GTID" data-url="https://Keithlan.github.io/2016/06/29/mysqlrpladmin/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#基本命令"><span class="toc-number">1.</span> <span class="toc-text">基本命令</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重点函数"><span class="toc-number">2.</span> <span class="toc-text">重点函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#状态检查_health"><span class="toc-number">3.</span> <span class="toc-text">状态检查 health</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#health"><span class="toc-number">3.1.</span> <span class="toc-text">health</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#elect"><span class="toc-number">3.2.</span> <span class="toc-text">elect</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#主动切换"><span class="toc-number">4.</span> <span class="toc-text">主动切换</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover"><span class="toc-number">4.1.</span> <span class="toc-text">switchover</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover_+_—demote-master"><span class="toc-number">4.2.</span> <span class="toc-text">switchover + —demote-master</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#switchover_的Bug"><span class="toc-number">4.3.</span> <span class="toc-text">switchover 的Bug</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#故障切换"><span class="toc-number">5.</span> <span class="toc-text">故障切换</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#failover"><span class="toc-number">5.1.</span> <span class="toc-text">failover</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#QA"><span class="toc-number">5.2.</span> <span class="toc-text">QA</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>10</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>10</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
