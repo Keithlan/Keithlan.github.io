@@ -1,0 +1,775 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>How MySQL5.7 new feature rocks your heart | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="新增特性
+
+
+
+种类
+特性名称
+备注
+相关链接
+
+
+
+
+Performance&amp;amp;Scalability
+online rename index
+inplace方式，针对所有引擎
+alter index
+
+
+Performance&amp;amp;Scalability
+online alter va">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/07/14/MySQL57_new_feature/" title="How MySQL5.7 new feature rocks your heart" itemprop="url">How MySQL5.7 new feature rocks your heart</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-07-14T13:55:24.000Z" itemprop="datePublished">Jul 14 2016</time>
+    Updated:<time datetime="2016-07-14T13:56:13.000Z" itemprop="dateModified">Jul 14 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#新增特性"><span class="toc-number">1.</span> <span class="toc-text">新增特性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#新特性描述"><span class="toc-number">2.</span> <span class="toc-text">新特性描述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#移除的特性"><span class="toc-number">3.</span> <span class="toc-text">移除的特性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键特性详解"><span class="toc-number">4.</span> <span class="toc-text">关键特性详解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Adding_JSON_Support_to_MySQL"><span class="toc-number">4.1.</span> <span class="toc-text">Adding JSON Support to MySQL</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Generated_Columns_&_Indexable_Virtual_Columns"><span class="toc-number">4.2.</span> <span class="toc-text">Generated Columns & Indexable Virtual Columns</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Performance_&_Scalability"><span class="toc-number">4.3.</span> <span class="toc-text">Performance & Scalability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Online_Operations"><span class="toc-number">4.4.</span> <span class="toc-text">Online Operations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Optimizer_Improvements"><span class="toc-number">4.5.</span> <span class="toc-text">Optimizer Improvements</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Parser_Refactoring"><span class="toc-number">4.6.</span> <span class="toc-text">Parser Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Optimizer_Refactoring"><span class="toc-number">4.7.</span> <span class="toc-text">Optimizer Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Work_towards_a_New_Cost_Model"><span class="toc-number">4.8.</span> <span class="toc-text">Work towards a New Cost Model</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Page_Compression"><span class="toc-number">4.9.</span> <span class="toc-text">Page Compression</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Fulltext_Search"><span class="toc-number">4.10.</span> <span class="toc-text">InnoDB Fulltext Search</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Performance_Schema"><span class="toc-number">4.11.</span> <span class="toc-text">Performance Schema</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SYS_Schema"><span class="toc-number">4.12.</span> <span class="toc-text">SYS Schema</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Fabric_Support"><span class="toc-number">4.13.</span> <span class="toc-text">Fabric Support</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Secure_by_Default"><span class="toc-number">4.14.</span> <span class="toc-text">Secure by Default</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Security_Features"><span class="toc-number">4.15.</span> <span class="toc-text">Security Features</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Native_Partitioning"><span class="toc-number">4.16.</span> <span class="toc-text">InnoDB Native Partitioning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_General_Tablespaces"><span class="toc-number">4.17.</span> <span class="toc-text">InnoDB General Tablespaces</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Temporary_Table_Performance"><span class="toc-number">4.18.</span> <span class="toc-text">InnoDB Temporary Table Performance</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Buffer_Pool—Dump_and_Load"><span class="toc-number">4.19.</span> <span class="toc-text">Buffer Pool—Dump and Load</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Tools"><span class="toc-number">4.20.</span> <span class="toc-text">Tools</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Community_Contributions"><span class="toc-number">4.21.</span> <span class="toc-text">Community Contributions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Triggers"><span class="toc-number">4.22.</span> <span class="toc-text">Triggers</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IGNORE_Clause"><span class="toc-number">4.23.</span> <span class="toc-text">IGNORE Clause</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#STRICT_Mode"><span class="toc-number">4.24.</span> <span class="toc-text">STRICT Mode</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GIS:_InnoDB_Spatial_Indexes"><span class="toc-number">4.25.</span> <span class="toc-text">GIS: InnoDB Spatial Indexes</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GIS:_Geometry_Functions_&_Formats"><span class="toc-number">4.26.</span> <span class="toc-text">GIS: Geometry Functions & Formats</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Multi-Source_Replication"><span class="toc-number">4.27.</span> <span class="toc-text">Multi-Source Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_Multi-Threaded_Slaves_(MTS)"><span class="toc-number">4.28.</span> <span class="toc-text">Replication — Multi-Threaded Slaves (MTS)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Semi-Sync_Replication_(lossless)"><span class="toc-number">4.29.</span> <span class="toc-text">Semi-Sync Replication (lossless)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_GTID_（online）"><span class="toc-number">4.30.</span> <span class="toc-text">Replication — GTID （online）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_Refactoring"><span class="toc-number">4.31.</span> <span class="toc-text">Replication — Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Other_Replication_Features"><span class="toc-number">4.32.</span> <span class="toc-text">Other Replication Features</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Other_Improvements"><span class="toc-number">4.33.</span> <span class="toc-text">Other Improvements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键参数"><span class="toc-number">5.</span> <span class="toc-text">关键参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-number">6.</span> <span class="toc-text">参考</span></a></li></ol>
+		</div>
+		
+		<p><img src="/image/mysql_innodb_arch/MySQL51.jpg" alt="MySQL51" title="async"></p>
+<p><img src="/image/mysql_innodb_arch/MySQL55.jpg" alt="MySQL55" title="async"></p>
+<p><img src="/image/mysql_innodb_arch/MySQL56.jpg" alt="MySQL56" title="async"></p>
+<p><img src="/image/mysql_innodb_arch/MySQL_57.jpg" alt="MySQL_57" title="async"></p>
+<h2 id="新增特性">新增特性</h2>
+<table>
+<thead>
+<tr>
+<th>种类</th>
+<th>特性名称</th>
+<th>备注</th>
+<th>相关链接</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>online rename index</td>
+<td>inplace方式，针对所有引擎</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/alter-table.html" target="_blank" rel="external">alter index</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>online alter varchar</td>
+<td>[0~255]是inplace修改，[256 ~ 256+] 是inplace修改</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">online alter varchar</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>innochecksum</td>
+<td>增强版本的innochecksum</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/innochecksum.html" target="_blank" rel="external">innochecksum</a>,<a href="http://mysqlserverteam.com/improving-innochecksum/" target="_blank" rel="external">Improving Innochecksum</a>,<a href="https://www.percona.com/blog/2015/03/16/deep-dive-mysqls-innochecksum-tool/" target="_blank" rel="external">deep innochecksum</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>innodb_buffer_pool_dump_pct</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">innodb_buffer_pool_dump_pct</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>multi page cleaner</td>
+<td>innodb_page_cleaners</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">innodb_page_cleaners</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>online DDL for optimize, alter engine=innodb</td>
+<td>inplace的方式优化表</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/innodb-create-index-overview.html" target="_blank" rel="external">online ddl</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>可传输表空间</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/tablespace-copying.html" target="_blank" rel="external">可传输表空间</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>buffer_pool动态调整</td>
+<td>innodb_buffer_pool_size</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/innodb-buffer-pool-resize.html#innodb-buffer-pool-online-resize" target="_blank" rel="external">Configuring InnoDB Buffer Pool Size Online</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>创建所有和重建索引的时候使用bulk load</td>
+<td>sorted index build,innodb_fill_factor</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/sorted-index-builds.html" target="_blank" rel="external">Sorted Index Builds</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>缩小undo空间</td>
+<td>innodb_undo_log_truncate</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/truncate-undo-tablespace.html" target="_blank" rel="external">Truncating Undo Logs</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>general tablespaces</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/general-tablespaces.html" target="_blank" rel="external">InnoDB General Tablespaces</a></td>
+</tr>
+<tr>
+<td>Performance&amp;Scalability</td>
+<td>show_compatibility_56</td>
+<td>兼容5.6参数用法</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/performance-schema-variable-table-migration.html" target="_blank" rel="external">Migrating to Performance Schema System and Status Variable Tables</a></td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>Master dump thread improvements</td>
+<td>提升dump thread，减少锁竞争，增大吞吐量</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">improvements</a></td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>Changing the replication master without STOP SLAVE</td>
+<td>在线change master</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/change-master-to.html" target="_blank" rel="external">CHANGE MASTER</a>,<a href="http://dev.mysql.com/doc/refman/5.7/en/replication-solutions-switch.html" target="_blank" rel="external">Switching Masters During Failover</a></td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>Multi-source replication</td>
+<td>多源复制</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/replication-multi-source.html" target="_blank" rel="external">Multi-Source Replication</a></td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>Group Replication</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/replication-group-sql.html" target="_blank" rel="external">SQL Statements for Controlling Group Replication</a>,<a href="http://dev.mysql.com/doc/refman/5.7/en/performance-schema-replication-tables.html" target="_blank" rel="external">Group Replication</a></td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>online GTID</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>multi-threaded replication</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Replication improvements</td>
+<td>lossless semi-sync replication</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Performance Schema</td>
+<td>sys schema增强版</td>
+<td>包含了一些列ps的操作</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/sys-schema.html" target="_blank" rel="external">sys schema</a></td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>explain增强</td>
+<td>可以根据connection_id查看</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/explain-for-connection.html" target="_blank" rel="external">explain connection</a></td>
+</tr>
+<tr>
+<td>Optimizer</td>
+<td>hint增强</td>
+<td>optimizer_switch</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/optimizer-hints.html" target="_blank" rel="external">hints</a></td>
+</tr>
+<tr>
+<td>JSON support</td>
+<td>提供JSON支持</td>
+<td>NoSQL扩展</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">JSON</a></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>密码过期策略</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/password-expiration-policy.html" target="_blank" rel="external">Password Expiration Policy</a></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>账号锁定</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/account-locking.html" target="_blank" rel="external">account-locking</a></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>mysql初始化</td>
+<td>1，只创建root@local用户 2，不创建test库</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/data-directory-initialization-mysqld.html" target="_blank" rel="external">initial</a></td>
+</tr>
+<tr>
+<td>Security</td>
+<td>支持SSL连接</td>
+<td>更加安全</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/using-secure-connections.html" target="_blank" rel="external">SSL</a></td>
+</tr>
+<tr>
+<td>Other</td>
+<td>Generated Columns</td>
+<td>虚拟列</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/create-table-generated-columns.html" target="_blank" rel="external">CREATE TABLE and Generated Columns</a></td>
+</tr>
+<tr>
+<td>Other</td>
+<td>mysql client增强</td>
+<td>ctrl+c 终止操作，但是不会退出终端</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">ctrl+c</a></td>
+</tr>
+<tr>
+<td>Other</td>
+<td>数据库重命名</td>
+<td>—rewrite-db</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">rewrite dbname</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="新特性描述">新特性描述</h2>
+<blockquote>
+<p>Performance &amp; Scalability: innoDB可伸缩性增强，临时表的性能，快速的online操作以及bulk load<br>JSON Support: JSON的支持，可以让RDB和NoSQL结合，让其更加灵活<br>Replication improvements: multi-source replication, multi-threaded slave enhancements, online GTIDs, and enhanced semi-sync replication 超级特性<br>Performance Schema: new SYS Schema 可以更加全面和底层的了解到数据库的性能<br>Security: MySQL5.7的新特性可以让数据库更加安全<br>Optimizer: 在解析器，优化器，代价模型上重构了大量的代码。并且在管理性，扩展性，性能方面得到了大量的提升<br>GIS: 地理位置查询,支持InnoDB spatial索引  </p>
+</blockquote>
+<h2 id="移除的特性">移除的特性</h2>
+<ul>
+<li><strong><a href="http://dev.mysql.com/doc/refman/5.7/en/migrating-to-year4.html" target="_blank" rel="external">YEAR(2) Limitations and Migrating to YEAR(4)</a></strong></li>
+<li><strong>storage_engine 用 default_storage_engine 替换</strong></li>
+<li><strong>去除thread_concurrency 参数</strong></li>
+<li><strong>去除 timed_mutexes 参数</strong></li>
+<li><strong>alter table 不在有 ignore语句</strong></li>
+<li><strong>insert delayed 不在支持</strong></li>
+<li><strong>mysql_upgrade 不在支持—basedir,—datadir,—tmpdir </strong></li>
+<li><strong>SHOW ENGINE INNODB MUTEX 废除</strong></li>
+<li><strong>innodb_monitor，innodb_lock_monitor废除，代替的是： innodb_status_output， innodb_status_output_locks</strong></li>
+<li><strong>innodb_use_sys_malloc and innodb_additional_mem_pool_size 废除</strong></li>
+<li><strong>innodb_log_checksum_algorithm废除</strong></li>
+</ul>
+<h2 id="关键特性详解">关键特性详解</h2>
+<h3 id="Adding_JSON_Support_to_MySQL">Adding JSON Support to MySQL</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">a. 随着<span class="built_in">JSON</span>被MySQL支持，就可以将NoSQL的灵活性与关系型数据库的长处结合起来，强大的一塌糊涂  </div><div class="line">b. <span class="built_in">JSON</span> 数据类型已经被支持，源生的<span class="built_in">JSON</span>支持让MySQL与<span class="built_in">JSON</span>更加紧密联系</div></pre></td></tr></table></figure>
+
+<h3 id="Generated_Columns_&amp;_Indexable_Virtual_Columns">Generated Columns &amp; Indexable Virtual Columns</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">a. Generated列和普通的列是不一样的，该列用户不能插入值，但是可以根据用户定义的table definition，通过表达式由其他regular列计算而来  </div><div class="line">b. Generated column 可以被物化，也可以不被物化。物化的列，可以真实的存储下来（stored）。不被物化的列，我们叫它虚拟列（virtual）  </div><div class="line">d. 除此之外, 目前已经支持对虚拟列创建二级索引，这样可以更快的检索获取虚拟列的数据  </div><div class="line">e. 虚拟列的实现是这样的：他们并不会存在主键记录里面，但是他们的metadata已经在InnoDB 系统表和metadata <span class="operator"><span class="keyword">cache</span>里面注册  </span></div><div class="line">f. 虚拟列的好处：<span class="number">1</span>，灵活 <span class="number">2</span>，节省空间 <span class="number">3</span>，增加和删除虚拟列不需要rebuild <span class="keyword">table</span>  </div><div class="line">g. 虚拟列的缺点：<span class="number">1</span>，由于列值不被物化，查询检索的速度没有普通列快  </div><div class="line">h. 但是，虚拟列值现在可以被物化到二级索引中，那么查询速度就会快很多。这样就大大提升了虚拟列的实用价值  </div><div class="line">i. 不仅如此，在虚拟列上创建索引也是ONLINE的啦   </div><div class="line"></div><div class="line">z. 关于generated <span class="keyword">column</span> 官方博客： http://mysqlserverteam.com/generated-<span class="keyword">columns</span>-<span class="keyword">in</span>-mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">5</span>/</div></pre></td></tr></table></figure>
+
+<h3 id="Performance_&amp;_Scalability">Performance &amp; Scalability</h3>
+<blockquote>
+<p>性能和可伸缩性一直都是MySQL的重点优化对象<br>在InnoDB read-only（RO）方面，通过不断地迭代研发，让server层的connection处理更加快速<br>在InnoDB read-write（RW）方面，改善了很多internal的操作（如：flushing/purging 更加快速和稳定），以及快速的bulk 数据导入  </p>
+</blockquote>
+<ul>
+<li><strong>InnoDB Read-Only Scalability</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">a. 在RO中，涉及到Meta Data Locking(MDL)相关的竞争，在server层我们都移除了。</div><div class="line">b. 对于InnoDB，THR_LOCK <span class="operator"><span class="keyword">lock</span>也移除了  </span></div><div class="line"></div><div class="line">z1. MySQL Performance: reaching <span class="number">500</span>K QPS <span class="keyword">with</span> MySQL <span class="number">5.7</span> : http://dimitrik.free.fr/blog/archives/<span class="number">09</span>-<span class="number">01</span>-<span class="number">2013</span>_09-<span class="number">30</span>-<span class="number">2013.</span>html  </div><div class="line">z2. MySQL <span class="number">5.7</span> : Over <span class="number">1</span>M QPS <span class="keyword">with</span> <span class="keyword">InnoDB</span> Memcached <span class="keyword">Plugin</span> : http://mysqlserverteam.com/mysql-<span class="number">5</span>-<span class="number">7</span>-over-<span class="number">1</span>m-qps-<span class="keyword">with</span>-<span class="keyword">innodb</span>-memcached-<span class="keyword">plugin</span>/  </div><div class="line">z3. <span class="keyword">Transaction</span> life cycle improvements <span class="keyword">in</span> <span class="number">5.7</span><span class="number">.3</span> : http://mysqlserverteam.com/<span class="keyword">transaction</span>-life-cycle-improvements-<span class="keyword">in</span>-<span class="number">5</span>-<span class="number">7</span>-<span class="number">3</span>/  </div><div class="line">z4. MySQL <span class="number">5.7</span><span class="number">.3</span>: Deep dive <span class="keyword">into</span> <span class="number">1</span>mil QPS <span class="keyword">with</span> <span class="keyword">InnoDB</span> Memcached : http://mysqlserverteam.com/mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">3</span>-deep-dive-<span class="keyword">into</span>-<span class="number">1</span>mil-qps-<span class="keyword">with</span>-<span class="keyword">innodb</span>-memcached/</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>InnoDB Read-Write Scalability</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. 移除了InnoDB <span class="keyword">index</span> lock 竞争  </div><div class="line">b. 何为<span class="keyword">index</span> lock呢？顾名思义，就是DML中会在整个<span class="keyword">index</span> tree 结构上加<span class="keyword">index</span> 锁，现在改进为在<span class="keyword">block</span>中加锁，这样粒度更加细了  </div><div class="line"></div><div class="line">z. MySQL-<span class="number">5.7</span> improves DML oriented workloads: http:<span class="comment">//mysqlserverteam.com/mysql-5-7-improves-dml-oriented-workloads/</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>InnoDB Faster &amp; Parallel Flushing</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. 当批量flush的时候，减少页的扫描来加速页的刷新  </div><div class="line">b. 页扫描复杂度由原来的<span class="keyword">O</span>(n*n) 变成 <span class="keyword">O</span>(n)  </div><div class="line">c. 现在还有多线程刷新机制，以前的刷新线程的拼接不复存在  </div><div class="line">d. 另外还修改了自适应刷新算法和机制来或者更大的一致性以及更平滑的吞吐量</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Speeding up Connection Handling</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. 在一些短生命周期的应用中，如：PHP，也许一个连接只执行一个query。意味着大部分时间都花在了创建和关闭连接上，很浪费  </div><div class="line">b. 在<span class="number">5.7</span>中，我们降低了线程初始化和连接初始化的负载，比<span class="number">5.6</span> 多了一倍的处理能力，从原来的<span class="number">26</span>k每秒到现在的<span class="number">56</span>k每秒  </div><div class="line"></div><div class="line">z. Improving connect<span class="regexp">/disconnect performance: http:/</span><span class="regexp">/mysqlserverteam.com/im</span>proving-connectdisconnect-performance<span class="regexp">/</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Bulk Data Load Improvements</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">a. Bulk <span class="operator"><span class="keyword">load</span> 主要是为了创建索引  </span></div><div class="line">b. 现在可以bulk sorted <span class="keyword">index</span> build，因此，创建索引会非常快  </div><div class="line">c. 以前的版本，MySQL只能一个一个记录的在基础表上扫描和创建索引，然后现在，可以一次读取多个记录并排序</div></pre></td></tr></table></figure>
+
+<h3 id="Online_Operations">Online Operations</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">a. "Always ON" 一直以来都是web 解决方案的艺术追求最基本的特点    </div><div class="line">b. 对于DBA和开发来说，调优和扩展生产系统的时候服务不受打断太重要了  </div><div class="line">c. GTID现在可以online了，所以可以在线切换，不受任何影响  </div><div class="line">d. innodb_buffer_pool_size 可以动态调整，也是online的  </div><div class="line">e. 如果你配置了独立的UNDO表空间，那么<span class="operator"><span class="keyword">truncate</span> undo <span class="keyword">logs</span> 是自动的，而别不会对线上服务有影响，这样可以避免undo无限增大  </span></div><div class="line">f. 索引重命名也支持online  </div><div class="line">g. 增大<span class="built_in">varchar</span> 也可以online，但是有条件限制。 <span class="number">0</span>~<span class="number">255</span> 范围内调整online，<span class="number">256</span> ~ <span class="number">256</span>+ 范围内 online，不能跨越两个尺寸的增长  </div><div class="line">h. <span class="keyword">CHANGE</span> REPLICATION FILTER 是online 动态的，不需要停机  </div><div class="line">i. CANGE <span class="keyword">MASTER</span> <span class="keyword">TO</span>限制也可以支持online 动态，不需要<span class="keyword">stop</span> <span class="keyword">slave</span>了  </div><div class="line"></div><div class="line">z1. Enabling <span class="keyword">Global</span> <span class="keyword">Transaction</span> Identifiers Without Downtime <span class="keyword">in</span> MySQL <span class="number">5.7</span><span class="number">.6</span> : http://mysqlhighavailability.com/enabling-gtids-without-downtime-<span class="keyword">in</span>-mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">6</span>/  </div><div class="line">z2. Resizing the <span class="keyword">InnoDB</span> Buffer Pool Online : http://mysqlserverteam.com/resizing-buffer-pool-online/  </div><div class="line">z3. MySQL-<span class="number">5.7</span><span class="number">.3</span>- Making MySQL <span class="keyword">Slave</span> Replication Filters Dynamic ： http://mysqlserverteam.com/mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">3</span>-making-mysql-<span class="keyword">slave</span>-replication-filters-dynamic/</div></pre></td></tr></table></figure>
+
+<h3 id="Optimizer_Improvements">Optimizer Improvements</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">a. Query重写插件： 用户可以自己写插件，在SQL执行前，重写query，非常方便  </div><div class="line">b. 对于small limit语句是否选择索引的代价变小了  </div><div class="line">c. In query 现在优化成使用range扫描，以前的版本是通过改写query成 and/or 实现  </div><div class="line">d. union all 不再创建tempory表  </div><div class="line">e. Non-sorted 非排序字段现在在sort buffer中是压缩过的，这样可以最大利用sort buffer  </div><div class="line">f. <span class="operator"><span class="keyword">explain</span> 现在可以在执行的<span class="keyword">query</span>上跑，<span class="keyword">explain</span> <span class="keyword">for</span> <span class="keyword">connection</span>  </span></div><div class="line">g. JSON <span class="keyword">explain</span> 已经支持  </div><div class="line"></div><div class="line">z1. <span class="keyword">Write</span> Yourself a <span class="keyword">Query</span> Rewrite <span class="keyword">Plugin</span>: Part <span class="number">1</span> : http://mysqlserverteam.com/<span class="keyword">write</span>-yourself-a-<span class="keyword">query</span>-rewrite-<span class="keyword">plugin</span>-part-<span class="number">1</span>/   </div><div class="line">z2. <span class="keyword">Write</span> Yourself a <span class="keyword">Query</span> Rewrite <span class="keyword">Plugin</span>: Part <span class="number">2</span> : http://mysqlserverteam.com/<span class="keyword">write</span>-yourself-a-<span class="keyword">query</span>-rewrite-<span class="keyword">plugin</span>-part-<span class="number">2</span>/  </div><div class="line">z3. MySQL <span class="keyword">EXPLAIN</span> Explained: http://mysqlserverteam.com/mysql-<span class="keyword">explain</span>-explained/</div></pre></td></tr></table></figure>
+
+<h3 id="Parser_Refactoring">Parser Refactoring</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">a. 由于原来老的SQL解析器限制太多，不易于维护和扩展。  </div><div class="line">b. 之前做了很多预备工作，比如：<span class="operator"><span class="keyword">SELECT</span>,DML 的重构。  </span></div><div class="line">c. 现在打算重写整个解析器  </div><div class="line"></div><div class="line">z1. <span class="keyword">SQL</span> parser refactoring <span class="keyword">in</span> <span class="number">5.7</span><span class="number">.4</span> LAB <span class="keyword">release</span> : http://mysqlserverteam.com/<span class="keyword">sql</span>-parser-refactoring-<span class="keyword">in</span>-<span class="number">5</span>-<span class="number">7</span>-<span class="number">4</span>-lab-<span class="keyword">release</span>/</div></pre></td></tr></table></figure>
+
+<h3 id="Optimizer_Refactoring"><a href="http://mysqlserverteam.com/re-factoring-some-internals-of-prepared-statements-in-5-7/" target="_blank" rel="external">Optimizer Refactoring</a></h3>
+<h3 id="Work_towards_a_New_Cost_Model"><a href="http://mysqlserverteam.com/the-mysql-optimizer-cost-model-project/" target="_blank" rel="external">Work towards a New Cost Model</a></h3>
+<h3 id="Page_Compression">Page Compression</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. 透明页压缩在InnoDB层已经实现了  </div><div class="line">b. 这个特性可以在任何支持稀疏文件（sparse <span class="built_in">files</span>）和 空洞（punch hole）的操作系统/文件系统  </div><div class="line">c. 通俗来讲就是：给你一个<span class="number">16</span>k的页，你可以用你喜欢的算法去压缩，然后仅仅写入压缩后的数据。  </div><div class="line">d. 然后将这<span class="number">16</span>k种没有用到的block以punch hole的形式再写回文件系统</div></pre></td></tr></table></figure>
+
+<h3 id="InnoDB_Fulltext_Search">InnoDB Fulltext Search</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">z1. InnoDB supports plugin parser <span class="operator">in</span> fulltext index : <span class="keyword">http</span>://mysqlserverteam.com/innodb-supports-plugin-parser-<span class="operator">in</span>-fulltext-index/  </div><div class="line">z2. Rankings <span class="operator">with</span> InnoDB Full-Text Search : <span class="keyword">http</span>://mysqlserverteam.com/rankings-<span class="operator">with</span>-innodb-full-<span class="keyword">text</span>-search/</div></pre></td></tr></table></figure>
+
+<h3 id="Performance_Schema">Performance Schema</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">a. 在数据库管理系统中，监控对于用户、顾客都是非常重要的.   </div><div class="line">b. Performance Schema 是我们在监控领域里面的一个核心战略，第一次是在5.5的时候哦引进  </div><div class="line">c. 5.7中，我们加入了 Metadata Locking (WL#5879), Transactions (WL#5864), Memory Usage (WL#3249, WL#7777), Stored Programs (WL#5766), and Prepared Statements   </div><div class="line">d. 5.7中，揭露更多<span class="operator"><span class="keyword">show</span> <span class="keyword">slave</span> <span class="keyword">status</span>的信息, <span class="keyword">show</span> <span class="keyword">status</span> 和 <span class="keyword">show</span> <span class="keyword">variables</span>的之间的兼容性  </span></div><div class="line">e. <span class="number">5.7</span>中，会打印出long <span class="keyword">query</span>的处理过程进度报告  </div><div class="line">f. 对performance <span class="keyword">schema</span>的对内分配做了改变，之前的版本会在MySQL启动的时候就分配所有ps需要的内容，现在做到动态分配，按需分配  </div><div class="line">g. 在setup_actors中新增enabled列，让<span class="keyword">user</span>可以轻松和监控和不监控某些资源  </div><div class="line">h. 增加了两个实体来配置<span class="keyword">Query</span> <span class="built_in">text</span> 长度，<span class="keyword">SQL</span> <span class="built_in">text</span>和 digest ， 默认是<span class="number">1024</span>个bytes  </div><div class="line"></div><div class="line">z1. Performance <span class="keyword">Schema</span> implementation Internals: Registering instruments : http://mysqlserverteam.com/performance-<span class="keyword">schema</span>-implementation-internals-registering-instruments/  </div><div class="line">z2. MySQL Performance <span class="keyword">Schema</span> : Prepared Statements Instrumentation : http://mysqlserverteam.com/mysql-performance-<span class="keyword">schema</span>-prepared-statements-instrumentation/  </div><div class="line">z3. MySQL Performance <span class="keyword">Schema</span>: Instrumentation Exceptions : http://mysqlserverteam.com/mysql-performance-<span class="keyword">schema</span>-instrumentation-exceptions/  </div><div class="line">z4. MySQL Statement Digests : http://mysqlserverteam.com/mysql-statement-digests/</div></pre></td></tr></table></figure>
+
+<h3 id="SYS_Schema">SYS Schema</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. SYS schema 是DBA的福音，他整合了Information_Schema ， performance schema 以及更多来帮助DBA和开发来更简单的使用和配置ps  </div><div class="line"></div><div class="line">z. The MySQL SYS Schema <span class="operator">in</span> MySQL <span class="number">5.7</span><span class="number">.7</span> : <span class="keyword">http</span>://mysqlserverteam.com/<span class="operator">the</span>-mysql-sys-schema-<span class="operator">in</span>-mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">7</span>/</div></pre></td></tr></table></figure>
+
+<h3 id="Fabric_Support">Fabric Support</h3>
+<h3 id="Secure_by_Default">Secure by Default</h3>
+<h3 id="Security_Features">Security Features</h3>
+<h3 id="InnoDB_Native_Partitioning">InnoDB Native Partitioning</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">a. 现在InnoDB开始支持原生的分区表，之前都是依赖ha_partiion <span class="operator"><span class="keyword">handler</span>，意味着没创建一个分区表，都会创建一个新的<span class="keyword">handler</span>，浪费资源  </span></div><div class="line">b. 现在<span class="keyword">InnoDB</span> 分区表支持外键，全局二级索引，全文索引  </div><div class="line">c. 更强大的是：它还支持ICP，传输表空间  </div><div class="line"></div><div class="line">z. MySQL <span class="number">5.7</span><span class="number">.4</span> <span class="keyword">now</span> supports Transportable Tablespaces <span class="keyword">for</span> <span class="keyword">InnoDB</span> Partitions. : http://mysqlserverteam.com/mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">4</span>-<span class="keyword">now</span>-supports-transportable-tablespaces-<span class="keyword">for</span>-<span class="keyword">innodb</span>-partitions/</div></pre></td></tr></table></figure>
+
+<h3 id="InnoDB_General_Tablespaces">InnoDB General Tablespaces</h3>
+<h3 id="InnoDB_Temporary_Table_Performance">InnoDB Temporary Table Performance</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">a. 通过避免一些不必要的步骤（持久化临时表的metadata到磁盘）来将临时表的创建和去除更加的轻量级   </div><div class="line">b. 将临时表放到了单独的表空间中，这样恢复的时候就没必要走特别复杂的算法和过程，简单的re-created 就好  </div><div class="line">c. 临时表只有在创建它的connection和session中才能看到  </div><div class="line">d. 对于相关临时表的DML操作，移除了不必要的undo和redo，<span class="operator"><span class="keyword">change</span> buffering，locking等过程  </span></div><div class="line">e. 添加了新的undo <span class="keyword">log</span> 类型，不需要redo 来记录  </div><div class="line">f. 这些non-redo-logged的undo <span class="keyword">log</span> 在恢复过程中是不需要的，他们只负责<span class="keyword">rollback</span>即可  </div><div class="line">g. 新增了一个特殊的临时表，叫做内部临时表（intrinsic tempory <span class="keyword">table</span>），这种类型的临时表和普通临时表的区别就是：它没有复杂的acid和mvcc  </div><div class="line">h. 这种内部临时表用于支持内部模块的使用，比如：优化器的需求啦  </div><div class="line"></div><div class="line">z. MySQL <span class="number">5.7</span>: <span class="keyword">InnoDB</span> Intrinsic <span class="keyword">Tables</span> : http://mysqlserverteam.com/mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="keyword">innodb</span>-intrinsic-<span class="keyword">tables</span>/</div></pre></td></tr></table></figure>
+
+<h3 id="Buffer_Pool—Dump_and_Load">Buffer Pool—Dump and Load</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. 现在可以支持dump 线上热点数据的N%   </div><div class="line">b. <span class="built_in">load</span> 操作现在也非常轻量级，因为是通过后台线程异步的方式导入进去的  </div><div class="line">c. 默认设置的是<span class="number">25</span>%，这样既能很好的保持线上的热点数据，又能让shutdown和startup的速度不受影响   </div><div class="line"></div><div class="line">z1. MySQL Dumping <span class="operator">and</span> Reloading <span class="operator">the</span> InnoDB Buffer Pool : <span class="keyword">http</span>://mysqlserverteam.com/mysql-dumping-<span class="operator">and</span>-reloading-<span class="operator">the</span>-innodb-buffer-pool/</div></pre></td></tr></table></figure>
+
+<h3 id="Tools">Tools</h3>
+<ul>
+<li><strong>mysqlpump</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">a. mysqlpump 和 mysqldump 类似，但是并不是<span class="number">100</span><span class="comment">%兼容  </span></div><div class="line">b. mysqlpump 最大的优点就是：可以多线程备份和恢复</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>innochecksum</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">a. 对innochecksum 新增了很多实用的功能  </div><div class="line">b. 可以自己指定<span class="operator"><span class="keyword">checksum</span>的算法（<span class="keyword">innodb</span>/<span class="keyword">crc32</span>/none)  </span></div><div class="line">c. 可以对多表空间文件以及同一个表空间中的多个文件进行<span class="keyword">checksum</span>  </div><div class="line">d. 还可以查看页的类型  </div><div class="line"></div><div class="line">z. Improving Innochecksum : http://mysqlserverteam.com/improving-innochecksum/</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>mysqlbinlog</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. 可以支持远程读取binlog文件，通过SSL 安全连接的方式</div></pre></td></tr></table></figure>
+
+<h3 id="Community_Contributions">Community Contributions</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">a. server-side 语句延迟功能在MySQL5.7.4 被引入，但是在5.7.13上面却没有看到这个功能  </div><div class="line">b. 只对<span class="operator"><span class="keyword">SELECT</span>语句有效果  </span></div><div class="line">c. 如果<span class="keyword">select</span>的时间超过max_statement_time的阈值，那么就会被abort，非常实用的功能  </div><div class="line"></div><div class="line"></div><div class="line">z. <span class="keyword">Server</span>-side <span class="keyword">SELECT</span> statement timeouts: http://mysqlserverteam.com/<span class="keyword">server</span>-side-<span class="keyword">select</span>-statement-timeouts/</div></pre></td></tr></table></figure>
+
+<h3 id="Triggers"><a href="http://mysqlserverteam.com/support-for-multiple-triggers-per-table-for-the-same-value-of-actiontiming/" target="_blank" rel="external">Triggers</a></h3>
+<h3 id="IGNORE_Clause"><a href="http://mysqlserverteam.com/improvements-to-the-mysql-ignore-implementation/" target="_blank" rel="external">IGNORE Clause</a></h3>
+<h3 id="STRICT_Mode"><a href="http://mysqlserverteam.com/improvements-to-strict-mode-in-mysql/" target="_blank" rel="external">STRICT Mode</a></h3>
+<h3 id="GIS:_InnoDB_Spatial_Indexes"><a href="http://mysqlserverteam.com/innodb-spatial-indexes-in-5-7-4-lab-release/" target="_blank" rel="external">GIS: InnoDB Spatial Indexes</a></h3>
+<h3 id="GIS:_Geometry_Functions_&amp;_Formats"><a href="http://mysqlserverteam.com/mysql-5-7-and-gis-an-example/" target="_blank" rel="external">GIS: Geometry Functions &amp; Formats</a></h3>
+<h3 id="Multi-Source_Replication">Multi-Source Replication</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. slave 现在可以同步多台master，并且之间没有冲突  </div><div class="line">b. 这样的应用场景就是：可以在slave进行数据整合和备份  </div><div class="line"></div><div class="line">z. MySQL-<span class="number">5.7</span>.<span class="number">6</span>: Introducing Multi-<span class="keyword">source</span> replication : http:<span class="comment">//mysqlhighavailability.com/mysql-5-7-6-introducing-multi-source-replication/</span></div></pre></td></tr></table></figure>
+
+<h3 id="Replication_—_Multi-Threaded_Slaves_(MTS)">Replication — Multi-Threaded Slaves (MTS)</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">a. 多线程复制，支持同一个库的并行  </div><div class="line">b. ordered <span class="operator"><span class="keyword">commit</span> 也已经实现，也就是保证顺序一致性。   </span></div><div class="line">c. <span class="keyword">slave</span>并行执行的顺序和<span class="keyword">master</span>并行是一致的  </div><div class="line">d. <span class="keyword">slave</span> replication 支持自动重连，之前只支持单线程复制  </div><div class="line">e. 使用了一个更加聪明的算法来检测多线程事务之间的冲突(<span class="comment">--slave-parallel-type=LOGICAL_CLOCK),意味着并发性能更好了   </span></div><div class="line"></div><div class="line">z. enhancedMTS : http://geek.rohitkalhans.com/<span class="number">2013</span>/<span class="number">09</span>/enhancedMTS-configuration.html</div></pre></td></tr></table></figure>
+
+<h3 id="Semi-Sync_Replication_(lossless)">Semi-Sync Replication (lossless)</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">a. 增加了一个<span class="built_in">option</span>，让master等待N(N&gt;=<span class="number">1</span>)个slave的ack。 之前只支持N=<span class="number">1</span>  </div><div class="line">b. lossless之所以叫无损复制，那是因为等待的<span class="keyword">point</span>不一样了，以前是after_commit,现在是after_sync.  </div><div class="line">c. 降低了semi-sync的延迟，现在是用独立的线程去发送和接受semi-sync ack，所以send和receive之间是可以同时的  </div><div class="line"></div><div class="line">z. lossless semi-sync : http:<span class="comment">//my-replication-life.blogspot.co.uk/2013/09/loss-less-semi-synchronous-replication.html</span></div></pre></td></tr></table></figure>
+
+<h3 id="Replication_—_GTID_（online）">Replication — GTID （online）</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. 就像之前提到的那样，GTID支持online了，所以切换期间读写不受影响，server之间也不需要同步操作  </div><div class="line">b. 在之前的版本中，必须停掉所有写操作，所有server必须到同步到一个点，然后restart  </div><div class="line"></div><div class="line">z. Enabling Global Transaction Identifiers Without Downtime <span class="operator">in</span> MySQL <span class="number">5.7</span><span class="number">.6</span> : <span class="keyword">http</span>://mysqlhighavailability.com/enabling-gtids-<span class="keyword">without</span>-downtime-<span class="operator">in</span>-mysql-<span class="number">5</span>-<span class="number">7</span>-<span class="number">6</span>/</div></pre></td></tr></table></figure>
+
+<h3 id="Replication_—_Refactoring"><a href="http://mysqlhighavailability.com/tag/mysql-group-replication/" target="_blank" rel="external">Replication — Refactoring</a></h3>
+<h3 id="Other_Replication_Features">Other Replication Features</h3>
+<ul>
+<li>SHOW SLAVE STATUS 不阻塞</li>
+<li>mysqlbinlog幂等模式</li>
+<li>mysqlbinlog重写DB  </li>
+<li>replication的变量和参数已经加入到performance schema中  </li>
+<li>GTIDs 存入InnoDB表中  </li>
+<li>增加参数： —binlog_group_commit_sync_delay，binlog_group_commit_sync_no_delay_count 让更多的事务加入到binlog的组提交队列中  </li>
+</ul>
+<h3 id="Other_Improvements">Other Improvements</h3>
+<ul>
+<li>ROW_FORMAT=DYNAMIC 成为默认  </li>
+<li>PERFORMANCE_SCHEMA 中新增 THREADS.THREAD_OS_ID   </li>
+<li>在sys中打印出long query的进度报告  </li>
+<li>新增Information_Schema.Files   </li>
+<li>InnoDB的填充因子可设置了  </li>
+<li>支持32k和64k页了  </li>
+<li>5.6到5.7可以更加平滑的升级了，以前是需要制定—skip-grant-tables  </li>
+<li>插件和系统表大部分都修改成innoDB了  </li>
+<li>TRUNCATE TABLE 操作变成原子的了，意味着table_id 是同一个，不会新增了  </li>
+<li>新增参数：—disabled-storage-engines  </li>
+<li>新增参数：Super-read-only（super权限也无法操作）  ， 这个设置后，read-only 也会自动设置on  </li>
+</ul>
+<h2 id="关键参数">关键参数</h2>
+<table>
+<thead>
+<tr>
+<th>参数名</th>
+<th>备注</th>
+<th>链接</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default_password_lifetime</td>
+<td>-</td>
+<td><a href="http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_default_password_lifetime" target="_blank" rel="external">default_password_lifetime</a></td>
+</tr>
+</tbody>
+</table>
+<h2 id="参考">参考</h2>
+<ul>
+<li><a href="http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/mysql-nutshell.html</a>  </li>
+<li><a href="http://mysqlserverteam.com/whats-new-in-mysql-5-7-generally-available" target="_blank" rel="external">http://mysqlserverteam.com/whats-new-in-mysql-5-7-generally-available</a>  </li>
+<li><a href="https://www.percona.com/blog/2015/05/27/mysql-5-7-key-features" target="_blank" rel="external">https://www.percona.com/blog/2015/05/27/mysql-5-7-key-features</a>  </li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/07/14/MySQL57_new_feature/" data-title="How MySQL5.7 new feature rocks your heart | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/07/01/mysqlrpladmin/"  title="MySQL5.7新特性：mysqlrpladmin + GTID">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7新特性：mysqlrpladmin + GTID
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/07/14/MySQL57_new_feature/" data-title="How MySQL5.7 new feature rocks your heart" data-url="https://Keithlan.github.io/2016/07/14/MySQL57_new_feature/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#新增特性"><span class="toc-number">1.</span> <span class="toc-text">新增特性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#新特性描述"><span class="toc-number">2.</span> <span class="toc-text">新特性描述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#移除的特性"><span class="toc-number">3.</span> <span class="toc-text">移除的特性</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键特性详解"><span class="toc-number">4.</span> <span class="toc-text">关键特性详解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Adding_JSON_Support_to_MySQL"><span class="toc-number">4.1.</span> <span class="toc-text">Adding JSON Support to MySQL</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Generated_Columns_&_Indexable_Virtual_Columns"><span class="toc-number">4.2.</span> <span class="toc-text">Generated Columns & Indexable Virtual Columns</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Performance_&_Scalability"><span class="toc-number">4.3.</span> <span class="toc-text">Performance & Scalability</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Online_Operations"><span class="toc-number">4.4.</span> <span class="toc-text">Online Operations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Optimizer_Improvements"><span class="toc-number">4.5.</span> <span class="toc-text">Optimizer Improvements</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Parser_Refactoring"><span class="toc-number">4.6.</span> <span class="toc-text">Parser Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Optimizer_Refactoring"><span class="toc-number">4.7.</span> <span class="toc-text">Optimizer Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Work_towards_a_New_Cost_Model"><span class="toc-number">4.8.</span> <span class="toc-text">Work towards a New Cost Model</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Page_Compression"><span class="toc-number">4.9.</span> <span class="toc-text">Page Compression</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Fulltext_Search"><span class="toc-number">4.10.</span> <span class="toc-text">InnoDB Fulltext Search</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Performance_Schema"><span class="toc-number">4.11.</span> <span class="toc-text">Performance Schema</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#SYS_Schema"><span class="toc-number">4.12.</span> <span class="toc-text">SYS Schema</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Fabric_Support"><span class="toc-number">4.13.</span> <span class="toc-text">Fabric Support</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Secure_by_Default"><span class="toc-number">4.14.</span> <span class="toc-text">Secure by Default</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Security_Features"><span class="toc-number">4.15.</span> <span class="toc-text">Security Features</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Native_Partitioning"><span class="toc-number">4.16.</span> <span class="toc-text">InnoDB Native Partitioning</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_General_Tablespaces"><span class="toc-number">4.17.</span> <span class="toc-text">InnoDB General Tablespaces</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#InnoDB_Temporary_Table_Performance"><span class="toc-number">4.18.</span> <span class="toc-text">InnoDB Temporary Table Performance</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Buffer_Pool—Dump_and_Load"><span class="toc-number">4.19.</span> <span class="toc-text">Buffer Pool—Dump and Load</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Tools"><span class="toc-number">4.20.</span> <span class="toc-text">Tools</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Community_Contributions"><span class="toc-number">4.21.</span> <span class="toc-text">Community Contributions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Triggers"><span class="toc-number">4.22.</span> <span class="toc-text">Triggers</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#IGNORE_Clause"><span class="toc-number">4.23.</span> <span class="toc-text">IGNORE Clause</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#STRICT_Mode"><span class="toc-number">4.24.</span> <span class="toc-text">STRICT Mode</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GIS:_InnoDB_Spatial_Indexes"><span class="toc-number">4.25.</span> <span class="toc-text">GIS: InnoDB Spatial Indexes</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#GIS:_Geometry_Functions_&_Formats"><span class="toc-number">4.26.</span> <span class="toc-text">GIS: Geometry Functions & Formats</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Multi-Source_Replication"><span class="toc-number">4.27.</span> <span class="toc-text">Multi-Source Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_Multi-Threaded_Slaves_(MTS)"><span class="toc-number">4.28.</span> <span class="toc-text">Replication — Multi-Threaded Slaves (MTS)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Semi-Sync_Replication_(lossless)"><span class="toc-number">4.29.</span> <span class="toc-text">Semi-Sync Replication (lossless)</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_GTID_（online）"><span class="toc-number">4.30.</span> <span class="toc-text">Replication — GTID （online）</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Replication_—_Refactoring"><span class="toc-number">4.31.</span> <span class="toc-text">Replication — Refactoring</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Other_Replication_Features"><span class="toc-number">4.32.</span> <span class="toc-text">Other Replication Features</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Other_Improvements"><span class="toc-number">4.33.</span> <span class="toc-text">Other Improvements</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键参数"><span class="toc-number">5.</span> <span class="toc-text">关键参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考"><span class="toc-number">6.</span> <span class="toc-text">参考</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>11</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>11</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
