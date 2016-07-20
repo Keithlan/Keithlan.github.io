@@ -1,0 +1,448 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL replace into 错误案例 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="背景
+12345678910111213* MySQL5.7* ROW模式* 表结构CREATE TABLE `test` (  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,  `col_1` varchar(100) DEFAULT NULL,  `">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/07/20/replace_into/" title="MySQL replace into 错误案例" itemprop="url">MySQL replace into 错误案例</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-07-20T08:50:24.000Z" itemprop="datePublished">Jul 20 2016</time>
+    Updated:<time datetime="2016-07-20T08:58:12.000Z" itemprop="dateModified">Jul 20 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#错误场景一"><span class="toc-number">2.</span> <span class="toc-text">错误场景一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#错误场景二"><span class="toc-number">3.</span> <span class="toc-text">错误场景二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后总结"><span class="toc-number">4.</span> <span class="toc-text">最后总结</span></a></li></ol>
+		</div>
+		
+		<h2 id="背景">背景</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">* MySQL5.7</div><div class="line"></div><div class="line">* ROW模式</div><div class="line"></div><div class="line"></div><div class="line">* 表结构</div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`test`</span> (</span></div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">10</span>) unsigned <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`col_1`</span> <span class="built_in">varchar</span>(<span class="number">100</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`col_2`</span> <span class="built_in">varchar</span>(<span class="number">100</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>),</div><div class="line">  <span class="keyword">UNIQUE</span> <span class="keyword">KEY</span> <span class="string">`col_1`</span> (<span class="string">`col_1`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span>  <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<h2 id="错误场景一">错误场景一</h2>
+<blockquote>
+<p>其他字段value莫名其妙的没了  </p>
+</blockquote>
+<ul>
+<li><strong>step1 初始化记录</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line">mater:lc&gt; REPLACE INTO test (col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'a'</span>,<span class="emphasis">'a'</span>,<span class="emphasis">'a'</span>);</div><div class="line">Query OK, 1 row affected (0.00 sec) --注意，这里是影响了1条记录</div><div class="line"></div><div class="line">master:lc&gt; REPLACE INTO test (col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'b'</span>,<span class="emphasis">'b'</span>,<span class="emphasis">'b'</span>);</div><div class="line">Query OK, 1 row affected (0.00 sec) --注意，这里是影响了1条记录</div><div class="line"></div><div class="line">master:lc&gt; REPLACE INTO test (col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'c'</span>,<span class="emphasis">'c'</span>,<span class="emphasis">'c'</span>);</div><div class="line">Query OK, 1 row affected (0.00 sec) --注意，这里是影响了1条记录</div><div class="line"></div><div class="line"></div><div class="line">master &gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="code">`test`</span> (</div><div class="line"><span class="code">  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,</span></div><div class="line"><span class="code">  `col_1` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col_2` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  PRIMARY KEY (`id`),</span></div><div class="line"><span class="code">  UNIQUE KEY `col_1` (`col_1`)</span></div><div class="line">) ENGINE=InnoDB AUTO<span class="emphasis">_INCREMENT=4 DEFAULT CHARSET=utf8 |</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="header">mater &gt; select * from test;</span></div><div class="line">+----+-------+-------+-------+</div><div class="line"><span class="header">| id | col_1 | col_2 | col_3 |</span></div><div class="line">+----+-------+-------+-------+</div><div class="line">|  1 | a     | a     | a     |</div><div class="line">|  2 | b     | b     | b     |</div><div class="line"><span class="header">|  3 | c     | c     | c     |</span></div><div class="line">+----+-------+-------+-------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>step2 构造错误场景</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">master:lc&gt; replace into test(col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'c'</span>,<span class="emphasis">'cc'</span>);</div><div class="line">Query OK, 2 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; select * from test;</span></div><div class="line">+----+-------+-------+-------+</div><div class="line"><span class="header">| id | col_1 | col_2 | col_3 |</span></div><div class="line">+----+-------+-------+-------+</div><div class="line">|  1 | a     | a     | a     |</div><div class="line">|  2 | b     | b     | b     |</div><div class="line"><span class="header">|  4 | c     | cc    | NULL  |</span></div><div class="line">+----+-------+-------+-------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>总结</strong></li>
+</ul>
+<ol>
+<li>col_3 的值，从原来的c，变成了NULL，天呐，数据不见了。  id 也变了。 </li>
+<li>用户原本的需求，应该是如果col_1=’c’ 存在，那么就改变col_2=’cc’，其余的记录保持不变，结果id,col_3都变化了  </li>
+<li>解决方案就是：将replace into 改成 INSERT INTO … ON DUPLICATE KEY UPDATE   </li>
+</ol>
+<p>但是你以为这样就完美的解决了吗？ 马上就会带来另外一场灾难，请看下面的错误场景  </p>
+<h2 id="错误场景二">错误场景二</h2>
+<blockquote>
+<p>ERROR 1062 (23000): Duplicate entry ‘x’ for key ‘PRIMARY’   </p>
+</blockquote>
+<ul>
+<li><strong>step1 初始化记录</strong> </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="label">mater:</span>lc&gt; REPLACE INTO test (col_1,col_2) values('<span class="literal">a</span>','<span class="literal">a</span>')<span class="comment">;</span></div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec) --注意，这里是影响了<span class="number">1</span>条记录</div><div class="line"></div><div class="line"><span class="label">master:</span>lc&gt; REPLACE INTO test (col_1,col_2) values('b','b')<span class="comment">;</span></div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec) --注意，这里是影响了<span class="number">1</span>条记录</div><div class="line"></div><div class="line"><span class="label">master:</span>lc&gt; REPLACE INTO test (col_1,col_2) values('c','c')<span class="comment">;</span></div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec) --注意，这里是影响了<span class="number">1</span>条记录</div><div class="line"></div><div class="line"></div><div class="line">master &gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="escape">`t</span>est<span class="escape">` </span>(</div><div class="line">  <span class="escape">`i</span>d<span class="escape">` </span>int(<span class="number">10</span>) unsigned <span class="literal">NOT</span> NULL AUTO_INCREMENT,</div><div class="line">  <span class="escape">`c</span>ol_1<span class="escape">` </span>varchar(<span class="number">100</span>) DEFAULT NULL,</div><div class="line">  <span class="escape">`c</span>ol_2<span class="escape">` </span>varchar(<span class="number">100</span>) DEFAULT NULL,</div><div class="line">  PRIMARY KEY (<span class="escape">`i</span>d<span class="escape">`)</span>,</div><div class="line">  UNIQUE KEY <span class="escape">`c</span>ol_1<span class="escape">` </span>(<span class="escape">`c</span>ol_1<span class="escape">`)</span></div><div class="line">) ENGINE=InnoDB AUTO_INCREMENT=<span class="number">4</span> DEFAULT CHARSET=utf8 |</div><div class="line"></div><div class="line"></div><div class="line">slave &gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="escape">`t</span>est<span class="escape">` </span>(</div><div class="line">  <span class="escape">`i</span>d<span class="escape">` </span>int(<span class="number">10</span>) unsigned <span class="literal">NOT</span> NULL AUTO_INCREMENT,</div><div class="line">  <span class="escape">`c</span>ol_1<span class="escape">` </span>varchar(<span class="number">100</span>) DEFAULT NULL,</div><div class="line">  <span class="escape">`c</span>ol_2<span class="escape">` </span>varchar(<span class="number">100</span>) DEFAULT NULL,</div><div class="line">  PRIMARY KEY (<span class="escape">`i</span>d<span class="escape">`)</span>,</div><div class="line">  UNIQUE KEY <span class="escape">`c</span>ol_1<span class="escape">` </span>(<span class="escape">`c</span>ol_1<span class="escape">`)</span></div><div class="line">) ENGINE=InnoDB AUTO_INCREMENT=<span class="number">4</span> DEFAULT CHARSET=utf8 |</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>step2 构造错误场景</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>master</div><div class="line"></div><div class="line">mater:lc&gt; REPLACE INTO test (col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'c'</span>,<span class="emphasis">'cc'</span>);</div><div class="line">Query OK, 2 rows affected (0.00 sec)  --注意，这里是影响了两条记录 </div><div class="line"></div><div class="line">mater:lc&gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="code">`test`</span> (</div><div class="line"><span class="code">  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,</span></div><div class="line"><span class="code">  `col_1` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col_2` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  PRIMARY KEY (`id`),</span></div><div class="line"><span class="code">  UNIQUE KEY `col_1` (`col_1`)</span></div><div class="line">) ENGINE=InnoDB AUTO<span class="emphasis">_INCREMENT=5 DEFAULT CHARSET=utf8 |</span></div><div class="line"></div><div class="line"><span class="header">master:lc&gt; select * from test</span></div><div class="line">+----+-------+-------+</div><div class="line"><span class="header">| id | col_1 | col_2 |</span></div><div class="line">+----+-------+-------+</div><div class="line">|  1 | a     | a     |</div><div class="line">|  2 | b     | b     |</div><div class="line"><span class="header">|  4 | c     | cc    |</span></div><div class="line">+----+-------+-------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="bullet">* </span>slave</div><div class="line"></div><div class="line">slave:lc&gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="code">`test`</span> (</div><div class="line"><span class="code">  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,</span></div><div class="line"><span class="code">  `col_1` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col_2` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  PRIMARY KEY (`id`),</span></div><div class="line"><span class="code">  UNIQUE KEY `col_1` (`col_1`)</span></div><div class="line">) ENGINE=InnoDB AUTO<span class="emphasis">_INCREMENT=4 DEFAULT CHARSET=utf8 |</span></div><div class="line"></div><div class="line"><span class="header">slave:lc&gt; select * from test</span></div><div class="line">+----+-------+-------+</div><div class="line"><span class="header">| id | col_1 | col_2 |</span></div><div class="line">+----+-------+-------+</div><div class="line">|  1 | a     | a     |</div><div class="line">|  2 | b     | b     |</div><div class="line"><span class="header">|  4 | c     | cc    |</span></div><div class="line">+----+-------+-------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>step3 错误案例产生</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>假设有一天，master 挂了， 由slave 提升为 new mater</div><div class="line"></div><div class="line">原slave:lc&gt; show create table test</div><div class="line"></div><div class="line">| test  | CREATE TABLE <span class="code">`test`</span> (</div><div class="line"><span class="code">  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,</span></div><div class="line"><span class="code">  `col_1` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  `col_2` varchar(100) DEFAULT NULL,</span></div><div class="line"><span class="code">  PRIMARY KEY (`id`),</span></div><div class="line"><span class="code">  UNIQUE KEY `col_1` (`col_1`)</span></div><div class="line">) ENGINE=InnoDB AUTO<span class="emphasis">_INCREMENT=4 DEFAULT CHARSET=utf8 |</span></div><div class="line"></div><div class="line"><span class="header">原slave:lc&gt; select * from test</span></div><div class="line">+----+-------+-------+</div><div class="line"><span class="header">| id | col_1 | col_2 |</span></div><div class="line">+----+-------+-------+</div><div class="line">|  1 | a     | a     |</div><div class="line">|  2 | b     | b     |</div><div class="line"><span class="header">|  4 | c     | cc    |</span></div><div class="line">+----+-------+-------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">===注意==</div><div class="line"></div><div class="line">root:lc&gt; REPLACE INTO test (col<span class="emphasis">_1,col_</span>2) values(<span class="emphasis">'d'</span>,<span class="emphasis">'d'</span>);</div><div class="line">ERROR 1062 (23000): Duplicate entry <span class="emphasis">'4'</span> for key <span class="emphasis">'PRIMARY'</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>总结</strong> </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">* Row 模式，主从情况下，<span class="operator"><span class="keyword">replace</span> <span class="keyword">into</span> 和 <span class="keyword">INSERT</span> <span class="keyword">INTO</span> … <span class="keyword">ON</span> DUPLICATE <span class="keyword">KEY</span> <span class="keyword">UPDATE</span> 都会导致以上问题的发生  </span></div><div class="line">* 解决方案： 最后可以通过<span class="keyword">alter</span> <span class="keyword">table</span> auto_increment值解决，但是这样已经造成mater的表很长时间没有写入了。。。</div></pre></td></tr></table></figure>
+
+<h2 id="最后总结">最后总结</h2>
+<ul>
+<li><strong>replace with unique key</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1. 禁止 <span class="operator"><span class="keyword">replace</span> <span class="keyword">into</span> (错误一，错误二 都会发生) </span></div><div class="line"><span class="number">2.</span> 禁止 <span class="keyword">INSERT</span> <span class="keyword">INTO</span> … <span class="keyword">ON</span> DUPLICATE <span class="keyword">KEY</span> <span class="keyword">UPDATE</span> （错误二 会发生）</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>replace with primary key</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1. 禁止 <span class="operator"><span class="keyword">replace</span> <span class="keyword">into</span> (会发生错误场景一的案例，丢失部分字段数据) </span></div><div class="line"><span class="number">2.</span> 可以使用<span class="keyword">INSERT</span> <span class="keyword">INTO</span> … <span class="keyword">ON</span> DUPLICATE <span class="keyword">KEY</span> <span class="keyword">UPDATE</span> 代替 <span class="keyword">replace</span> <span class="keyword">into</span></div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/07/20/replace_into/" data-title="MySQL replace into 错误案例 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/07/14/MySQL57_new_feature/"  title="How MySQL5.7 new feature rocks your heart">
+ <strong>NEXT:</strong><br/> 
+ <span>How MySQL5.7 new feature rocks your heart
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/07/20/replace_into/" data-title="MySQL replace into 错误案例" data-url="https://Keithlan.github.io/2016/07/20/replace_into/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#错误场景一"><span class="toc-number">2.</span> <span class="toc-text">错误场景一</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#错误场景二"><span class="toc-number">3.</span> <span class="toc-text">错误场景二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后总结"><span class="toc-number">4.</span> <span class="toc-text">最后总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>12</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
