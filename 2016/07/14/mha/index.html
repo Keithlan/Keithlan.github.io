@@ -1,0 +1,1188 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL Master High Available 理论篇 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、概况
+MHA 提供自动master故障转移以及在最短的时间内（10~30秒）提升slave为new masterMHA 解决了切换后的数据不一致问题所有的这些操作都是没有任何负载和影响的，并且对存在的环境不需要做任何改动，简单易用  
+除了failover之外，MHA还支持在线master切换，">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/07/14/mha/" title="MySQL Master High Available 理论篇" itemprop="url">MySQL Master High Available 理论篇</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-07-14T13:55:24.000Z" itemprop="datePublished">Jul 14 2016</time>
+    Updated:<time datetime="2016-07-25T10:03:20.000Z" itemprop="dateModified">Jul 25 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、概况"><span class="toc-number">1.</span> <span class="toc-text">一、概况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、其他的HA解决方案"><span class="toc-number">2.</span> <span class="toc-text">二、其他的HA解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MHA架构"><span class="toc-number">3.</span> <span class="toc-text">三、MHA架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、MHA的优点"><span class="toc-number">4.</span> <span class="toc-text">四、MHA的优点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、MHA工作流程"><span class="toc-number">5.</span> <span class="toc-text">五、MHA工作流程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_MHA如何监控master和故障转移"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 MHA如何监控master和故障转移</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-1_验证复制设置以及确认当前master状态"><span class="toc-number">5.1.1.</span> <span class="toc-text">5.1.1 验证复制设置以及确认当前master状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-2_监控master"><span class="toc-number">5.1.2.</span> <span class="toc-text">5.1.2 监控master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-3_检测master是否失败"><span class="toc-number">5.1.3.</span> <span class="toc-text">5.1.3 检测master是否失败</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-4_再次验证slave的配置"><span class="toc-number">5.1.4.</span> <span class="toc-text">5.1.4 再次验证slave的配置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-5_关掉失败的master的服务器（可选）"><span class="toc-number">5.1.5.</span> <span class="toc-text">5.1.5 关掉失败的master的服务器（可选）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-6_恢复一台新master"><span class="toc-number">5.1.6.</span> <span class="toc-text">5.1.6 恢复一台新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-7_让这台新master可用"><span class="toc-number">5.1.7.</span> <span class="toc-text">5.1.7 让这台新master可用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-8_恢复其他slave"><span class="toc-number">5.1.8.</span> <span class="toc-text">5.1.8 恢复其他slave</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-9_通知（可选）"><span class="toc-number">5.1.9.</span> <span class="toc-text">5.1.9 通知（可选）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-10_流程图"><span class="toc-number">5.1.10.</span> <span class="toc-text">5.1.10 流程图</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_MHA如何在线快速切换master"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 MHA如何在线快速切换master</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-1_验证复制设置以及确认当前master状态"><span class="toc-number">5.2.1.</span> <span class="toc-text">5.2.1  验证复制设置以及确认当前master状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-2_确认新master"><span class="toc-number">5.2.2.</span> <span class="toc-text">5.2.2  确认新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-3_当前master停写"><span class="toc-number">5.2.3.</span> <span class="toc-text">5.2.3  当前master停写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-4_等待其他slave追上当前master，同步无延迟"><span class="toc-number">5.2.4.</span> <span class="toc-text">5.2.4  等待其他slave追上当前master，同步无延迟</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-5_确保新master可写"><span class="toc-number">5.2.5.</span> <span class="toc-text">5.2.5  确保新master可写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-6_让其他slave指向新master"><span class="toc-number">5.2.6.</span> <span class="toc-text">5.2.6  让其他slave指向新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-7_流程图"><span class="toc-number">5.2.7.</span> <span class="toc-text">5.2.7  流程图</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、重要的命令"><span class="toc-number">6.</span> <span class="toc-text">五、重要的命令</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_masterha_manager"><span class="toc-number">6.1.</span> <span class="toc-text">5.1 masterha_manager</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_masterha_master_switch"><span class="toc-number">6.2.</span> <span class="toc-text">5.2 masterha_master_switch</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3_masterha_check_status"><span class="toc-number">6.3.</span> <span class="toc-text">5.3 masterha_check_status</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4_masterha_check_repl"><span class="toc-number">6.4.</span> <span class="toc-text">5.4 masterha_check_repl</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5_masterha_stop"><span class="toc-number">6.5.</span> <span class="toc-text">5.5 masterha_stop</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6_masterha_conf_host"><span class="toc-number">6.6.</span> <span class="toc-text">5.6 masterha_conf_host</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-7_masterha_ssh_check"><span class="toc-number">6.7.</span> <span class="toc-text">5.7 masterha_ssh_check</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-8_purge_relay_logs"><span class="toc-number">6.8.</span> <span class="toc-text">5.8 purge_relay_logs</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、核心参数详解"><span class="toc-number">7.</span> <span class="toc-text">六、核心参数详解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1_参数矩阵图"><span class="toc-number">7.1.</span> <span class="toc-text">6.1  参数矩阵图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2_核心参数详解"><span class="toc-number">7.2.</span> <span class="toc-text">6.2 核心参数详解</span></a></li></ol></li></ol>
+		</div>
+		
+		<p><img src="/image/mysql_innodb_arch/MySQL51.jpg" alt="MySQL51" title="async"></p>
+<h2 id="一、概况">一、概况</h2>
+<p>MHA 提供自动master故障转移以及在最短的时间内（10~30秒）提升slave为new master<br>MHA 解决了切换后的数据不一致问题<br>所有的这些操作都是没有任何负载和影响的，并且对存在的环境不需要做任何改动，简单易用  </p>
+<p>除了failover之外，MHA还支持在线master切换，非常安全和高效，大概只需要（0.5 ~ 2秒）的阻塞写时间  </p>
+<p>MHA提供了如下功能：  </p>
+<ul>
+<li>master自动监控，故障转移一体化(Automated master monitoring and failover)    </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">MHA 可以在一个复制<span class="keyword">group</span>中监控master的状态，如果挂了，就可以自动的做failover  </div><div class="line">MHA 通过所有slave的差异relay-log来保证数据的一致性  </div><div class="line">MHA 在做故障转移，日志补偿这些动作的时候，通常只需要<span class="number">10</span>~<span class="number">30</span>秒  </div><div class="line">通常情况下，MHA会选择最新的slave作为<span class="keyword">new</span> master，但是你也可以指定哪些是候选maser，那么新master选举的时候，就从这些host里面挑  </div><div class="line">导致复制环境中断的一致性问题，在MHA中是不会发生的，请放心使用</div></pre></td></tr></table></figure>
+
+<ul>
+<li>手工-交互式 master故障转移（Interactive manually initiated Master Failover） </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">MHA可以配置成 手工-交互式方式进行故障转移，不支持监控master的状态</div></pre></td></tr></table></figure>
+
+<ul>
+<li>非交互式 master故障转移 （Non-interactive master failover）  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">非交互式，自动的故障转移，不提供监控master状态功能，监控可以交给其他组件做（如：Pacemaker heartbeat）</div></pre></td></tr></table></figure>
+
+<ul>
+<li>在线master切换 （Online switching master to a different host）  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">如果你有更快，更好的master，计划要将老master替换成新的master，那么这个功能特别适合这样的场景  </div><div class="line">这不是master真的挂掉了，只是我们有很多需求要进行master例行维护</div></pre></td></tr></table></figure>
+
+<h2 id="二、其他的HA解决方案">二、其他的HA解决方案</h2>
+<ul>
+<li><strong>人工切换与修复</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">MySQL的复制基本上是异步复制或者半同步复制  </div><div class="line">当master crash了，很有可能某些slave还没有获取最新的relay <span class="built_in">log</span>，那么就意味着这些slave的数据不在同一个时间点  </div><div class="line">然而人工解决一致性问题是非常困难和复杂的。  </div><div class="line">一旦数据一致性问题没有解决，复制环境是会报错，无法工作的，这一白白的浪费了<span class="keyword">N</span>个小时，损失会非常严重</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>一主一从架构</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">M(RW)</div><div class="line"> |        <span class="comment">--(master crash)--&gt;   M(RW), promoted from S</span></div><div class="line">S(R) </div><div class="line"> </div><div class="line"></div><div class="line">如果只有一主一从，那么做故障切换确实是非常简单，但是这一的架构会满足业务需求吗？  </div><div class="line"></div><div class="line">* 第一、 无法扩展读  </div><div class="line"></div><div class="line">在很多种情况下，人们会将复杂查询，备份，分析查询，批量job放在slave，来减少对master的负担  </div><div class="line">这些操作，都会严重影响服务器的性能  </div><div class="line">如果只有一个slave，那么假如slave挂了，master就要承担这些操作，将会严重影响到master的正常业务  </div><div class="line"></div><div class="line">* 第二、 高可用的问题  </div><div class="line"></div><div class="line">如果master挂了，只有一个slave（new master）可用，那么就会产生另一个问题，单点故障  </div><div class="line">为了在搭建一个slave，你需要在master上做online <span class="operator"><span class="keyword">backup</span>，在新的机器上<span class="keyword">restore</span>，然后立马<span class="keyword">start</span> <span class="keyword">slave</span>  </span></div><div class="line">但是这样的操作，会花掉你好几个小时的时间哦  </div><div class="line">在一些苛刻的环境下，是不允许让<span class="keyword">master</span>单点那么长时间的  </div><div class="line">另一方面，在<span class="keyword">master</span>上online <span class="keyword">backup</span>会给<span class="keyword">master</span>的性能带来非常大的影响，这样也是不可行的  </div><div class="line"></div><div class="line">* 第三、 扩展性问题</div><div class="line"></div><div class="line">假设你想多搭建一台机器作为灾备机器（另一个数据中心），怎么办呢？  </div><div class="line">因为你只允许一个<span class="keyword">slave</span>，所以以上需求是不可能实现的  </div><div class="line"></div><div class="line"></div><div class="line">总之，单maseter，单<span class="keyword">slave</span> 在大多数场景下是不可行的</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>一主多从</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">      <span class="comment">M(RW)</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="comment">M2(R)</span>                      <span class="comment">M(RW)</span><span class="string">,</span> <span class="comment">promoted</span> <span class="comment">from</span> <span class="comment">M2</span></div><div class="line">       <span class="comment">|</span>                                          <span class="comment">|</span></div><div class="line">  <span class="literal">+</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">+</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">-</span><span class="literal">+</span>          <span class="literal">-</span><span class="literal">-</span><span class="comment">(master</span> <span class="comment">crash)</span><span class="literal">-</span><span class="literal">-</span>&gt;   <span class="literal">+</span><span class="literal">-</span><span class="comment">x</span><span class="literal">-</span><span class="literal">-</span><span class="literal">+</span><span class="literal">-</span><span class="literal">-</span><span class="comment">x</span><span class="literal">-</span><span class="literal">+</span></div><div class="line"> <span class="comment">S(R)</span>     <span class="comment">S2(R)</span>                             <span class="comment">S(?)</span>      <span class="comment">S(?)</span></div><div class="line">                                          <span class="comment">(From</span> <span class="comment">which</span> <span class="comment">position</span> <span class="comment">should</span> <span class="comment">S</span> <span class="comment">restart</span> <span class="comment">replication?)</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">很直接的问题，master挂后，其他的slave如何挂载呢？</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong><del>Pacemaker + DRBD</del></strong></li>
+</ul>
+<ul>
+<li><strong>MySQL Cluster</strong></li>
+</ul>
+<blockquote>
+<p>不支持InnoDB引擎，不考虑  </p>
+</blockquote>
+<ul>
+<li><strong>半同步复制架构</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">5.5，5.6 半同步复制，只能减少数据丢失的风险，不能保证完全不丢失数据  </div><div class="line">5.7 的lossless 复制，可以保证完全不丢失数据, 但是会有新的问题，lossless 有可能降级，lossless不负责master选举，不负责监控master，不负责数据一致性</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>Global Transaction ID</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">没错，<span class="keyword">Global</span> Transaction ID 天生就是为了HA而产生的。  </div><div class="line">MHA + GTID 可以非常好的解决HA的问题，GTID支持多层级的复制故障转移，MHA不行  </div><div class="line">MHA <span class="number">0.56</span> 开始，就可以支持GTID了</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>mysqlfailover,mysqlrpladmin</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">官方的failover工具，只支持GTID，有局限性  </div><div class="line">官方的failover工具，由于刚出来不久，很多bug，很多方案都不成熟</div></pre></td></tr></table></figure>
+
+<h2 id="三、MHA架构">三、MHA架构</h2>
+<blockquote>
+<p>当master crash了，MHA恢复的过程如下图</p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/mha_arch.jpg" alt="mha_arch" title="mha_arch"></p>
+<blockquote>
+<p>MHA 是由 MHA Manager 和 MHA Node 组合而成  </p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/mha_components.jpg" alt="mha_components" title="mha_components"></p>
+<p>MHA Manager 主要是用来监控master，控制故障转移等功能  </p>
+<p>MHA Node 具有很多failover的帮助脚本，比如：解析MySQL binary/relay logs，定位差异日志等  </p>
+<p>当MHA Manager 做故障转移的时候，MHA Manager 通过ssh 连接到 MHA Node节点，然后执行Node中需要用到的命令  </p>
+<blockquote>
+<p>自定义扩展  </p>
+</blockquote>
+<p>MHA 有很多扩展的点。  </p>
+<p>下面有一些sample  </p>
+<ul>
+<li>secondary_check_script : 多路由，多链路的二次检测功能  </li>
+<li>master_ip_failover_script :修改master ip    </li>
+<li>shutdown_script : 强制关闭master，防止脑裂    </li>
+<li>report_script : 发送一些报告  </li>
+<li>init_conf_load_script : 导入一些初始化配置参数  </li>
+<li>master_ip_online_change_script : 修改master ip，这不是给failover用的，是给在线切换用的 online_master_switch  </li>
+</ul>
+<h2 id="四、MHA的优点">四、MHA的优点</h2>
+<ul>
+<li><p><strong>master failover 和 slave promotion 非常快速</strong></p>
+</li>
+<li><p><strong>master crash 不会导致数据不一致</strong></p>
+</li>
+<li><p><strong>不需要修改复制的任何设置，简单易部署</strong></p>
+</li>
+<li><p><strong>不需要增加很多额外的机器来部署MHA</strong></p>
+</li>
+<li><p><strong>没有任何性能影响</strong></p>
+</li>
+<li><p><strong>跨存储引擎，支持任何引擎</strong></p>
+</li>
+</ul>
+<h2 id="五、MHA工作流程">五、MHA工作流程</h2>
+<h3 id="5-1_MHA如何监控master和故障转移">5.1 MHA如何监控master和故障转移</h3>
+<blockquote>
+<p>下面的流程，就是masterha_manager做的事情   </p>
+</blockquote>
+<h4 id="5-1-1_验证复制设置以及确认当前master状态">5.1.1 验证复制设置以及确认当前master状态</h4>
+<ul>
+<li>连接所有hosts，MHA自动来确认当前master是哪个，配置文件中无需指定哪个是master   </li>
+<li>如果其中有任何一个slave挂了，脚本立即退出，停止监控</li>
+<li>如果有一些必要的脚本没有在MHA Node节点安装，那么MHA在这个阶段终止，且停止监控  </li>
+</ul>
+<h4 id="5-1-2_监控master">5.1.2 监控master</h4>
+<ul>
+<li>监控master，直到master 挂了  </li>
+</ul>
+<p>这个阶段，MHA不会监控slave. Stopping/Restarting/Adding/Removing操作在slave上，不会影响当前的MHA 监控进程<br>当你添加或者删除slave的时候，请更新好配置文件，最好重启MHA   </p>
+<h4 id="5-1-3_检测master是否失败">5.1.3 检测master是否失败</h4>
+<ul>
+<li>如果MHA Manger三次间隔时间都没办法连接master server，就会进入这个阶段  </li>
+<li>如果你设置了 secondary_check_script ，那么MHA会调用脚本做二次检测来判断master是否是真的挂了  </li>
+</ul>
+<blockquote>
+<p>接下来的步骤，就是masterha_master_switch 的工作流程  </p>
+</blockquote>
+<h4 id="5-1-4_再次验证slave的配置">5.1.4 再次验证slave的配置</h4>
+<ul>
+<li>如果发现任何不合法的复制配置（有些slave的master不是同一个），那么MHA会停止监控，且报错。可以设置ignore_fail忽略  </li>
+</ul>
+<p>这一步是处于安全考虑。 很有可能，复制的配置文件已经被改掉了，所以double check 是比较推荐的做法  </p>
+<ul>
+<li>检查最后一次failover（故障转移）的状态</li>
+</ul>
+<p>如果上一次的failover报错，或者上一次的failover结束的太近（默认3天），MHA停止监控，停止failover，那么在masterha_manager命令中设置ignore_last_failover，wait_on_failover_error来改变这一检测  </p>
+<p>这么做，也是出于安全考虑。频繁的failover，检查下是否网络出问题，或者其他错误呢？  </p>
+<h4 id="5-1-5_关掉失败的master的服务器（可选）">5.1.5 关掉失败的master的服务器（可选）</h4>
+<ul>
+<li>如果在配置文件中定义了 master_ip_failover_script and/or shutdown_script ，MHA 会调用这些的脚本</li>
+<li>关闭dead master，避免脑裂（值得商榷）</li>
+</ul>
+<h4 id="5-1-6_恢复一台新master">5.1.6 恢复一台新master</h4>
+<ul>
+<li><p>从crashed master服务器上保存binlog到Manager（如果可以的话）</p>
+<ul>
+<li>如果dead master可以SSH的话，拷贝binary logs 从最新的slave上的end_log_pos(Read_Master_Log_Pos)位置开始拷贝  </li>
+</ul>
+</li>
+<li><p>选举新master</p>
+<ul>
+<li>根据配置文件的设置来决定选举谁</li>
+<li>如果想设置一些候选master，设置 candidate_master=1</li>
+<li>如果想设置一些host，永远都不会选举，设置no_master=1</li>
+</ul>
+</li>
+<li><p>确认最新的slave （这台slave拥有最新的relay-log）</p>
+</li>
+<li><p>恢复和提升新master</p>
+<ul>
+<li>根据老master binlog生成差异日志</li>
+<li>应用日志到new master</li>
+<li>如果这一步发生错误（如：duplicate key error），MHA停止恢复，并且其余的slave也停止恢复</li>
+</ul>
+</li>
+</ul>
+<h4 id="5-1-7_让这台新master可用">5.1.7 让这台新master可用</h4>
+<ul>
+<li>如果定义了 master_ip_failover_script 在配置文件中，MHA会调用它<ul>
+<li>你可以在这里做任何你想做的事情，激活ip，创建用户    </li>
+</ul>
+</li>
+</ul>
+<h4 id="5-1-8_恢复其他slave">5.1.8 恢复其他slave</h4>
+<ul>
+<li>并行的生成差异日志给到其余slave</li>
+<li>并行的应用日志到其他slave</li>
+<li>slave上 change master 到 new master</li>
+<li>这一步如果报错（duplicate key error on slave 3），MHA也不会停止。失败的slave 不会同步新master，但是其他恢复成功的slave可以start slave</li>
+</ul>
+<h4 id="5-1-9_通知（可选）">5.1.9 通知（可选）</h4>
+<ul>
+<li>如果你在配置中定义了 report_script， MHA会调用它<ul>
+<li>可以发邮件</li>
+<li>可以停止备份计划任务</li>
+<li>etc</li>
+</ul>
+</li>
+</ul>
+<h4 id="5-1-10_流程图">5.1.10 流程图</h4>
+<h3 id="5-2_MHA如何在线快速切换master">5.2 MHA如何在线快速切换master</h3>
+<blockquote>
+<p>下面的步骤，就是masterha_master_switch —master_state=alive 做的事情  </p>
+</blockquote>
+<h4 id="5-2-1_验证复制设置以及确认当前master状态">5.2.1  验证复制设置以及确认当前master状态</h4>
+<ul>
+<li>连接配置文件中列出的所有hosts，MHA自动来确认当前master是哪个，配置文件中无需指定哪个是master</li>
+<li>执行 flush tables 命令在master上（可选）. 这样可以缩短FLUSH TABLES WITH READ LOCK 的时间  </li>
+<li>既不监控master，也不会failover  </li>
+<li>检查下面的条件是否满足<ul>
+<li>IO线程是否在所有slave上都是running  </li>
+<li>SQL线程是否在所有slave上都是running</li>
+<li>Seconds_Behind_Master 是否低于2秒（—running_updates_limit=N）</li>
+<li>master上是否没有长的更新语句大于2秒  </li>
+</ul>
+</li>
+</ul>
+<h4 id="5-2-2_确认新master">5.2.2  确认新master</h4>
+<ul>
+<li>新master 需要设置： —new_master_host 参数  </li>
+<li>原来的master和新的master 必须要有同样的复制过滤条件（binlog-do-db and binlog-ignore-db）</li>
+</ul>
+<h4 id="5-2-3_当前master停写">5.2.3  当前master停写</h4>
+<ul>
+<li><p>如果你在配置中定义了master_ip_online_change_script，MHA会调用它</p>
+<ul>
+<li>可以通过设置SET GLOBAL read_only=1 来完美的阻止写入  </li>
+</ul>
+</li>
+<li><p>在老master上执行 FLUSH TABLES WITH READ LOCK 来阻止所有的写（—skip_lock_all_tables 可以忽略这一步）</p>
+</li>
+</ul>
+<h4 id="5-2-4_等待其他slave追上当前master，同步无延迟">5.2.4  等待其他slave追上当前master，同步无延迟</h4>
+<ul>
+<li>调用这个函数MASTER_LOG_POS（） </li>
+</ul>
+<h4 id="5-2-5_确保新master可写">5.2.5  确保新master可写</h4>
+<ul>
+<li>执行SHOW MASTER STATUS 来确定新master的  binary log 文件名和position</li>
+<li>如果设置了 master_ip_online_change_script，会调用它<ul>
+<li>可以创建写权限的用户</li>
+<li>SET GLOBAL read_only=0   </li>
+</ul>
+</li>
+</ul>
+<h4 id="5-2-6_让其他slave指向新master">5.2.6  让其他slave指向新master</h4>
+<ul>
+<li>并行执行CHANGE MASTER, START SLAVE </li>
+</ul>
+<h4 id="5-2-7_流程图">5.2.7  流程图</h4>
+<h2 id="五、重要的命令">五、重要的命令</h2>
+<blockquote>
+<p>masterha_manager: master监控， 自动化failover<br>masterha_master_switch：人工failover or 非交互式master failover or 在线maser切换<br>masterha_check_status<br>masterha_check_repl<br>masterha_stop<br>masterha_conf_host<br>masterha_ssh_check： 检查ssh配置<br>purge_relay_logs  ： 删除老的relay-log，不用担心复制延迟  </p>
+</blockquote>
+<h3 id="5-1_masterha_manager">5.1 masterha_manager</h3>
+<blockquote>
+<p>控制MHA Manager的命令  </p>
+</blockquote>
+<p>执行下列命令可以开启MHA Manager</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"># masterha_manager --<span class="keyword">conf</span>=/etc/<span class="keyword">conf</span>/masterha/app1.<span class="keyword">cnf</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>masterha_manager 相关参数</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=(配置文件的全路径)</span></div><div class="line"><span class="comment">	应用&局部配置文件</span></div><div class="line"></div><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">global_conf=(全局配置文件的全路径)</span></div><div class="line"><span class="comment">	全局配置文件。默认是：</span> <span class="comment">/etc/masterha_default</span><span class="string">.</span><span class="comment">cnf</span></div><div class="line"></div><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">manager_workdir</span><span class="string">,</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">workdir</span></div><div class="line"><span class="comment">	MHA</span> <span class="comment">Manger的工作目录，会产生一系列状态文件在这里面。如果不设置，默认的是：</span> <span class="comment">/var/tmp</span>  </div><div class="line"><span class="comment">	</span></div><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">manager_log</span><span class="string">,</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">log_output</span></div><div class="line"><span class="comment">	MHA</span> <span class="comment">Manger会产生日志相关的文件在这个目录中。如果不设置，会打印到STDOUT/STDERR。</span>  </div><div class="line"><span class="comment">	如果是人工failover（interactive</span> <span class="comment">failover），MHA会忽略</span><span class="literal">-</span><span class="literal">-</span><span class="comment">manager_log，直接打印到STDOUT/STDERR</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>MHA Manager 监控master方面的指定参数  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* --wait_on_monitor_error=(seconds)</div><div class="line">	这个功能主要用在自动监控和failover上  </div><div class="line">	如果在监控期间发生了错误，masterha_manager 会等待wait_on_monitor_error=N 秒，然后退出，默认是0  </div><div class="line">	如果遇到错误，在restart 监控前最好还是等等  </div><div class="line"></div><div class="line">* --ignore_fail_on_start</div><div class="line">	默认情况下，如果一个或者多个slave down掉了，master monitor 进程就会停掉，就算你设置了ignore_fail  </div><div class="line">	如果设置了--ignore_fail_on_start参数，ignore_fail标记了slave挂掉也不会让master monitor进程停掉</div></pre></td></tr></table></figure>
+
+<ul>
+<li>failover 指定参数  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">* <span class="comment">--wait_on_monitor_error=(seconds)</span></div><div class="line">    这个功能主要用在自动监控和failover上</div><div class="line">    如果在监控期间发生了错误，masterha_manager 会等待wait_on_monitor_error=N 秒，然后退出，默认是<span class="number">0</span></div><div class="line">    如果遇到错误，在restart 监控前最好还是等等</div><div class="line"></div><div class="line">* <span class="comment">--ignore_fail_on_start</span></div><div class="line">    默认情况下，如果一个或者多个slave down掉了，master monitor 进程就会停掉，就算你设置了ignore_fail</div><div class="line">    如果设置了<span class="comment">--ignore_fail_on_start参数，ignore_fail标记了slave挂掉也不会让master monitor进程停掉</span></div><div class="line"></div><div class="line">* <span class="comment">--last_failover_minute=(minutes)</span></div><div class="line">	如果上一次failover刚刚才完成（默认<span class="number">8</span>小时），那么MHA manager 这次将不会进行failover  </div><div class="line">	这个参数主要是为了避免 ping-pong failover问题  </div><div class="line">	如果设置了 <span class="comment">--ignore_last_failover，将忽略这个限制  </span></div><div class="line">	</div><div class="line">* <span class="comment">--remove_dead_master_conf</span></div><div class="line">	设置了这个参数后，如果MHA failover结束后，MHA Manager会自动在配置文件中删除 dead master的相关项	  </div><div class="line">	如果不设置，由于dead master的配置还存在文件中，那么当MHA failover后，当再次restart MHA manager后，会报错（there is <span class="operator">a</span> dead slave previous dead master）</div></pre></td></tr></table></figure>
+
+<h3 id="5-2_masterha_master_switch">5.2 masterha_master_switch</h3>
+<blockquote>
+<ol>
+<li>Manual Failover 人工交互式failover  </li>
+<li>Non-Interactive Failover 人工非交互式failover  </li>
+<li>Scheduled(Online) Master Switch 在线例行master切换  </li>
+</ol>
+</blockquote>
+<p>masterha_manager 不仅仅failover，还会monitor master。<br>masterha_master_switch 只做failover，不做master的monitor。<br>masterha_master_switch 除了failover外，还可以做master在线切换。  </p>
+<ul>
+<li>5.2.1 Manual Failover 人工交互式failover  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">$</span> <span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host1</span></div></pre></td></tr></table></figure>
+
+<p>相关参数如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line">* <span class="comment">--master_state=dead</span></div><div class="line">	这个value可能的取值是：‘dead’ or ‘alive’。  </div><div class="line">	如果设置为alive，就是在线master切换了，这样的场景，master必须是活着的   </div><div class="line"></div><div class="line">* <span class="comment">--dead_master_host=(hostname)</span></div><div class="line">	Dead master的主机信息，包括 <span class="comment">--dead_master_ip，--dead_master_port  </span></div><div class="line"></div><div class="line">* <span class="comment">--new_master_host=(hostname)</span></div><div class="line">	New master的主机信息，这个参数是可选项，如果你想特意指定某台机器作为new master，就设置这个参数  </div><div class="line">	如果new_master_host没有设置，那么选举master的规则参考automated master failover（ candidate_master parameter ）  </div><div class="line">	   </div><div class="line">* <span class="comment">--interactive=(0|1)</span></div><div class="line">	交互式failover，设置为1（默认）    </div><div class="line">	非交互式failover，设置为0  </div><div class="line">	</div><div class="line">* <span class="comment">--skip_change_master(0.56)</span></div><div class="line">	只会完成日志补偿，不会进行<span class="operator"><span class="keyword">change</span> <span class="keyword">master</span>和<span class="keyword">start</span> <span class="keyword">slave</span>  </span></div><div class="line">	如果你想<span class="keyword">double</span> <span class="keyword">check</span> <span class="keyword">slave</span>是否成功的恢复完成，那么设置该参数对你特别有用  </div><div class="line"></div><div class="line">* <span class="comment">--skip_disable_read_only</span></div><div class="line">	如果设置了这个参数，那么新<span class="keyword">master</span> 将还会是 只读状态  </div><div class="line">	如果你想手动开启新<span class="keyword">master</span>的写权限，那么这个参数特别有用  </div><div class="line"></div><div class="line">* <span class="comment">--last_failover_minute=(minutes)</span></div><div class="line">	同 masterha_manager 里面的参数一样  </div><div class="line"></div><div class="line">* <span class="comment">--ignore_last_failover</span></div><div class="line">	同 masterha_manager 里面的参数一样  </div><div class="line"></div><div class="line">* <span class="comment">--wait_on_failover_error=(seconds)</span></div><div class="line">	同 masterha_manager 里面的参数一样。  </div><div class="line">	这个参数，只对自动或者非交互式的failover有用，如果<span class="comment">--interactive=0 没有设置，那么这个参数将不起作用  </span></div><div class="line"></div><div class="line">* <span class="comment">--remove_dead_master_conf</span></div><div class="line">	同 masterha_manager 里面的参数一样</div></pre></td></tr></table></figure>
+
+<p>masterha_master_switch 默认是交互式的，你需要手动敲 “yes”  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="title">Starting</span> master switch from host1(<span class="number">192.168.0.1:3306</span>) to host2(<span class="number">192.168.0.2:3306</span>)? (yes/NO): <span class="built_in">yes</span></div></pre></td></tr></table></figure>
+
+<p>如果你没有设置new_master_host,那么选举过程也将是人工的  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">Starting master <span class="keyword">switch</span> from host1(<span class="number">192.168</span><span class="number">.0</span><span class="number">.1</span>:<span class="number">3306</span>) to host2(<span class="number">192.168</span><span class="number">.0</span><span class="number">.2</span>:<span class="number">3306</span>)? (<span class="literal">yes</span>/NO): <span class="literal">no</span></div><div class="line">Continue? (<span class="literal">yes</span>/NO): <span class="literal">yes</span></div><div class="line">Enter <span class="keyword">new</span> master host <span class="attribute">name</span>: host5</div><div class="line">Master <span class="keyword">switch</span> to gd1305(<span class="number">10.17</span><span class="number">.1</span><span class="number">.238</span>:<span class="number">3306</span>). OK? (<span class="literal">yes</span>/NO): <span class="literal">yes</span></div></pre></td></tr></table></figure>
+
+<p>在上面的例子中，host5 将会是新的master（前提是host5 必须开启binlog，并且大版本号不能高于其他slave）<br>下面的命令和上面有同样的效果  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">$</span> <span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">new_master_host=host5</span></div></pre></td></tr></table></figure>
+
+<p>下面的参数是MHA 0.56的参数  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">* <span class="comment">--wait_until_gtid_in_sync(0|1)</span></div><div class="line">	这是基于GTID的参数  </div><div class="line">	如果设置为1（默认）： MHA会等待，直到所有slave追上新master的gtid  </div><div class="line">	如果设置为0： 那么MHA不会等待slave追上新master  </div><div class="line">	</div><div class="line">* <span class="comment">--skip_change_master</span></div><div class="line">	MHA 不会执行 <span class="operator"><span class="keyword">CHANGE</span> <span class="keyword">MASTER</span>  </span></div><div class="line"></div><div class="line">* <span class="comment">--skip_disable_read_only</span></div><div class="line">	MHA 忽略在new <span class="keyword">master</span>上执行 <span class="keyword">SET</span> <span class="keyword">GLOBAL</span> read_only=<span class="number">0</span>  </div><div class="line"></div><div class="line">* <span class="comment">--ignore_binlog_server_error</span></div><div class="line">	MHA忽略任何<span class="keyword">binlog</span> <span class="keyword">server</span>的错误</div></pre></td></tr></table></figure>
+
+<ul>
+<li>5.2.2 Non-Interactive Failover 非交互式failover  </li>
+</ul>
+<p>如果在masterha_master_switch中设置了 —interactive=0 ， 那么它将是自动failover（非交互式）</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">$</span> <span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/conf/masterha/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">new_master_host=host2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interactive=0</span></div></pre></td></tr></table></figure>
+
+<p>这个masterha_master_switch 非交互failover操作，就跟masterha_manager内部跑的failover一样<br>如果你发现自己的master挂了，但是又没有用masterha_manager监控，那么执行这个masterha_master_switch —interactive=0 特别有用<br>如果没有用masterha_manager监控，但是有其他的监控（Pacemaker），那么配合这个masterha_master_switch —interactive=0 特别有用  </p>
+<ul>
+<li>5.2.3 Scheduled(Online) Master Switch 在线master切换</li>
+</ul>
+<p>MySQL 的例行维护，需要在线切换master，这个场景特别有用  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">$</span> <span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=alive</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">new_master_host=host2</span></div></pre></td></tr></table></figure>
+
+<p>—master_state=alive 必须指定  </p>
+<p>当下面条件都满足时，可以进行online 切换  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>IO 线程在running 状态</div><div class="line"><span class="bullet">* </span>SQL 线程在running 状态</div><div class="line"><span class="bullet">* </span>Seconds<span class="emphasis">_Behind_</span>Master 小于等于--running<span class="emphasis">_updates_</span>limit设置的秒数  </div><div class="line"><span class="bullet">* </span>在master上，没有超过--running<span class="emphasis">_updates_</span>limit设置的秒数的 update query存在</div></pre></td></tr></table></figure>
+
+<p>其他重要参数</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">* <span class="comment">--new_master_host=(hostname)</span></div><div class="line">	指定每台机器为新master</div><div class="line"></div><div class="line">* <span class="comment">--orig_master_is_new_slave</span></div><div class="line">	当master切换后，原来的老master切换后，会成为新的slave  </div><div class="line">	默认情况下，这个参数是关闭的，也就是原来的老master不会出现在新的复制环境中  </div><div class="line">	如果你要设置<span class="comment">--orig_master_is_new_slave，那么必须在配置文件中设置repl_password参数，因为它不知道新master的复制密码  </span></div><div class="line"></div><div class="line">* <span class="comment">--running_updates_limit=(seconds)</span></div><div class="line">	如果当前master上的执行的写query超过这个值，或者slave 落后master超过这个值，master switch操作会终止  </div><div class="line">	默认是1秒  </div><div class="line"></div><div class="line">* <span class="comment">--remove_orig_master_conf</span></div><div class="line">	设置后，master 切换后，原来master的相关信息在配置文件中会被删除  </div><div class="line">	默认这个参数不生效，不会在配置中删除相关信息  </div><div class="line"></div><div class="line">* <span class="comment">--skip_lock_all_tables</span></div><div class="line">	如果设置这个参数，那么在切换过程中，不会对老master 进行<span class="operator"><span class="keyword">FLUSH</span> <span class="keyword">TABLES</span> <span class="keyword">WITH</span> <span class="keyword">READ</span> <span class="keyword">LOCK</span></span></div></pre></td></tr></table></figure>
+
+<h3 id="5-3_masterha_check_status">5.3 masterha_check_status</h3>
+<p>主要是用来检查MHA manager中对master的monitor是否正确  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="char">$ </span>masterha_check_status --conf=/path/to/app1.cnf</div><div class="line">  app1 (<span class="method">pid:</span><span class="number">8368</span>) is running(<span class="number">0</span>:<span class="class">PING_OK</span>), <span class="method">master:</span>host1</div><div class="line"><span class="char">$ </span>echo <span class="char">$?</span></div><div class="line">  <span class="number">0</span></div></pre></td></tr></table></figure>
+
+<p>如果监控master的线程正常，会返回0  </p>
+<h3 id="5-4_masterha_check_repl">5.4 masterha_check_repl</h3>
+<p>检查复制环境是否ok  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">manager_host$ masterha_check_repl --<span class="keyword">conf</span>=/etc/app1.<span class="keyword">cnf</span></div><div class="line">  </div><div class="line">MySQL Replication Health <span class="keyword">is</span> OK.</div></pre></td></tr></table></figure>
+
+<p>如果检测到失败，会返回错误  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>复制过滤规则不同，SQL线程有错误，复制环境中存在多个master  </div><div class="line"><span class="bullet">* </span>IO线程stopped状态</div><div class="line"><span class="bullet">* </span>SQL线程stopped状态</div><div class="line"><span class="bullet">* </span>复制延迟太长（--seconds<span class="emphasis">_behind_</span>master=(seconds)）</div></pre></td></tr></table></figure>
+
+<p>masterha_check_repl的一些参数，可以加到配置文件中   </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* --seconds_behind_master=(seconds)</div><div class="line">	masterha_check_repl 会检测延迟，如果超过这个描述，会报错	</div><div class="line">	默认是 30秒</div><div class="line"></div><div class="line">* --skip_check_ssh</div><div class="line">	通过masterha_check_ssh 去检测ssh的环境  </div><div class="line">	如果设置了该参数，可以忽略SSH的检测</div></pre></td></tr></table></figure>
+
+<h3 id="5-5_masterha_stop">5.5 masterha_stop</h3>
+<p>可以通过如下命令，关闭MHA manager进程</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">manager_host$ masterha_stop --<span class="keyword">conf</span>=/etc/app1.<span class="keyword">cnf</span></div><div class="line">Stopped app1 successfully.</div></pre></td></tr></table></figure>
+
+<p>关闭manager，并不会关闭掉MySQL server<br>如果关闭不掉怎么办呢？ 加上—abort 参数，他会发送 sigkill（-9）强行关闭<br>如果manager的状态是 FAILOVER_RUNNING，那么manager 不会被关闭，这是出于安全考虑<br>你当然也可以自动kill掉manager进程，但是要确保它不是处在failover阶段  </p>
+<h3 id="5-6_masterha_conf_host">5.6 masterha_conf_host</h3>
+<blockquote>
+<p>用于添加和删除配置文件中的条目  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"># masterha_conf_host --<span class="keyword">command</span>=<span class="built_in">add</span> --<span class="keyword">conf</span>=/etc/<span class="keyword">conf</span>/masterha/app1.<span class="keyword">cnf</span> --<span class="built_in">hostname</span>=db101</div></pre></td></tr></table></figure>
+
+<p>执行上述命令后，配置文件中新增了如下条目  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="title">[server_db101]</span></div><div class="line"><span class="setting">hostname=<span class="value">db101</span></span></div></pre></td></tr></table></figure>
+
+<p>可以通过—param 添加很多参数，用；分号 分隔  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"># masterha_conf_host --<span class="keyword">command</span>=<span class="built_in">add</span> --<span class="keyword">conf</span>=/etc/<span class="keyword">conf</span>/masterha/app1.<span class="keyword">cnf</span> --<span class="built_in">hostname</span>=db101 --block=server100 --params=<span class="string">"no_master=1;ignore_fail=1"</span></div></pre></td></tr></table></figure>
+
+<p>执行上述命令后，配置文件中新增了如下条目  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="title">[server100]</span></div><div class="line"><span class="setting">hostname=<span class="value">db101</span></span></div><div class="line"><span class="setting">no_master=<span class="value"><span class="number">1</span></span></span></div><div class="line"><span class="setting">ignore_fail=<span class="value"><span class="number">1</span></span></span></div></pre></td></tr></table></figure>
+
+<p>当然也可以删除某些条目  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"># masterha_conf_host --<span class="keyword">command</span>=<span class="built_in">delete</span> --<span class="keyword">conf</span>=/etc/<span class="keyword">conf</span>/masterha/app1.<span class="keyword">cnf</span> --block=server100</div></pre></td></tr></table></figure>
+
+<ul>
+<li>重点参数 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">* --<span class="keyword">command</span>=(<span class="built_in">add</span>|<span class="built_in">delete</span>)</div><div class="line">	增加或者删除一个block  </div><div class="line"></div><div class="line">* --<span class="keyword">conf</span>=(config <span class="keyword">file</span> path)</div><div class="line">	局部配置的全局路径  </div><div class="line"></div><div class="line">* --<span class="built_in">hostname</span>=(<span class="built_in">hostname</span>)</div><div class="line">	主机名</div><div class="line"></div><div class="line">* --block=(block_name)</div><div class="line">	配置文件中的一个block  </div><div class="line">	当--<span class="built_in">add</span>时，block name 必须在配置文件中不存在  </div><div class="line">	当--<span class="built_in">delete</span>时，block name 必须在配置文件中存在  </div><div class="line">	当--block不指定时，名字默认为： server$<span class="built_in">hostname</span>  </div><div class="line"></div><div class="line">* --params=(key1=value1;key2=value2;...)</div><div class="line">	参数<span class="keyword">list</span></div></pre></td></tr></table></figure>
+
+<h3 id="5-7_masterha_ssh_check">5.7 masterha_ssh_check</h3>
+<p>检查所有MHA需要要到的机器之间的SSH互信  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># masterha_check_ssh --conf=/etc/app1.cnf</span></div><div class="line">  </div><div class="line">  <span class="title">Sat</span> May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">19</span> <span class="number">2011</span> - [<span class="built_in">warn</span>] Global configuration file /etc/masterha_default.cnf not found. Skipping.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">19</span> <span class="number">2011</span> - [<span class="built_in">info</span>] Reading application default configurations from /etc/app1.cnf..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">19</span> <span class="number">2011</span> - [<span class="built_in">info</span>] Reading server configurations from /etc/app1.cnf..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">19</span> <span class="number">2011</span> - [<span class="built_in">info</span>] Starting SSH connection tests..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">19</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host1</span>(<span class="number">192.168.0.1</span>) to root<span class="variable">@host2</span>(<span class="number">192.168.0.2</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">20</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">20</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host1</span>(<span class="number">192.168.0.1</span>) to root<span class="variable">@host3</span>(<span class="number">192.168.0.3</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">20</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">21</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host2</span>(<span class="number">192.168.0.2</span>) to root<span class="variable">@host1</span>(<span class="number">192.168.0.1</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">21</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">21</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host2</span>(<span class="number">192.168.0.2</span>) to root<span class="variable">@host3</span>(<span class="number">192.168.0.3</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">21</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">22</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host3</span>(<span class="number">192.168.0.3</span>) to root<span class="variable">@host1</span>(<span class="number">192.168.0.1</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">22</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">22</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]  Connecting via SSH from root<span class="variable">@host3</span>(<span class="number">192.168.0.3</span>) to root<span class="variable">@host2</span>(<span class="number">192.168.0.2</span>)..</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">22</span> <span class="number">2011</span> - [<span class="built_in">debug</span>]   ok.</div><div class="line">  Sat May <span class="number">14</span> <span class="number">14</span>:<span class="number">42</span>:<span class="number">22</span> <span class="number">2011</span> - [<span class="built_in">info</span>] All SSH connection tests passed successfully.</div></pre></td></tr></table></figure>
+
+<p>如果你使用了masterha_secondary_check 做二次验证，那么这里面提到的机器也必须SSH互信  </p>
+<p>MHA恢复slave是并行的，也就意味着恢复需要开启多个ssh通道，所以为了安全和谨慎，在/etc/ssh/sshd_config（默认10）提高MaxStartups 的数量，然后重启sshd，或者reload  </p>
+<h3 id="5-8_purge_relay_logs">5.8 purge_relay_logs</h3>
+<blockquote>
+<p>默认情况下，如果SQL线程执行完relay-log，relay logs就会被自动删除。但是这些relay-logs 也许还会用来恢复其他的slave，所以你需要关闭自动删除relay-logs的purge线程，然后自己阶段性的来删除<br>如果是你自己来删的话，必须考虑repl 延迟问题  </p>
+</blockquote>
+<p>MHA Node 上有一个命令purge_relay_logs可以帮你安全的删除relay log<br>purge_relay_logs帮你做了很多事情，创建硬连接，执行SET GLOBAL relay_log_purge=1，等几秒让其切换到新的relay log，然后执行SET GLOBAL relay_log_purge=0  </p>
+<p>purge_relay_logs 需要连接MySQL server，所以需要很多认证的参数  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">* <span class="comment">--user</span></div><div class="line">	MySQL用户名，默认root  </div><div class="line"></div><div class="line">* <span class="comment">--password</span></div><div class="line">	MySQL 密码，默认为空</div><div class="line"></div><div class="line">* <span class="comment">--host</span></div><div class="line">	MySQL的hostname，默认<span class="number">127.0</span><span class="number">.0</span><span class="number">.1</span>，必须传递正确的host  </div><div class="line"></div><div class="line">* <span class="comment">--port</span></div><div class="line">	MySQL 的端口，默认<span class="number">3306</span></div><div class="line"></div><div class="line">* <span class="comment">--workdir</span></div><div class="line">	relay <span class="built_in">log</span>硬连接创建和删除的目录  </div><div class="line">	这个目录最好不要跨OS分区，relay <span class="built_in">log</span> 在哪个分区，workdir就设置在哪个分区。如果跨分区，会报错Invalid cross-device link  </div><div class="line"></div><div class="line">* <span class="comment">--disable_relay_log_purge</span></div><div class="line">	如果MySQL里面的参数relay_log_purge设置为<span class="number">1</span>，那么这个脚本不会做任何工作  </div><div class="line">	如果这个脚本设置了 <span class="comment">--disable_relay_log_purge参数，那么它会主动去关闭MySQL的参数relay_log_purge=0</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>计划任务调度purge_relay_logs  </li>
+</ul>
+<p>/usr/bin/purge_relay_logs 可以在不阻塞SQL线程的前提下删除relay logs<br>所以，我们需要定期的来删除relay，必须每天一次，没半天一次等等<br>通过如下计划任务可以做到  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">[app<span class="variable">@slave_host1</span>]<span class="variable">$ </span>cat /etc/cron.d/purge_relay_logs</div><div class="line"><span class="comment"># purge relay logs at 5am</span></div><div class="line"><span class="number">0</span> <span class="number">5</span> * * * app /usr/bin/purge_relay_logs --user=root --password=<span class="constant">PASSWORD</span> --disable_relay_log_purge <span class="input">&gt;&gt; /var/log/masterha/purge_relay_logs.log <span class="number">2</span>&gt;&<span class="number">1</span></span></div></pre></td></tr></table></figure>
+
+<p>最好让slave删除relay log不要在同一时间点，假如需要恢复，那么这个时间点所有relay logs都被删除了就不好了  </p>
+<h2 id="六、核心参数详解">六、核心参数详解</h2>
+<h3 id="6-1_参数矩阵图">6.1  参数矩阵图</h3>
+<table>
+<thead>
+<tr>
+<th>参数名</th>
+<th>是否必须？</th>
+<th>参数作用域</th>
+<th>默认值</th>
+<th>例子</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>hostname</td>
+<td>yes</td>
+<td>Local Only</td>
+<td>-</td>
+<td>hostname=mysql_server1, hostname=192.168.0.1, etc</td>
+</tr>
+<tr>
+<td>ip</td>
+<td>No</td>
+<td>Local Only</td>
+<td>gethostbyname($hostname)</td>
+<td>ip=192.168.1.3</td>
+</tr>
+<tr>
+<td>port</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>3306</td>
+<td>port=3306</td>
+</tr>
+<tr>
+<td>ssh_connection_timeout</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>5</td>
+<td>ssh_connection_timeout=20</td>
+</tr>
+<tr>
+<td>ssh_options</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>“”(empty string)</td>
+<td>ssh_options=”-i /root/.ssh/id_dsa2”</td>
+</tr>
+<tr>
+<td>candidate_master</td>
+<td>No</td>
+<td>Local Only</td>
+<td>0</td>
+<td>candidate_master=1</td>
+</tr>
+<tr>
+<td>no_master</td>
+<td>No</td>
+<td>Local Only</td>
+<td>0</td>
+<td>no_master=1</td>
+</tr>
+<tr>
+<td>ignore_fail</td>
+<td>No</td>
+<td>Local Only</td>
+<td>0</td>
+<td>ignore_fail=1</td>
+</tr>
+<tr>
+<td>skip_init_ssh_check</td>
+<td>No</td>
+<td>Local Only</td>
+<td>0</td>
+<td>skip_init_ssh_check=1</td>
+</tr>
+<tr>
+<td>skip_reset_slave</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>0</td>
+<td>skip_reset_slave=1</td>
+</tr>
+<tr>
+<td>user</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>root</td>
+<td>user=mysql_root</td>
+</tr>
+<tr>
+<td>password</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>“”(empty string)</td>
+<td>password=rootpass</td>
+</tr>
+<tr>
+<td>repl_user</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>Master_User value from SHOW SLAVE STATUS</td>
+<td>repl_user=repl</td>
+</tr>
+<tr>
+<td>repl_password</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>- (current replication password)</td>
+<td>repl_user=replpass</td>
+</tr>
+<tr>
+<td>disable_log_bin</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>0</td>
+<td>disable_log_bin=1</td>
+</tr>
+<tr>
+<td>master_pid_file</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>“”(empty string)</td>
+<td>master_pid_file=/var/lib/mysql/master1.pid</td>
+</tr>
+<tr>
+<td>ssh_user</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>current OS user</td>
+<td>ssh_user=root</td>
+</tr>
+<tr>
+<td>remote_workdir</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>/var/tmp</td>
+<td>remote_workdir=/var/log/masterha/app1</td>
+</tr>
+<tr>
+<td>master_binlog_dir</td>
+<td>No</td>
+<td>Local/App/Global</td>
+<td>/var/lib/mysql</td>
+<td>master_binlog_dir=/data/mysql1,/data/mysql2</td>
+</tr>
+<tr>
+<td>log_level</td>
+<td>No</td>
+<td>App/Global</td>
+<td>info</td>
+<td>log_level=debug</td>
+</tr>
+<tr>
+<td>manager_workdir</td>
+<td>No</td>
+<td>App</td>
+<td>/var/tmp</td>
+<td>manager_workdir=/var/log/masterha</td>
+</tr>
+<tr>
+<td>client_bindir</td>
+<td>No</td>
+<td>App</td>
+<td>-</td>
+<td>client_bindir=/usr/mysql/bin</td>
+</tr>
+<tr>
+<td>client_libdir</td>
+<td>No</td>
+<td>App</td>
+<td>-</td>
+<td>client_libdir=/usr/lib/mysql</td>
+</tr>
+<tr>
+<td>manager_log</td>
+<td>No</td>
+<td>App</td>
+<td>STDERR</td>
+<td>manager_log=/var/log/masterha/app1.log</td>
+</tr>
+<tr>
+<td>check_repl_delay</td>
+<td>No</td>
+<td>App/Global</td>
+<td>1</td>
+<td>check_repl_delay=0</td>
+</tr>
+<tr>
+<td>check_repl_filter</td>
+<td>No</td>
+<td>App/Global</td>
+<td>1</td>
+<td>check_repl_filter=0</td>
+</tr>
+<tr>
+<td>latest_priority</td>
+<td>No</td>
+<td>App/Global</td>
+<td>1</td>
+<td>latest_priority=0</td>
+</tr>
+<tr>
+<td>multi_tier_slave</td>
+<td>No</td>
+<td>App/Global</td>
+<td>0</td>
+<td>multi_tier_slave=1</td>
+</tr>
+<tr>
+<td>ping_interval</td>
+<td>No</td>
+<td>App/Global</td>
+<td>3</td>
+<td>ping_interval=5</td>
+</tr>
+<tr>
+<td>ping_type</td>
+<td>No</td>
+<td>App/Global</td>
+<td>SELECT</td>
+<td>ping_type=CONNECT</td>
+</tr>
+<tr>
+<td>secondary_check_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>secondary_check_script= masterha_secondary_check -s remote_dc1 -s remote_dc2</td>
+</tr>
+<tr>
+<td>master_ip_failover_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>master_ip_failover_script=/usr/local/custom_script/master_ip_failover</td>
+</tr>
+<tr>
+<td>master_ip_online_change_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>master_ip_online_change_script= /usr/local/custom_script/master_ip_online_change</td>
+</tr>
+<tr>
+<td>shutdown_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>shutdown_script= /usr/local/custom_script/master_shutdown</td>
+</tr>
+<tr>
+<td>report_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>report_script= /usr/local/custom_script/report</td>
+</tr>
+<tr>
+<td>init_conf_load_script</td>
+<td>No</td>
+<td>App/Global</td>
+<td>null</td>
+<td>report_script= /usr/local/custom_script/init_conf_loader</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Local Scope</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">每个server域的参数  </div><div class="line">在application 配置文件(app.<span class="keyword">cnf</span>)中：[server_xxx] 下面写的参数</div></pre></td></tr></table></figure>
+
+<ul>
+<li>App Scope</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">每个<span class="list">{master,slave}</span>对的参数  </div><div class="line">这些参数在application配置(app.cnf)中： [server_default] 写的参数</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Global Scope</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">所有{master,slave}对的参数  </div><div class="line">这些参数在<span class="keyword">global</span> 配置(masterha_default.cnf)中：[server_default]写的参数</div></pre></td></tr></table></figure>
+
+<h3 id="6-2_核心参数详解">6.2 核心参数详解</h3>
+<ul>
+<li>hostname</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">目标MySQL服务器的 <span class="built_in">hostname</span> 或者 ip   </div><div class="line">这个参数必须配置在 application 配置文件的[server_xxx]下面</div></pre></td></tr></table></figure>
+
+<ul>
+<li>ssh_connection_timeout</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">0.54开始支持，默认5秒，以前是硬编码</div></pre></td></tr></table></figure>
+
+<ul>
+<li>ssh_options</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">0.53开始支持，SSH命令额外的参数</div></pre></td></tr></table></figure>
+
+<ul>
+<li>candidate_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">候选master，如果设置为1，那么这台机器被选举为新master的机会就越大（还要满足：binlog开启，无大延迟）  </span></div><div class="line">如果你设置了N台机器都为candidate_master=<span class="string">1，那么优先选举的顺序为：  从上到下  </span></div><div class="line">([server_xxx]). [server_1]  </div><div class="line">([server_xxx]). [server_2]</div><div class="line">([server_xxx]). [server_3]</div></pre></td></tr></table></figure>
+
+<ul>
+<li>no_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">如果对某台机器设置了no_master</span>=<span class="string">1 ， 那么这台机器永远都不可能成为新master  </span></div><div class="line">如果没有master选举了，那么MHA会退出</div></pre></td></tr></table></figure>
+
+<ul>
+<li>ignore_fail</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">默认情况下，如果slave有问题（无法通过mysql，ssh连接，sql线程停止等等），MHA 将停止failover  </span></div><div class="line">如果你不想让MHA manager停止，可以设置ignore_fail=<span class="string">1</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>skip_init_ssh_check</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">跳过SSH检测</div></pre></td></tr></table></figure>
+
+<ul>
+<li>skip_reset_slave</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">0.56才支持的参数，failover后，不执行<span class="operator"><span class="keyword">reset</span> <span class="keyword">slave</span> <span class="keyword">all</span></span></div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>user，password，repl_user，repl_password，ssh_user</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">* user</div><div class="line">	默认root，MySQL 的用户名，如果是root，因为要执行很多命令如：<span class="operator"><span class="keyword">STOP</span> <span class="keyword">SLAVE</span>, <span class="keyword">CHANGE</span> <span class="keyword">MASTER</span>, <span class="keyword">RESET</span> <span class="keyword">SLAVE</span>  </span></div><div class="line"></div><div class="line">* <span class="keyword">password</span></div><div class="line">	<span class="keyword">user</span>的密码  </div><div class="line"></div><div class="line">* repl_user</div><div class="line">	复制线程的用户名（最好加上）</div><div class="line"></div><div class="line">* repl_password</div><div class="line">	复制线程的密码（最好加上），尤其是<span class="comment">--orig_master_is_new_slave之后，老master要change master到新master，它不知道密码  </span></div><div class="line"></div><div class="line">* ssh_user</div><div class="line">	操作系统的用户名（Manager，Node），因为要应用，解析各种日志，最好权限大点，默认是MHA manager上的当前OS 用户</div></pre></td></tr></table></figure>
+
+<ul>
+<li>disable_log_bin</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在slave上应用差异relay <span class="built_in">log</span>的时候，可以不记录到binlog日志中</div></pre></td></tr></table></figure>
+
+<ul>
+<li>remote_workdir</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">MHA Node的工作目录，默认 /<span class="keyword">var</span>/tmp</div></pre></td></tr></table></figure>
+
+<ul>
+<li>master_binlog_dir</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">master上产生binlog的binlog 目录。默认是：<span class="regexp">/var/</span>lib<span class="regexp">/mysql,/</span>var<span class="regexp">/log/m</span>ysql</div></pre></td></tr></table></figure>
+
+<ul>
+<li>manager_workdir</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">MHA Manager的工作目录，默认： /<span class="keyword">var</span>/tmp</div></pre></td></tr></table></figure>
+
+<ul>
+<li>manager_log</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="title">MHA</span> manager 的日志目录，如果不设置，就是标准输出，和标准错误输出</div></pre></td></tr></table></figure>
+
+<ul>
+<li>check_repl_delay</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">默认情况下，如果slave落后master100M左右的relay <span class="built_in">log</span>，MHA会放弃选择这个slave作为<span class="keyword">new</span> master  </div><div class="line">如果设置check_repl_delay=<span class="number">0</span>，MHA会忽略这个限制  </div><div class="line">如果你想让某个candidate_master=<span class="number">1</span>特定的slave成为maseter，那么这个参数特别有用</div></pre></td></tr></table></figure>
+
+<ul>
+<li>check_repl_filter</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">如果过滤规则不一样，MHA停止monitor和failover  </span></div><div class="line">可以通过设置check_repl_filter=<span class="string">0忽略，但是要特别小心这么做</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>ping_interval</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">MHA manager多久去<span class="built_in">ping</span> SQL 一次master  </div><div class="line">如果三次间隔都没反应，那么MHA认为master挂了  </div><div class="line">默认<span class="number">3</span>秒  </div><div class="line">如果MHA Manager连不上Master是因为too many connection错误或者认证失败，这些将不会认为master挂了</div></pre></td></tr></table></figure>
+
+<ul>
+<li>secondary_check_script</li>
+</ul>
+<p>一般来讲，　非常推荐使用更多网络上机器是不同路由策略上的机器来检查MySQL　Master是否存活。<br>默认情况下，只有MHA Manager通过一个路由来检查Master是否存活。这个也是不推荐的。<br>MHA可以通过外部secondary_check_script配置的脚本来做到从多个路由策略下进行检查.    </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">secondary_check_script = masterha_secondary_check <span class="operator">-s</span> remote_host1 <span class="operator">-s</span> remote_host2</div></pre></td></tr></table></figure>
+
+<p>在大多数场景下，内置的masterha_secondary_check都可以允许良好  </p>
+<p>Manager-(A)-&gt;remote_host1-(B)-&gt;master_host<br>Manager-(A)-&gt;remote_host2-(B)-&gt;master_host  </p>
+<p>在所有的路由中，如果A成功，B失败，那么MHA认为master就真的挂了，其他情况，一律认为master还是活的  </p>
+<p>通常来讲，remote_host1，remote_host2，应该和MHA manager在不同的网段中  </p>
+<p>MHA会调用secondary_check_script声明的脚本并自动带上一些参数。　<br>masterha_secondary_check在很多场景都是适用的，但是你也可以自已实现这个程序带有更多的功能。  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>–user=(在远程机器上使用的SSH用户名。　ssh_user的值将被使用)  </div><div class="line"><span class="bullet">* </span>–master_host = (master的hostname)  </div><div class="line"><span class="bullet">* </span>–master_ip = (master的ip地址)  </div><div class="line"><span class="bullet">* </span>–master_port = ( master的端口号)</div></pre></td></tr></table></figure>
+
+<p>注意：内置的masterha_secondary_check脚本依赖于的Perl的IO::Socket::INET(Perl 5.6.0中是默认支持包含这个模块)。  　<br>masterha_secondary_check需要通过ssh连接到远程的机器上，所以需要manager到远程机器上建立public key信任。<br>另外masterha_secondary_check是通过和Master建立TCP的连接测试Master是否存活，所以mysql设置的max_connections不起作用。　<br>但每次TCP连接成功后，MySQL的Aborted_connects 值都会加1  </p>
+<ul>
+<li>master_ip_failover_script</li>
+</ul>
+<p>MHA 不做vip 漂移动作，这些事情你必须自己做  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">master_ip_failover_script= <span class="regexp">/usr/local</span><span class="regexp">/sample/bin</span><span class="regexp">/master_ip_failover</span></div></pre></td></tr></table></figure>
+
+<p>MHA manager会调用master_ip_failover_script三次  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">* 第一次：检查阶段</div><div class="line">	--command=status  </div><div class="line">	--ssh_user=(current maste<span class="string">r's ssh username)  </span></div><div class="line">	--orig_master_host=(current master's hostname)  </div><div class="line">	--orig_master_ip=(current maste<span class="string">r's ip address)  </span></div><div class="line">	--orig_master_port=(current master's port number)  </div><div class="line"></div><div class="line">* 第二次：当前master 关闭阶段  </div><div class="line">	--command=stop <span class="keyword">or</span> stopssh  </div><div class="line">	--ssh_user=(dead maste<span class="string">r's ssh username, if reachable via ssh)  </span></div><div class="line">	--orig_master_host=(current(dead) master's hostname)  </div><div class="line">	--orig_master_ip=(current(dead) maste<span class="string">r's ip address)  </span></div><div class="line">	--orig_master_port=(current(dead) master's port number)  </div><div class="line"></div><div class="line">* 第三次：新master激活阶段</div><div class="line">	--command=start</div><div class="line">	--ssh_user=(new maste<span class="string">r's ssh username)</span></div><div class="line">	--orig_master_host=(dead master's hostname)</div><div class="line">	--orig_master_ip=(dead maste<span class="string">r's ip address)</span></div><div class="line">	--orig_master_port=(dead master's port number)</div><div class="line">	--new_master_host=(new maste<span class="string">r's hostname)</span></div><div class="line">	--new_master_ip=(new master's ip address)</div><div class="line">	--new_master_port(new maste<span class="string">r's port number)</span></div><div class="line">	--new_master_user=(new master's user)</div><div class="line">	--new_master_password(new maste<span class="string">r's password)</span></div></pre></td></tr></table></figure>
+
+<p>在当前master shutdown阶段，你可以调用shutdown_script 关闭当前master<br>在当前master shutdown阶段，你可以删除dead master在配置文件中<br>在新master激活阶段，你可以指定虚拟ip在新master上，并且可以更改数据库路由设置<br>在新master激活阶段，你可以新增和更改新maser的记录<br>另外，你可以做任何事情让应用可写新master，例如：SET GLOBAL read_only=0，创建用户，权限  </p>
+<p>但是，默认的MHA manager参数是空，不会做任何事情  </p>
+<ul>
+<li>master_ip_online_changes_script</li>
+</ul>
+<p>这个参数有点类似于master_ip_failover_script,但这个参数不用于master　故障转意，只使用到master在线的切换  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">* 冻结当前master写的阶段</div><div class="line"></div><div class="line">--command=stop <span class="keyword">or</span> stopssh</div><div class="line">--orig_master_host=(current maste<span class="string">r's hostname)</span></div><div class="line">--orig_master_ip=(current master's ip address)</div><div class="line">--orig_master_port=(current maste<span class="string">r's port number)</span></div><div class="line">--orig_master_user=(current master's user)</div><div class="line">--orig_master_password=(current maste<span class="string">r's password)</span></div><div class="line">--orig_master_ssh_user=(from 0.56, current master's ssh user)</div><div class="line">--orig_master_is_new_slave=(<span class="keyword">from</span> <span class="number">0.56</span>, notifying whether the orig master will be new slave <span class="keyword">or</span> <span class="keyword">not</span>)</div><div class="line"></div><div class="line">* new master赋予写权限阶段  </div><div class="line"></div><div class="line">--command=start</div><div class="line">--orig_master_host=(orig maste<span class="string">r's hostname)</span></div><div class="line">--orig_master_ip=(orig master's ip address)</div><div class="line">--orig_master_port=(orig maste<span class="string">r's port number)</span></div><div class="line">--new_master_host=(new master's hostname)</div><div class="line">--new_master_ip=(new maste<span class="string">r's ip address)</span></div><div class="line">--new_master_port(new master's port number)</div><div class="line">--new_master_user=(new maste<span class="string">r's user)</span></div><div class="line">--new_master_password=(new master's password)</div><div class="line">--new_master_ssh_user=(<span class="keyword">from</span> <span class="number">0.56</span>, new maste<span class="string">r's ssh user)</span></div></pre></td></tr></table></figure>
+
+<p>MHA在冻结写的切换过程中会在Master上执行FlUSH TABLES WITH READ LOCK,在这个优雅的切换过程不会有任何写入的。<br>在新的Ｍaster在开始授权写的过程中，你可以做和master_ip_failover_script一样的事情。　例如：　创建用户及权限，　执行set global read_only=0<br>如果脚本执行exit code不是0 或是10, MHA　Manager异常退出并发不会继续进行master切换。  </p>
+<p>默认这个参数是空的，所以MHA Manager在默认情况下什么也不做。</p>
+<ul>
+<li><p><del>shutdown_script</del></p>
+</li>
+<li><p><del>report_script</del></p>
+</li>
+<li><p><del>init_conf_load_script</del></p>
+</li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/07/14/mha/" data-title="MySQL Master High Available 理论篇 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/07/20/replace_into/" title="MySQL replace into 错误案例">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  MySQL replace into 错误案例</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/07/14/MySQL57_new_feature/"  title="How MySQL5.7 new feature rocks your heart">
+ <strong>NEXT:</strong><br/> 
+ <span>How MySQL5.7 new feature rocks your heart
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/07/14/mha/" data-title="MySQL Master High Available 理论篇" data-url="https://Keithlan.github.io/2016/07/14/mha/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、概况"><span class="toc-number">1.</span> <span class="toc-text">一、概况</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、其他的HA解决方案"><span class="toc-number">2.</span> <span class="toc-text">二、其他的HA解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MHA架构"><span class="toc-number">3.</span> <span class="toc-text">三、MHA架构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、MHA的优点"><span class="toc-number">4.</span> <span class="toc-text">四、MHA的优点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、MHA工作流程"><span class="toc-number">5.</span> <span class="toc-text">五、MHA工作流程</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_MHA如何监控master和故障转移"><span class="toc-number">5.1.</span> <span class="toc-text">5.1 MHA如何监控master和故障转移</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-1_验证复制设置以及确认当前master状态"><span class="toc-number">5.1.1.</span> <span class="toc-text">5.1.1 验证复制设置以及确认当前master状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-2_监控master"><span class="toc-number">5.1.2.</span> <span class="toc-text">5.1.2 监控master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-3_检测master是否失败"><span class="toc-number">5.1.3.</span> <span class="toc-text">5.1.3 检测master是否失败</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-4_再次验证slave的配置"><span class="toc-number">5.1.4.</span> <span class="toc-text">5.1.4 再次验证slave的配置</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-5_关掉失败的master的服务器（可选）"><span class="toc-number">5.1.5.</span> <span class="toc-text">5.1.5 关掉失败的master的服务器（可选）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-6_恢复一台新master"><span class="toc-number">5.1.6.</span> <span class="toc-text">5.1.6 恢复一台新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-7_让这台新master可用"><span class="toc-number">5.1.7.</span> <span class="toc-text">5.1.7 让这台新master可用</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-8_恢复其他slave"><span class="toc-number">5.1.8.</span> <span class="toc-text">5.1.8 恢复其他slave</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-9_通知（可选）"><span class="toc-number">5.1.9.</span> <span class="toc-text">5.1.9 通知（可选）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-1-10_流程图"><span class="toc-number">5.1.10.</span> <span class="toc-text">5.1.10 流程图</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_MHA如何在线快速切换master"><span class="toc-number">5.2.</span> <span class="toc-text">5.2 MHA如何在线快速切换master</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-1_验证复制设置以及确认当前master状态"><span class="toc-number">5.2.1.</span> <span class="toc-text">5.2.1  验证复制设置以及确认当前master状态</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-2_确认新master"><span class="toc-number">5.2.2.</span> <span class="toc-text">5.2.2  确认新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-3_当前master停写"><span class="toc-number">5.2.3.</span> <span class="toc-text">5.2.3  当前master停写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-4_等待其他slave追上当前master，同步无延迟"><span class="toc-number">5.2.4.</span> <span class="toc-text">5.2.4  等待其他slave追上当前master，同步无延迟</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-5_确保新master可写"><span class="toc-number">5.2.5.</span> <span class="toc-text">5.2.5  确保新master可写</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-6_让其他slave指向新master"><span class="toc-number">5.2.6.</span> <span class="toc-text">5.2.6  让其他slave指向新master</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#5-2-7_流程图"><span class="toc-number">5.2.7.</span> <span class="toc-text">5.2.7  流程图</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、重要的命令"><span class="toc-number">6.</span> <span class="toc-text">五、重要的命令</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#5-1_masterha_manager"><span class="toc-number">6.1.</span> <span class="toc-text">5.1 masterha_manager</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-2_masterha_master_switch"><span class="toc-number">6.2.</span> <span class="toc-text">5.2 masterha_master_switch</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-3_masterha_check_status"><span class="toc-number">6.3.</span> <span class="toc-text">5.3 masterha_check_status</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-4_masterha_check_repl"><span class="toc-number">6.4.</span> <span class="toc-text">5.4 masterha_check_repl</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-5_masterha_stop"><span class="toc-number">6.5.</span> <span class="toc-text">5.5 masterha_stop</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-6_masterha_conf_host"><span class="toc-number">6.6.</span> <span class="toc-text">5.6 masterha_conf_host</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-7_masterha_ssh_check"><span class="toc-number">6.7.</span> <span class="toc-text">5.7 masterha_ssh_check</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#5-8_purge_relay_logs"><span class="toc-number">6.8.</span> <span class="toc-text">5.8 purge_relay_logs</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、核心参数详解"><span class="toc-number">7.</span> <span class="toc-text">六、核心参数详解</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#6-1_参数矩阵图"><span class="toc-number">7.1.</span> <span class="toc-text">6.1  参数矩阵图</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#6-2_核心参数详解"><span class="toc-number">7.2.</span> <span class="toc-text">6.2 核心参数详解</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>13</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>13</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
