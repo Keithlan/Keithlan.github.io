@@ -4,22 +4,13 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>pt-table-checksum原理详解 | Focus on MySQL,Focus on Focus</title>
+    <title>对人生的一些思考 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="环境
-
-MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15  
-
-它能做什么
-
-业界最流行的MySQL主从数据对比工具，数据一致性检测最好的的工具，没有之一  
-
-如何使用
-
-./pt-table-checksum -hxx">
+    <meta name="description" content="背景
+也许某个阶段，你会感觉迷茫，可是人为什么会感觉迷茫呢？思考了下，迷茫，80%是因为你根本就没有人生的目标吧？活了那么多年，在你身边肯定有很多人过着品质的生活，有的人却总是对生活充满了抱怨，这又是为什么呢？对于你，你觉得自己现在的生活是怎样的呢？又或者，你是否会羡慕别人的生活呢？回到之前的问题，">
     
     
     
@@ -79,15 +70,15 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/05/25/pt_table_checksum/" title="pt-table-checksum原理详解" itemprop="url">pt-table-checksum原理详解</a>
+      <a href="/2016/07/29/life_think/" title="对人生的一些思考" itemprop="url">对人生的一些思考</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-05-25T09:14:24.000Z" itemprop="datePublished">May 25 2016</time>
-    Updated:<time datetime="2016-05-25T09:15:10.000Z" itemprop="dateModified">May 25 2016</time>
+    <time datetime="2016-07-29T02:32:24.000Z" itemprop="datePublished">Jul 29 2016</time>
+    Updated:<time datetime="2016-07-29T08:23:20.000Z" itemprop="dateModified">Jul 29 2016</time>
     
   </p>
 </header>
@@ -96,106 +87,122 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#工作"><span class="toc-number">2.</span> <span class="toc-text">工作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生活"><span class="toc-number">3.</span> <span class="toc-text">生活</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键因子"><span class="toc-number">4.</span> <span class="toc-text">关键因子</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#制定计划，品质生活吧"><span class="toc-number">5.</span> <span class="toc-text">制定计划，品质生活吧</span></a></li></ol>
 		</div>
 		
-		<h2 id="环境">环境</h2>
+		<h2 id="背景">背景</h2>
+<p>也许某个阶段，你会感觉迷茫，可是人为什么会感觉迷茫呢？<br>思考了下，迷茫，80%是因为你根本就没有人生的目标吧？<br>活了那么多年，在你身边肯定有很多人过着品质的生活，有的人却总是对生活充满了抱怨，这又是为什么呢？<br>对于你，你觉得自己现在的生活是怎样的呢？又或者，你是否会羡慕别人的生活呢？<br>回到之前的问题，你的人生目标是什么？没有人生目标，是不可能活出精彩的，人生一世，势必要活的有价值和意义吧<br>如果你还没有自己的人生目标，那么请仔细思考你的未来吧，要不然，当你老的时候，你只会发现你只是活着，并没有体会生活  </p>
+<p>说了那么多，只是想说：人生目标的重要性，他的确可以给你持续的动力，这才是你开心和幸福的源泉  </p>
+<p>人生无非就两种大的分类，工作和生活，99%的时间都在这里面  </p>
+<h2 id="工作">工作</h2>
 <blockquote>
-<p>MySQL: MySQL 5.6.27<br>OS: centos 6.6<br>tool: pt-table-checksum 2.2.15  </p>
+<p>聊聊工作</p>
 </blockquote>
-<h2 id="它能做什么">它能做什么</h2>
-<blockquote>
-<p>业界最流行的MySQL主从数据对比工具，数据一致性检测最好的的工具，没有之一  </p>
-</blockquote>
-<h2 id="如何使用">如何使用</h2>
-<blockquote>
-<p>./pt-table-checksum -hxx -P 3306 -u backup -p backup    —no-check-binlog-format —databases=xx_db,yy_db,zz_db —no-check-replication-filters  </p>
-</blockquote>
-<h2 id="如何找到不一致的地方">如何找到不一致的地方</h2>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* slave上执行:</div><div class="line"><span class="operator"><span class="keyword">SELECT</span> db, tbl, <span class="keyword">SUM</span>(this_cnt) <span class="keyword">AS</span> total_rows, <span class="keyword">COUNT</span>(*) <span class="keyword">AS</span> chunks  </span></div><div class="line"><span class="keyword">FROM</span> percona.checksums  </div><div class="line"><span class="keyword">WHERE</span> (  </div><div class="line"> master_cnt &lt;&gt; this_cnt  </div><div class="line"> <span class="keyword">OR</span> master_crc &lt;&gt; this_crc  </div><div class="line"> <span class="keyword">OR</span> <span class="keyword">ISNULL</span>(master_crc) &lt;&gt; <span class="keyword">ISNULL</span>(this_crc))  </div><div class="line"><span class="keyword">GROUP</span> <span class="keyword">BY</span> db, tbl;</div></pre></td></tr></table></figure>
-
-
-<h2 id="原理">原理</h2>
-<blockquote>
-<p>大致的原理网上都能看到，这里会描述几个核心的点<br>这里假设就一个库，一张表，100条记录<br>pt-table-checksum进行比对的时候，不是一条条记录比的，而是一个个chunk进行对比<br>这里我们将100条记录分为10个chunk，一个chunk 10条记录。<br>每个chunk对比完后，再进行下一个chunk对比，直到全部结束。所以，这里我们就以一个chunk来描述下面的原理即可  </p>
-</blockquote>
-<ol>
-<li>master&gt; /<em>!50108 SET @@binlog_format := ‘STATEMENT’</em>/ 设置binlog-format为statement  </li>
-<li>master&gt; SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ 这是隔离级别为RR，利用RR的特性让数据在这一刻静止，就不用加锁了。      </li>
-<li>master&gt; checksums表：REPLACE INTO select设置this_cnt, this_crc(传递到slave，这其实设置slave每个chunk的cnt,crc)，算法来自：COALESCE(LOWER(CONV(BIT_XOR(CAST(CRC32(<code>主键</code>) AS UNSIGNED)), 10, 16)), 0)  </li>
-<li>slave&gt; 当同步追上后，开始执行REPLACE INTO select，然后设置slave每个chunk的cnt,crc  </li>
-<li>master&gt; checksums表：update master_cnt,master_crc ，这是设置master每个chunk的cnt，crc  </li>
-<li>slave&gt; 当同步追上后，开始执行update master_cnt,master_crc ，这是设置master每个chunk的cnt，crc   </li>
-</ol>
-<p>以上，基本完成。 接下来只需要去checksums表中找 master_cnt &lt;&gt; this_cnt or OR master_crc &lt;&gt; this_crc 的记录就行  </p>
-<h2 id="常问的问题">常问的问题</h2>
 <ul>
-<li><p><strong>一般在什么场景下使用pt-table-checksum？会在生产环境的master上用吗？</strong></p>
+<li>为什么要工作</li>
+</ul>
+<p>这个问题问的有水平吧，为什么要工作呢？  </p>
+<p>回答1：没有为什么啊？就如同上完小学上中学，上完中学上大学，大学毕业就工作，很自然的事情吧<br>回答2：工作为了赚钱啊，没有工作吃什么，这是谋生的手段吧<br>回答3：人，总得做些什么吧？ 工作，可以跟更多优秀，志同道合的人在一起，集众人的智慧去解决各种各样的问题，顺便创造些价值，多有趣啊  </p>
+<p>您的答案，是哪种呢？</p>
+<ul>
+<li>您热爱您的工作吗，您工作开心吗？</li>
+</ul>
+<p>如果您上一个问题的回答是1和2，那么我想80%的人都不会热爱自己的工作。<br>那么就引出了下面一个问题  </p>
+<ul>
+<li><p>您觉得自己工作做的怎么样？ </p>
+<blockquote>
+<p>马马虎虎<br>一般<br>优秀<br>卓越   </p>
+</blockquote>
+</li>
+<li><p>您对自己的职业有清晰的认识吗？</p>
+</li>
+<li><p>您最自己以后的未来发展有规划吗？</p>
+</li>
+<li><p>怎样才能做到最好？你的核心竞争力是什么？  </p>
+</li>
+<li><p>企业都需要什么样的人才？ 哪些是核心人才？  </p>
+</li>
+</ul>
+<p>以上没有标准答案  </p>
+<p>我不知道大家是怎么想的，但是至少，我经常思考和反思这几个问题 </p>
+<ul>
+<li><p>技术leader</p>
+<blockquote>
+<p>你期望你的领导是什么样的，你就成为什么样的人？<br>你强，不能说明你的能力。你的团队强，才是你的能力。<br>给予前瞻性方向，大的格局，团队目标明确<br>互相学习，共赢思维  </p>
+</blockquote>
+</li>
+<li><p>关键因子</p>
 <blockquote>
 <ol>
-<li>如果不太在乎master和slave之间的一致性的话，在master上设置ROW模式后，就基本可以保证数据一致了。  </li>
-<li>pt-table-checksum虽然很智能，但还是会对服务器造成一定的影响，所以一般不会用在master上,除非迫不得已  </li>
-<li>一般检查数据一致性，我们都会在两台slave上进行对比，如果两台slave ok，基本就ok了  </li>
+<li>拥抱变化，敞开心扉，持续学习  </li>
+<li>数据库架构师，数据库总监,CTO        </li>
 </ol>
 </blockquote>
 </li>
-<li><p><strong>听说该工具只对statement格式有用，如果是row格式，还能检查一致性吗？为什么？</strong></p>
+<li><p>兴趣是最好的学习动力，您了解自己的兴趣是什么么？</p>
 <blockquote>
-<ol>
-<li>如果是row模式，pt-table-checksum会报错，但是加上—no-check-binlog-format 即可  </li>
-<li>此工具会自动设置row-format=statement，所以用户不用担心。即便设置row，也没事  </li>
-</ol>
+<p>我似乎对任何事情都没有太大的兴趣，平常有没有其他的爱好<br>后来，突然发现我内心是喜欢计算机领域的，喜欢数据库，喜欢编程，喜欢解决问题，喜欢创造    </p>
 </blockquote>
 </li>
-<li><p><strong>它是怎么做到master和slave的记录对比的，master不是一直再更新吗？会有锁吗？</strong></p>
+</ul>
+<h2 id="生活">生活</h2>
 <blockquote>
-<ol>
-<li>详细原理，请看上面的原理分析。  </li>
-<li>master一直再更新没错，但是不会有锁，利用RR隔离级别的特性就能保证当前事务的数据是不会变的  </li>
-</ol>
+<p>聊聊生活  </p>
 </blockquote>
-</li>
-<li><p><strong>RR隔离级别是什么鬼？为什么能够保证当前事务的数据不变呢？</strong></p>
-<blockquote>
+<ul>
+<li>什么样的生活，你会觉得快乐<blockquote>
 <ol>
-<li>可参看之前的分享: <a href="http://keithlan.github.io/2016/05/23/acid/" target="_blank" rel="external">SELECT 你知多少</a>  </li>
+<li>天天不用发愁，躺在沙发上看电视？  </li>
+<li>天天呆在家里，啥都不用干，想吃吃，想喝喝，么事找朋友聊聊天？    </li>
+<li>说走就走的旅游，平常随便找点事情做做？  </li>
 </ol>
 </blockquote>
 </li>
 </ul>
-<h2 id="重要">重要</h2>
+<p>以上的生活，衣食无忧，但是真的会让你一直开心吗？<br>也许，一段时间过后，你发现生活无聊至极，至少我发现一个长假过后，我就期待着早点上班  </p>
+<p>最近突然，我想通了一件事情，而且有着强烈的欲望  </p>
+<ol>
+<li>想将以前课堂上上过的课本，重新读一遍，从没感觉自己这么热爱学习  </li>
+<li>想去了解生命的起源，想去了解历史，了解世界地理，了解物理，哲学，科学，心理学，这些太神奇了      </li>
+<li>当然还有我大计算机系统的各个领域  </li>
+</ol>
+<p>学习，学习知识，去解决自己的好奇，去充实自己，突然变成了我的兴趣，或许，这对于每个人都是公平的，但是没人真正意识到这宝贵的财富  </p>
+<p>太多的东西要学习，你会发现时间根本就不够用，哪里有时间去生气，哪里有时间去抱怨，哪里有时间去浪费呢？  </p>
 <ul>
-<li><p><strong>风险1</strong></p>
-<blockquote>
-<p>这里设置了SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ 直到对比完成，才结束这个session.<br>那这样意味什么呢？意味着如果这个session不结束，这个事务对应的undo一直不会被purge，会导致undo不断变大，即ibdata会一直变大。<br>措施：尽量在低峰期执行  </p>
-</blockquote>
-</li>
-<li><p><strong>风险2</strong></p>
-<blockquote>
-<p>这里是通过RR隔离级别来保证select CRC的值一致的，那么如果RR被破坏了呢？<br>没错，这样的对比，很容易被DDL所破坏。<br>措施：DDL是可以人为控制时间窗口和周期的  </p>
+<li>关键因子<blockquote>
+<ol>
+<li>充分利用时间，充实的感觉  </li>
+<li>健康  </li>
+<li>不攀比，不对比，做自己  </li>
+</ol>
 </blockquote>
 </li>
 </ul>
+<h2 id="关键因子">关键因子</h2>
+<blockquote>
+<p>控制情绪<br>与人开心</p>
+</blockquote>
+<h2 id="制定计划，品质生活吧">制定计划，品质生活吧</h2>
   
 	</div>
 		<footer class="article-footer clearfix">
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  <span></span> <a href="/tags/Life-share/">Life share</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/分享/">分享</a>
+  <a class="article-category-link" href="/categories/personal/">personal</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2016/05/25/pt_table_checksum/" data-title="pt-table-checksum原理详解 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/07/29/life_think/" data-title="对人生的一些思考 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -204,19 +211,11 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2016/06/23/gtid/" title="MySQL5.7杀手级新特性：GTID原理与实战">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  MySQL5.7杀手级新特性：GTID原理与实战</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2016/05/23/acid/"  title="select你知多少">
+<a href="/2016/07/25/mha/"  title="MySQL Master High Available 理论篇">
  <strong>NEXT:</strong><br/> 
- <span>select你知多少
+ <span>MySQL Master High Available 理论篇
 </span>
 </a>
 </div>
@@ -226,7 +225,7 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2016/05/25/pt_table_checksum/" data-title="pt-table-checksum原理详解" data-url="https://Keithlan.github.io/2016/05/25/pt_table_checksum/"></div>
+<div class="ds-thread" data-thread-key="/2016/07/29/life_think/" data-title="对人生的一些思考" data-url="https://Keithlan.github.io/2016/07/29/life_think/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -247,7 +246,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#工作"><span class="toc-number">2.</span> <span class="toc-text">工作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生活"><span class="toc-number">3.</span> <span class="toc-text">生活</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键因子"><span class="toc-number">4.</span> <span class="toc-text">关键因子</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#制定计划，品质生活吧"><span class="toc-number">5.</span> <span class="toc-text">制定计划，品质生活吧</span></a></li></ol>
   </div>
 
 <div id="asidepart">
