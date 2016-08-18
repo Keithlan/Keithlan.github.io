@@ -1,0 +1,586 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL Master High Available 源码篇 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="MasterFailover (Non-GTID)
+
+MHA::MasterFailover::main()-&amp;gt;do_master_failover  
+
+
+Phase 1: Configuration Check Phase
+
+init_config(): 初始化配置
+
+MHA::Serve">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/08/18/mha_source/" title="MySQL Master High Available 源码篇" itemprop="url">MySQL Master High Available 源码篇</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-08-18T02:01:24.000Z" itemprop="datePublished">Aug 18 2016</time>
+    Updated:<time datetime="2016-08-18T05:49:08.000Z" itemprop="dateModified">Aug 18 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterFailover_(Non-GTID)"><span class="toc-number">1.</span> <span class="toc-text">MasterFailover (Non-GTID)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase"><span class="toc-number">1.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Dead_Master_Shutdown_Phase-"><span class="toc-number">1.2.</span> <span class="toc-text">Phase 2: Dead Master Shutdown Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_3:_Master_Recovery_Phase-"><span class="toc-number">1.3.</span> <span class="toc-text">Phase 3: Master Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_4:_Slaves_Recovery_Phase-"><span class="toc-number">1.4.</span> <span class="toc-text">Phase 4: Slaves Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase-"><span class="toc-number">1.5.</span> <span class="toc-text">Phase 5: New master cleanup phase..</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterFailover_(GTID)"><span class="toc-number">2.</span> <span class="toc-text">MasterFailover (GTID)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase-1"><span class="toc-number">2.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Dead_Master_Shutdown_Phase_completed-"><span class="toc-number">2.2.</span> <span class="toc-text">Phase 2: Dead Master Shutdown Phase completed.</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_3:_Master_Recovery_Phase--1"><span class="toc-number">2.3.</span> <span class="toc-text">Phase 3: Master Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_4:_Slaves_Recovery_Phase--1"><span class="toc-number">2.4.</span> <span class="toc-text">Phase 4: Slaves Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase--1"><span class="toc-number">2.5.</span> <span class="toc-text">Phase 5: New master cleanup phase..</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterRotate_（Non-GTID）"><span class="toc-number">3.</span> <span class="toc-text">MasterRotate （Non-GTID）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase-1"><span class="toc-number">3.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Rejecting_updates_Phase"><span class="toc-number">3.2.</span> <span class="toc-text">Phase 2: Rejecting updates Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase"><span class="toc-number">3.3.</span> <span class="toc-text">Phase 5: New master cleanup phase</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterRotate_（GTID）"><span class="toc-number">4.</span> <span class="toc-text">MasterRotate （GTID）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重点需要注意的地方"><span class="toc-number">5.</span> <span class="toc-text">重点需要注意的地方</span></a></li></ol>
+		</div>
+		
+		<h2 id="MasterFailover_(Non-GTID)">MasterFailover (Non-GTID)</h2>
+<blockquote>
+<p>MHA::MasterFailover::main()-&gt;do_master_failover  </p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/failover_non_gtid.jpg" alt="failover_non_gtid" title="failover_non_gtid"></p>
+<h3 id="Phase_1:_Configuration_Check_Phase">Phase 1: Configuration Check Phase</h3>
+<ul>
+<li><p>init_config(): 初始化配置</p>
+</li>
+<li><p>MHA::ServerManager::init_binlog_server: 初始化binlog server </p>
+</li>
+<li><p>check_settings()</p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="tag">a</span>. <span class="function">check_node_version</span>()<span class="value">: 查看MHA的版本</span></div><div class="line">b. <span class="function">connect_all_and_read_server_status</span>(): 检测确认各个Node节点MySQL是否可以连接  </div><div class="line">c. <span class="function">get_dead_servers</span>()，<span class="function">get_alive_servers</span>()，<span class="function">get_alive_slaves</span>()：再次检测一次node节点的状态  </div><div class="line">d. <span class="function">print_dead_servers</span>(): 是否挂掉的master是否是当前的master  </div><div class="line">e. MHA::DBHelper::check_connection_fast_util : 快速判断dead server，是否真的挂了，如果ping_type=insert，不会double check  </div><div class="line">f. MHA::NodeUtil::<span class="function">drop_file_if</span>($_failover_error_file|$_failover_complete_file): 检测上次的failover文件    </div><div class="line">g. 如果上次failover的时间在<span class="number">8</span>小时以内，那么这次就不会failover,除非配置了额外的参数   </div><div class="line">h. <span class="function">start_sql_threads_if</span>(): 查看所有slave的Slave_SQL_Running是否为Yes，若不是则启动SQL thread</div></pre></td></tr></table></figure>
+
+<ul>
+<li>is_gtid_auto_pos_enabled(): 判断是否是GTID模式</li>
+</ul>
+<h3 id="Phase_2:_Dead_Master_Shutdown_Phase-">Phase 2: Dead Master Shutdown Phase..</h3>
+<ul>
+<li>force_shutdown($dead_master): </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. stop_io_thread(): <span class="operator"><span class="keyword">stop</span>所有<span class="keyword">slave</span>的IO_thread  </span></div><div class="line">b. force_shutdown_internal($dead_master):</div><div class="line">  b_1. master_ip_failover_script: 如果有这个脚本，则执行里面的逻辑(比如：切换vip)</div><div class="line">  b_2. shutdown_script：如果有这个脚本，则执行里面的逻辑（比如：<span class="keyword">Power</span> off 服务器）</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_3:_Master_Recovery_Phase-">Phase 3: Master Recovery Phase..</h3>
+<ul>
+<li>Phase 3.1: Getting Latest Slaves Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">* check_set_latest_slaves()</div><div class="line">  a. read_slave_status(): 获取所有<span class="operator"><span class="keyword">show</span> <span class="keyword">slave</span> <span class="keyword">status</span> 信息</span></div><div class="line">  b. identify_latest_slaves(): 找到最新的<span class="keyword">slave</span>是哪个</div><div class="line">  c. identify_oldest_slaves(): 找到最老的<span class="keyword">slave</span>是哪个</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 3.2: Saving Dead Master’s Binlog Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* save_master_binlog($dead_master);</div><div class="line">  -<span class="ruby">&gt; 如果dead master可以ssh，那么</span></div><div class="line">       b_1_1. save_master_binlog_internal: 用node节点save_binary_logs脚本拷贝相应binlog到manager  </div><div class="line">       	diff_binary_log 生产差异binlog日志</div><div class="line">       b_1_2. file_copy: 将差异binlog拷贝到manager节点的 manager_workdir目录下  </div><div class="line">  -<span class="ruby">&gt; 如果dead master不可以ssh</span></div><div class="line">       b_1_3. 那么差异日志就会丢失</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 3.3: Determining New Master Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">b. 如果GTID auto_pos没有打开，调用find_latest_base_slave()</div><div class="line">    b_1. find_latest_base_slave_internal: 寻找拥有所有relay-<span class="built_in">log</span>的最新slave，如果没有，则failover失败  </div><div class="line">            b_1_1. find_slave_with_all_relay_logs: </div><div class="line">                    b_1_1_1. apply_diff_relay_logs: 查看最新的slave是否有其他slave缺失的relay-<span class="built_in">log</span>  </div><div class="line"></div><div class="line">c. select_new_master: 选举<span class="built_in">new</span> master</div><div class="line">    c_1. MHA::ServerManager::select_new_master: </div><div class="line">       <span class="comment">#If preferred node is specified, one of active preferred nodes will be new master.</span></div><div class="line">       <span class="comment">#If the latest server behinds too much (i.e. stopping sql thread for online backups), we should not use it as a new master, but we should fetch relay log there</span></div><div class="line">       <span class="comment">#Even though preferred master is configured, it does not become a master if it's far behind</span></div><div class="line"></div><div class="line">       get_candidate_masters(): 获取配置中候选节点</div><div class="line">       get_bad_candidate_masters(): 以下条件不能成为候选master</div><div class="line">           <span class="comment"># dead server</span></div><div class="line">           <span class="comment"># no_master &gt;= 1</span></div><div class="line">           <span class="comment"># log_bin=0</span></div><div class="line">           <span class="comment"># oldest_major_version=0</span></div><div class="line">           <span class="comment"># check_slave_delay: 检查是否延迟非常厉害（可以通过设置no_check_delay忽略）</span></div><div class="line">               {Exec_Master_Log_Pos} + <span class="number">100000000</span> 只要binlog position不超过<span class="number">100000000</span> 就行 </div><div class="line">       选举流程： 先看candidate_master，然后找 latest slave, 然后再随机挑选</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 3.3(3.4): New Master Diff Log Generation Phase.. </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">* recover_master_internal</div><div class="line">         recover_relay_log<span class="variable">s:</span></div><div class="line">               判断<span class="keyword">new</span> master是否为最新的slave，如果不是，则生产差异relay logs，并发送给新master</div><div class="line">         recover_master_interna<span class="variable">l:</span></div><div class="line">               将之前生产的dead master上的binlog传送给<span class="keyword">new</span> master</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 3.4: Master Log Apply Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">* apply_diff:</div><div class="line">       <span class="operator">a</span>. wait_until_relay_log_applied: 直到<span class="built_in">new</span> master完成所有relay <span class="built_in">log</span>，否则一直等待  </div><div class="line">       b. 判断Exec_Master_Log_Pos == Read_Master_Log_Pos, 如果不等，那么生产差异日志：</div><div class="line">                   save_binary_logs <span class="comment">--command=save </span></div><div class="line">       c. apply_diff_relay_logs <span class="comment">--command=apply：对new master进行恢复    </span></div><div class="line">                   c_1. exec_diff:Exec_Master_Log_Pos和Read_Master_Log_Pos的差异日志</div><div class="line">                   c_2. read_diff:<span class="built_in">new</span> master与lastest slave的relay <span class="built_in">log</span>的差异日志</div><div class="line">                   c_3. binlog_diff:lastest slave与daed master之间的binlog差异日志</div><div class="line">* 如果设置了master_ip_failover_script脚本，那么会执行这里面的脚本（一般用来漂移vip）</div><div class="line"></div><div class="line">* disable_read_only(): 允许<span class="built_in">new</span> master可写</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_4:_Slaves_Recovery_Phase-">Phase 4: Slaves Recovery Phase..</h3>
+<blockquote>
+<p>recover_slaves_internal  </p>
+</blockquote>
+<ul>
+<li>Phase 4.1: Starting Parallel Slave Diff Log Generation Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">recover_all_slaves_relay_logs</span>: <span class="string">生成Slave与New Slave之间的差异日志，并将该日志拷贝到各Slave的工作目录下</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 4.2: Starting Parallel Slave Log Apply Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>recover_slave:</div><div class="line"><span class="code">	对每个slave进行恢复，跟以上Phase 3.4: Master Log Apply Phase中的 apply_diff一样</span></div><div class="line"><span class="bullet">* </span>change<span class="emphasis">_master_</span>and<span class="emphasis">_start_</span>slave：</div><div class="line"><span class="code">	重新指向到new master，并且start slave</span></div></pre></td></tr></table></figure>
+
+<h3 id="Phase_5:_New_master_cleanup_phase-">Phase 5: New master cleanup phase..</h3>
+<ul>
+<li>reset_slave_on_new_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在new master上执行<span class="operator"><span class="keyword">reset</span> <span class="keyword">slave</span> <span class="keyword">all</span>;</span></div></pre></td></tr></table></figure>
+
+<h2 id="MasterFailover_(GTID)">MasterFailover (GTID)</h2>
+<p><img src="/image/mysql_innodb_arch/failover_gitd.jpg" alt="failover_gitd" title="failover_gitd"></p>
+<h3 id="Phase_1:_Configuration_Check_Phase-1">Phase 1: Configuration Check Phase</h3>
+<ul>
+<li><p>init_config(): 初始化配置</p>
+</li>
+<li><p>MHA::ServerManager::init_binlog_server: 初始化binlog server</p>
+</li>
+<li><p>check_settings()</p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="tag">a</span>. <span class="function">check_node_version</span>()<span class="value">: 查看MHA的版本</span></div><div class="line">b. <span class="function">connect_all_and_read_server_status</span>(): 检测确认各个Node节点MySQL是否可以连接</div><div class="line">c. <span class="function">get_dead_servers</span>()，<span class="function">get_alive_servers</span>()，<span class="function">get_alive_slaves</span>()：再次检测一次node节点的状态</div><div class="line">d. <span class="function">print_dead_servers</span>(): 是否挂掉的master是否是当前的master</div><div class="line">e. MHA::DBHelper::check_connection_fast_util : 快速判断dead server，是否真的挂了，如果ping_type=insert，不会double check</div><div class="line">f. MHA::NodeUtil::<span class="function">drop_file_if</span>($_failover_error_file|$_failover_complete_file): 检测上次的failover文件</div><div class="line">g. 如果上次failover的时间在<span class="number">8</span>小时以内，那么这次就不会failover,除非配置了额外的参数</div><div class="line">h. <span class="function">start_sql_threads_if</span>(): 查看所有slave的Slave_SQL_Running是否为Yes，若不是则启动SQL thread</div></pre></td></tr></table></figure>
+
+<ul>
+<li>is_gtid_auto_pos_enabled(): 判断是否是GTID模式</li>
+</ul>
+<h3 id="Phase_2:_Dead_Master_Shutdown_Phase_completed-">Phase 2: Dead Master Shutdown Phase completed.</h3>
+<ul>
+<li>force_shutdown($dead_master):</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">a. stop_io_thread(): <span class="operator"><span class="keyword">stop</span>所有<span class="keyword">slave</span>的IO_thread</span></div><div class="line">b. force_shutdown_internal($dead_master):</div><div class="line">  b_1. master_ip_failover_script: 如果有这个脚本，则执行里面的逻辑(比如：切换vip)</div><div class="line">  b_2. shutdown_script：如果有这个脚本，则执行里面的逻辑（比如：<span class="keyword">Power</span> off 服务器）</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_3:_Master_Recovery_Phase--1">Phase 3: Master Recovery Phase..</h3>
+<ul>
+<li>Phase 3.1: Getting Latest Slaves Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">* check_set_latest_slaves()</div><div class="line">  a. read_slave_status(): 获取所有<span class="operator"><span class="keyword">show</span> <span class="keyword">slave</span> <span class="keyword">status</span> 信息</span></div><div class="line">  b. identify_latest_slaves(): 找到最新的<span class="keyword">slave</span>是哪个</div><div class="line">  c. identify_oldest_slaves(): 找到最老的<span class="keyword">slave</span>是哪个</div></pre></td></tr></table></figure>
+
+<ul>
+<li><p>Phase 3.2: Saving Dead Master’s Binlog Phase.. (GTID 模式下没有这一步)</p>
+</li>
+<li><p>Phase 3.3: Determining New Master Phase..</p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">get_most_advanced_latest_slave()</span>: <span class="string">获取最新的slave</span></div><div class="line"></div><div class="line"><span class="elixir">c. <span class="symbol">select_new_master:</span> 选举new master</span></div><div class="line">    c_1. <span class="constant">MHA:</span><span class="symbol">:ServerManager</span><span class="symbol">:</span><span class="symbol">:select_new_master</span><span class="symbol">:</span> </div><div class="line">       <span class="comment">#If preferred node is specified, one of active preferred nodes will be new master.</span></div><div class="line">       <span class="comment">#If the latest server behinds too much (i.e. stopping sql thread for online backups), we should not use it as a new master, but we should fetch relay log there</span></div><div class="line">       <span class="comment">#Even though preferred master is configured, it does not become a master if it's far behind</span></div><div class="line"></div><div class="line">       get_candidate_masters()<span class="symbol">:</span> 获取配置中候选节点</div><div class="line">       get_bad_candidate_masters()<span class="symbol">:</span> 以下条件不能成为候选master</div><div class="line">           <span class="comment"># dead server</span></div><div class="line">           <span class="comment"># no_master &gt;= 1</span></div><div class="line">           <span class="comment"># log_bin=0</span></div><div class="line">           <span class="comment"># oldest_major_version=0</span></div><div class="line">           <span class="comment"># check_slave_delay: 检查是否延迟非常厉害（可以通过设置no_check_delay忽略）</span></div><div class="line">               {<span class="constant">Exec_Master_Log_Pos}</span> + <span class="number">100000000</span> 只要binlog position不超过<span class="number">100000000</span> 就行 </div><div class="line">       选举流程： 先看candidate_master，然后找 latest slave, 然后再随机挑选</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Phase 3.3: New Master Recovery Phase..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">* recover_master_gtid_internal:</div><div class="line">	wait_until_relay_log_applied: 候选master等待所有relay-log都应用完  </div><div class="line">	如果候选master不是最新的slave：</div><div class="line">		$latest_slave-&gt;wait_until_relay_log_applied($log): 最新的slave应用完所有的relay-log</div><div class="line">		change_master_and_start_slave ： 让候选master同步到latest master，追上latest slave</div><div class="line">		获取候选master此时此刻的日志信息，以便后面切换</div><div class="line">	如果候选master是最新的slave：</div><div class="line">		获取候选master此时此刻的日志信息，以便后面切换		</div><div class="line">	save_from_binlog_server:</div><div class="line">		如果配置了binlog server，那么在binlogsever 能连的情况下，将binlog 拷贝到Manager，并生成差异日志diff_binlog(save_binary_logs --command=save)</div><div class="line">	apply_binlog_to_master:</div><div class="line">		Applying differential binlog： 应用差异的binlog到new master</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_4:_Slaves_Recovery_Phase--1">Phase 4: Slaves Recovery Phase..</h3>
+<ul>
+<li>Phase 4.1: Starting Slaves in parallel..</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">* recover_slaves_gtid_internal:</div><div class="line">	change_master_and_start_slave: 因为master已经恢复，那么slave直接<span class="operator"><span class="keyword">change</span> <span class="keyword">master</span> auto_pos=<span class="number">1</span> 的模式就可以恢复  </span></div><div class="line">	gtid_wait：用此等待同步全部追上</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_5:_New_master_cleanup_phase--1">Phase 5: New master cleanup phase..</h3>
+<ul>
+<li>reset_slave_on_new_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在new master上执行<span class="operator"><span class="keyword">reset</span> <span class="keyword">slave</span> <span class="keyword">all</span>;</span></div></pre></td></tr></table></figure>
+
+<h2 id="MasterRotate_（Non-GTID）">MasterRotate （Non-GTID）</h2>
+<h3 id="Phase_1:_Configuration_Check_Phase-1">Phase 1: Configuration Check Phase</h3>
+<ul>
+<li><p>do_master_online_switch</p>
+</li>
+<li><p>identify_orig_master</p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">* read_config():</div><div class="line">	Reading default configuration from /etc/masterha_default.cnf..</div><div class="line">	Reading application default configuration from /etc/app1.cnf..</div><div class="line">	Reading server configuration from /etc/app1.cnf..</div><div class="line"></div><div class="line">* connect_all_and_read_server_status:</div><div class="line">	connect_check: 首先进行connect <span class="operator"><span class="keyword">check</span>，确保各个<span class="keyword">server</span>的MySQL服务都正常</span></div><div class="line">	connect_and_get_status: </div><div class="line">			获取MySQL实例的server_id/mysql_version/log_bin..等信息</div><div class="line">			通过执行<span class="keyword">show</span> <span class="keyword">slave</span> <span class="keyword">status</span>，获取当前的<span class="keyword">master</span>节点。如果输出为空，说明当前节点是<span class="keyword">master</span>节点</div><div class="line">	validate_current_master：取得<span class="keyword">master</span>节点的信息，并判断配置的正确性</div><div class="line">	<span class="keyword">check</span>是否有<span class="keyword">server</span> down，若有则退出rotate</div><div class="line">	<span class="keyword">check</span> <span class="keyword">master</span> alive <span class="keyword">or</span> <span class="keyword">not</span>，若dead则退出rotate</div><div class="line">	check_repl_priv：	</div><div class="line">        查看用户是否有replication的权限</div><div class="line">    获取monitor_advisory_lock，以保证当前没有其他的monitor进程在<span class="keyword">master</span>上运行</div><div class="line">        执行：<span class="keyword">SELECT</span> <span class="keyword">GET_LOCK</span>(<span class="string">'MHA_Master_High_Availability_Monitor'</span>, ?) <span class="keyword">AS</span> <span class="keyword">Value</span></div><div class="line">    获取failover_advisory_lock，以保证当前没有其他的failover进程在<span class="keyword">slave</span>上运行</div><div class="line">        执行：<span class="keyword">SELECT</span> <span class="keyword">GET_LOCK</span>(<span class="string">'MHA_Master_High_Availability_Failover'</span>, ?) <span class="keyword">AS</span> <span class="keyword">Value</span></div><div class="line">    check_replication_health:</div><div class="line">        执行：<span class="keyword">SHOW</span> <span class="keyword">SLAVE</span> <span class="keyword">STATUS</span>来判断如下状态：current_slave_position/has_replication_problem</div><div class="line">        其中，has_replication_problem具体<span class="keyword">check</span>如下内容：IO线程/<span class="keyword">SQL</span>线程/Seconds_Behind_Master(<span class="number">1</span>s)</div><div class="line">    get_running_update_threads：</div><div class="line">        使用<span class="keyword">show</span> <span class="keyword">processlist</span>来查询当前有没有执行<span class="keyword">update</span>的线程存在，若有则退出switch</div><div class="line">	$self-&gt;validate_current_master():</div><div class="line">	    检查是否是GTID模式</div></pre></td></tr></table></figure>
+
+<ul>
+<li>identify_new_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">set_latest_slaves：当前的slave节点都是latest slave</div><div class="line"> <span class="symbol">select_new_master:</span> 选举new master</div><div class="line">  c_1. <span class="constant">MHA:</span><span class="symbol">:ServerManager</span><span class="symbol">:</span><span class="symbol">:select_new_master</span><span class="symbol">:</span></div><div class="line">     <span class="comment">#If preferred node is specified, one of active preferred nodes will be new master.</span></div><div class="line">     <span class="comment">#If the latest server behinds too much (i.e. stopping sql thread for online backups), we should not use it as a new master, but we should fetch relay log there</span></div><div class="line">     <span class="comment">#Even though preferred master is configured, it does not become a master if it's far behind</span></div><div class="line"></div><div class="line">     get_candidate_masters()<span class="symbol">:</span> 获取配置中候选节点</div><div class="line">     get_bad_candidate_masters()<span class="symbol">:</span> 以下条件不能成为候选master</div><div class="line">         <span class="comment"># dead server</span></div><div class="line">         <span class="comment"># no_master &gt;= 1</span></div><div class="line">         <span class="comment"># log_bin=0</span></div><div class="line">         <span class="comment"># oldest_major_version=0</span></div><div class="line">         <span class="comment"># check_slave_delay: 检查是否延迟非常厉害（可以通过设置no_check_delay忽略）</span></div><div class="line">             {<span class="constant">Exec_Master_Log_Pos}</span> + <span class="number">100000000</span> 只要binlog position不超过<span class="number">100000000</span> 就行</div><div class="line">     选举流程： 先看candidate_master，然后找 latest slave, 然后再随机挑选</div></pre></td></tr></table></figure>
+
+<h3 id="Phase_2:_Rejecting_updates_Phase">Phase 2: Rejecting updates Phase</h3>
+<ul>
+<li>reject_update</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* <span class="operator"><span class="keyword">lock</span> <span class="keyword">table</span>来reject <span class="keyword">write</span> <span class="keyword">binlog</span></span></div><div class="line">	  调用master_ip_online_change_script <span class="comment">--command=stop</span></div><div class="line">	  如果MHA的配置文件中设置了<span class="string">"master_ip_online_change_script"</span>参数，则执行该脚本来disable writes <span class="keyword">on</span> the <span class="keyword">current</span> <span class="keyword">master</span></div><div class="line">      该脚本在使用了vip的时候，在origin <span class="keyword">master</span>上删除vip{可选}</div><div class="line">      reconnect：确保当前与<span class="keyword">master</span>的连接正常</div><div class="line">      lock_all_tables：执行<span class="keyword">FLUSH</span> <span class="keyword">TABLES</span> <span class="keyword">WITH</span> <span class="keyword">READ</span> <span class="keyword">LOCK</span>，来<span class="keyword">lock</span> <span class="keyword">table</span></div><div class="line">      check_binlog_stop：连续两次<span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span>，来判断写<span class="keyword">binlog</span>是否已经停止</div></pre></td></tr></table></figure>
+
+<ul>
+<li>read_slave_status</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">get_alive_slaves：</div><div class="line">  check_slave_status：调用"<span class="operator"><span class="keyword">SHOW</span> <span class="keyword">SLAVE</span> <span class="keyword">STATUS</span><span class="string">"来取得slave的信息：</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>switch_master</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">switch_master_internal：</div><div class="line">    master_pos_wait：调用select master_pos_wait函数，等待主从同步完成</div><div class="line">    get_new_master_binlog_position：通过<span class="string">'show master status'</span>来获取</div><div class="line">Allow write access on the new master：</div><div class="line">    调用master_ip_online_change_script --command=start <span class="keyword">...</span>，将vip指向new master</div><div class="line">disable_read_only：</div><div class="line">    在新master上执行：SET GLOBAL read_only=<span class="number">0</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>switch_slaves</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">switch_slaves_internal：</div><div class="line">    change_master_and_start_slave</div><div class="line">        change_master：</div><div class="line">        start_slave：</div><div class="line">unlock_tables:在orig master上执行<span class="operator"><span class="keyword">unlock</span> <span class="keyword">table</span></span></div></pre></td></tr></table></figure>
+
+
+
+<h3 id="Phase_5:_New_master_cleanup_phase">Phase 5: New master cleanup phase</h3>
+<ul>
+<li><p>reset_slave_on_new_master</p>
+</li>
+<li><p>release_failover_advisory_lock</p>
+</li>
+</ul>
+<h2 id="MasterRotate_（GTID）">MasterRotate （GTID）</h2>
+<p>GTID模式的online switch 和 non-GTID 流程一样，除了在change_master_and_start_slave 不一样之外  </p>
+<h2 id="重点需要注意的地方">重点需要注意的地方</h2>
+<ul>
+<li>mha with not binlog server</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line">* 根据上述源码分析得到，如果没有配置binlog server的 GTID 模式failover，会导致数据丢失，即使master ssh可达  </div><div class="line"></div><div class="line">* 通过测试，的确在old master SSH可达的情况下，它也不会去save binlog，所以GTID和non-GTID模式的区别比较大。</div><div class="line"></div><div class="line">* 解决的方案就是： 配置Binlog Server</div><div class="line"></div><div class="line">/etc/app1.cnf</div><div class="line"></div><div class="line">[server default]</div><div class="line"><span class="variable">remote_workdir=</span>/var/log/masterha/app1</div><div class="line"><span class="variable">manager_workdir=</span>/var/log/masterha/app1</div><div class="line"><span class="variable">manager_log=</span>/var/log/masterha/app1/app1.log</div><div class="line"></div><div class="line">[server1]</div><div class="line"><span class="variable">hostname=</span>host1</div><div class="line"><span class="variable">candidate_master=</span><span class="number">1</span></div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span></div><div class="line"></div><div class="line">[server2]</div><div class="line"><span class="variable">hostname=</span>host2</div><div class="line"><span class="variable">candidate_master=</span><span class="number">1</span></div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span></div><div class="line"></div><div class="line">[server3]</div><div class="line"><span class="variable">hostname=</span>host3</div><div class="line"><span class="variable">no_master=</span><span class="number">1</span></div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span></div><div class="line"></div><div class="line">[binlog1]</div><div class="line"><span class="variable">hostname=</span>host1 --注意：这里既可以设置master为binlog server，也可以设置其他专用的binlog server</div></pre></td></tr></table></figure>
+
+<ul>
+<li>常用配置</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">/etc/app1.cnf</div><div class="line"></div><div class="line">[server default]</div><div class="line"><span class="variable">remote_workdir=</span>/var/log/masterha/app1</div><div class="line"><span class="variable">manager_workdir=</span>/var/log/masterha/app1</div><div class="line"><span class="variable">manager_log=</span>/var/log/masterha/app1/app1.log</div><div class="line"></div><div class="line">[server1]</div><div class="line"><span class="variable">hostname=</span>host1</div><div class="line"><span class="variable">candidate_master=</span><span class="number">1</span> --表示候选 master</div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span> --当 slave 有延迟的时候,如果没有这个参数,会失败</div><div class="line"></div><div class="line">[server2]</div><div class="line"><span class="variable">hostname=</span>host2</div><div class="line"><span class="variable">candidate_master=</span><span class="number">1</span></div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span></div><div class="line"></div><div class="line">[server3]</div><div class="line"><span class="variable">hostname=</span>host3</div><div class="line"><span class="variable">no_master=</span><span class="number">1</span> --永远不会成为new master</div><div class="line"><span class="variable">check_repl_delay=</span><span class="number">0</span></div><div class="line"><span class="variable">ignore_fail=</span><span class="number">1</span>  -- 如果不设置为<span class="number">1</span>，那么如果server3有问题，切换会失败</div><div class="line"></div><div class="line">[binlog1]</div><div class="line"><span class="variable">hostname=</span>host1 --注意：这里既可以设置master为binlog server，也可以设置其他专用的binlog server</div></pre></td></tr></table></figure>
+
+<ul>
+<li>常用命令</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="comment">masterha_check_repl</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span></div><div class="line"><span class="comment">masterha_check_status</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span></div><div class="line"><span class="comment">masterha_stop</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span></div><div class="line"><span class="comment">masterha_ssh_check</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span></div><div class="line"><span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host_1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interactive=1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore_last_failover</span></div><div class="line"><span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host_1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interactive=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore_last_failover</span></div><div class="line"><span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=alive</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">orig_master_is_new_slave</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interactive=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">running_updates_limit=10000</span></div><div class="line"><span class="comment">masterha_master_switch</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master_state=dead</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">dead_master_host=host_1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interactive=1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore_last_failover</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">new_master_host=host_2</span></div><div class="line"><span class="comment">nohup</span> <span class="comment">masterha_manager</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">conf=/etc/app1</span><span class="string">.</span><span class="comment">cnf</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">last_failover_minute=1</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore_last_failover</span> <span class="comment">&</span></div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/08/18/mha_source/" data-title="MySQL Master High Available 源码篇 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/08/05/mha_practice/"  title="MySQL Master High Available 实战篇">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL Master High Available 实战篇
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/08/18/mha_source/" data-title="MySQL Master High Available 源码篇" data-url="https://Keithlan.github.io/2016/08/18/mha_source/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterFailover_(Non-GTID)"><span class="toc-number">1.</span> <span class="toc-text">MasterFailover (Non-GTID)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase"><span class="toc-number">1.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Dead_Master_Shutdown_Phase-"><span class="toc-number">1.2.</span> <span class="toc-text">Phase 2: Dead Master Shutdown Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_3:_Master_Recovery_Phase-"><span class="toc-number">1.3.</span> <span class="toc-text">Phase 3: Master Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_4:_Slaves_Recovery_Phase-"><span class="toc-number">1.4.</span> <span class="toc-text">Phase 4: Slaves Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase-"><span class="toc-number">1.5.</span> <span class="toc-text">Phase 5: New master cleanup phase..</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterFailover_(GTID)"><span class="toc-number">2.</span> <span class="toc-text">MasterFailover (GTID)</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase-1"><span class="toc-number">2.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Dead_Master_Shutdown_Phase_completed-"><span class="toc-number">2.2.</span> <span class="toc-text">Phase 2: Dead Master Shutdown Phase completed.</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_3:_Master_Recovery_Phase--1"><span class="toc-number">2.3.</span> <span class="toc-text">Phase 3: Master Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_4:_Slaves_Recovery_Phase--1"><span class="toc-number">2.4.</span> <span class="toc-text">Phase 4: Slaves Recovery Phase..</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase--1"><span class="toc-number">2.5.</span> <span class="toc-text">Phase 5: New master cleanup phase..</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterRotate_（Non-GTID）"><span class="toc-number">3.</span> <span class="toc-text">MasterRotate （Non-GTID）</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_1:_Configuration_Check_Phase-1"><span class="toc-number">3.1.</span> <span class="toc-text">Phase 1: Configuration Check Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_2:_Rejecting_updates_Phase"><span class="toc-number">3.2.</span> <span class="toc-text">Phase 2: Rejecting updates Phase</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Phase_5:_New_master_cleanup_phase"><span class="toc-number">3.3.</span> <span class="toc-text">Phase 5: New master cleanup phase</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MasterRotate_（GTID）"><span class="toc-number">4.</span> <span class="toc-text">MasterRotate （GTID）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重点需要注意的地方"><span class="toc-number">5.</span> <span class="toc-text">重点需要注意的地方</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>15</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>15</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
