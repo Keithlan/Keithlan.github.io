@@ -87,7 +87,7 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
     </p>
   <p class="article-time">
     <time datetime="2016-05-25T09:14:24.000Z" itemprop="datePublished">May 25 2016</time>
-    Updated:<time datetime="2016-08-23T04:42:02.000Z" itemprop="dateModified">Aug 23 2016</time>
+    Updated:<time datetime="2016-09-01T01:16:26.000Z" itemprop="dateModified">Sep 1 2016</time>
     
   </p>
 </header>
@@ -96,7 +96,7 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缺陷"><span class="toc-number">7.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">8.</span> <span class="toc-text">重要</span></a></li></ol>
 		</div>
 		
 		<h2 id="环境">环境</h2>
@@ -162,11 +162,13 @@ MySQL: MySQL 5.6.27OS: centos 6.6tool: pt-table-checksum 2.2.15
 </ol>
 </blockquote>
 </li>
-<li><p>场景</p>
-</li>
 </ul>
-<p>master：table xx( A int,B char)<br>slave:  table xx( A int)</p>
-<p>pt-table-checksum 无法检测B字段。。。<br>```</p>
+<h2 id="缺陷">缺陷</h2>
+<ul>
+<li><strong>如果master和slave直接的表结构不一致，目前是没办法检测出来的</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">* 场景</div><div class="line"></div><div class="line">master：table xx( A <span class="keyword">int</span>,B <span class="keyword">char</span>)</div><div class="line">slave:  table xx( A <span class="keyword">int</span>)</div><div class="line"></div><div class="line">pt-table-checksum 无法检测B字段。。。</div></pre></td></tr></table></figure>
+
 <h2 id="重要">重要</h2>
 <ul>
 <li><p><strong>风险1</strong></p>
@@ -251,7 +253,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">7.</span> <span class="toc-text">重要</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#它能做什么"><span class="toc-number">2.</span> <span class="toc-text">它能做什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何使用"><span class="toc-number">3.</span> <span class="toc-text">如何使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何找到不一致的地方"><span class="toc-number">4.</span> <span class="toc-text">如何找到不一致的地方</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理"><span class="toc-number">5.</span> <span class="toc-text">原理</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常问的问题"><span class="toc-number">6.</span> <span class="toc-text">常问的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#缺陷"><span class="toc-number">7.</span> <span class="toc-text">缺陷</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#重要"><span class="toc-number">8.</span> <span class="toc-text">重要</span></a></li></ol>
   </div>
 
 <div id="asidepart">
