@@ -4,13 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Focus on MySQL,Focus on Focus</title>
+    <title>使用sysbench对MySQL进行测试 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="使用sysbench对MySQL进行测试
-为什么要测试，测什么东西？
+    <meta name="description" content="为什么要测试，测什么东西？
 测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  
 
 测试MySQL的极限IO
@@ -20,7 +19,8 @@
 
 为什么选择sysbench
 
-因为MySQL官方的测">
+因为MySQL官方的测试就是用sysbench哦  
+尽量选择最">
     
     
     
@@ -80,15 +80,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2016/12/16/sysbench_mysql/" title="" itemprop="url"></a>
+      <a href="/2016/12/16/sysbench_mysql/" title="使用sysbench对MySQL进行测试" itemprop="url">使用sysbench对MySQL进行测试</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2016-12-16T07:57:46.000Z" itemprop="datePublished">Dec 16 2016</time>
-    Updated:<time datetime="2016-12-16T07:57:45.000Z" itemprop="dateModified">Dec 16 2016</time>
+    <time datetime="2016-12-16T03:32:24.000Z" itemprop="datePublished">Dec 16 2016</time>
+    Updated:<time datetime="2016-12-16T07:59:21.000Z" itemprop="dateModified">Dec 16 2016</time>
     
   </p>
 </header>
@@ -97,11 +97,10 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用sysbench对MySQL进行测试"><span class="toc-number">1.</span> <span class="toc-text">使用sysbench对MySQL进行测试</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">1.2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">1.3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">1.4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">1.5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">1.6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">1.6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">1.7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">1.8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">1.9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">1.9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">1.9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol>
 		</div>
 		
-		<h1 id="使用sysbench对MySQL进行测试">使用sysbench对MySQL进行测试</h1>
-<h2 id="为什么要测试，测什么东西？">为什么要测试，测什么东西？</h2>
+		<h2 id="为什么要测试，测什么东西？">为什么要测试，测什么东西？</h2>
 <p>测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  </p>
 <ol>
 <li><p>测试MySQL的极限IO</p>
@@ -452,12 +451,22 @@
 	</div>
 		<footer class="article-footer clearfix">
 
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/sysbench/">sysbench</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/" data-title="使用sysbench对MySQL进行测试 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -480,7 +489,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2016/12/16/sysbench_mysql/" data-title="" data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/"></div>
+<div class="ds-thread" data-thread-key="/2016/12/16/sysbench_mysql/" data-title="使用sysbench对MySQL进行测试" data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -501,7 +510,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用sysbench对MySQL进行测试"><span class="toc-number">1.</span> <span class="toc-text">使用sysbench对MySQL进行测试</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">1.2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">1.3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">1.4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">1.5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">1.6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">1.6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">1.7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">1.8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">1.9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">1.9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">1.9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
@@ -538,7 +547,7 @@ var duoshuoQuery = {short_name:keithlan};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
@@ -573,6 +582,8 @@ var duoshuoQuery = {short_name:keithlan};
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
 		
 			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
 		
 		</ul>
 </div>
