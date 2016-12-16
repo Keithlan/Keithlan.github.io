@@ -90,7 +90,7 @@ xtrabackup原理深入浅出
     </p>
   <p class="article-time">
     <time datetime="2016-04-20T08:32:24.000Z" itemprop="datePublished">Apr 20 2016</time>
-    Updated:<time datetime="2016-06-02T16:31:44.000Z" itemprop="dateModified">Jun 3 2016</time>
+    Updated:<time datetime="2016-12-16T08:25:40.000Z" itemprop="dateModified">Dec 16 2016</time>
     
   </p>
 </header>
@@ -156,7 +156,11 @@ xtrabackup原理深入浅出
 </blockquote>
 <p><img src="/image/mysql_xtrabackup/innobackup.jpg" alt="innobackup" title="innobackup"></p>
 <p>从上述流程图可以看出，FLUSH TABLES WITH READ LOCK【FTWRL】  这个时间点，就是备份恢复的时间点，即一致性点<br>因为数据再拷贝的过程中是不一致的，MySQL利用其自身的crash recover机制，用redo来保证最终一致性  </p>
-<p>这里，假设一种场景，InnoDB是16k的刷新，当刷新到4k的时候，拷贝线程来讲这个页拷贝走，这样不就人为的造成了一次partial-write了吗？<br>对于partial-write的场景，由于redo日志是物理逻辑的，通过redo没有办法恢复，这可如何是好呢？<br>大家不用担心，底层的这些pread,pwrite操作，都是串行的，可以保证他们之间不会受到干扰，partial-write在机器断电的场景下才会发生  </p>
+<p>这里，假设一种场景，InnoDB是16k的刷新，当刷新到4k的时候，拷贝线程来讲这个页拷贝走，这样不就人为的造成了一次partial-write了吗？<br>对于partial-write的场景，由于redo日志是物理逻辑的，通过redo没有办法恢复，这可如何是好呢？  </p>
+<p>这里是核心：</p>
+<p>xtrabackup方式： xtrabackup里面做了很多事情，它在拷贝的过程中使用innodb的buf_page_is_corrupted()函数检查此页的数据是否正常，如果不正常，再重新拷贝，尝试N次重试之后还不行，就退出报错。  </p>
+<p>flush-method=O_direct，会直接从innodb buffer 写入到 磁盘，这个操作可能就会发生partial-write了。一旦发生这样的事情，MySQL是无法恢复的，所以，我们的备份必须保证脏页全部刷新完，也就是在备份程序中 a）必须保证没有写了 b）必须验证和检测Modified db pages是否等于0。 如果以上都ok，那么这个页肯定是完整的。除此之外，我们还有一招，就是多次rsync，确保完整。  </p>
+<p>flush-method=默认 ， 默认的会先从innodb buffer 写入到 OS缓存，这个操作是原子的，由操作系统保证。  </p>
 <h2 id="生产环境如何备份">生产环境如何备份</h2>
 <blockquote>
 <p>备份的意图：备份master或者slave上的数据，然后传输到一个挂有大磁盘的服务器上，保留若干天  </p>
