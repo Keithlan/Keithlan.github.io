@@ -1,0 +1,739 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="使用sysbench对MySQL进行测试
+为什么要测试，测什么东西？
+测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  
+
+测试MySQL的极限IO
+
+对比不同版本MySQL，不同参数, 不同硬件，不同系统对MySQL的性能影响
+
+
+为什么选择sysbench
+
+因为MySQL官方的测">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/12/16/sysbench_mysql/" title="" itemprop="url"></a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-12-16T07:57:46.000Z" itemprop="datePublished">Dec 16 2016</time>
+    Updated:<time datetime="2016-12-16T07:57:45.000Z" itemprop="dateModified">Dec 16 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用sysbench对MySQL进行测试"><span class="toc-number">1.</span> <span class="toc-text">使用sysbench对MySQL进行测试</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">1.2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">1.3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">1.4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">1.5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">1.6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">1.6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">1.7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">1.8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">1.9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">1.9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">1.9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol></li></ol>
+		</div>
+		
+		<h1 id="使用sysbench对MySQL进行测试">使用sysbench对MySQL进行测试</h1>
+<h2 id="为什么要测试，测什么东西？">为什么要测试，测什么东西？</h2>
+<p>测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  </p>
+<ol>
+<li><p>测试MySQL的极限IO</p>
+</li>
+<li><p>对比不同版本MySQL，不同参数, 不同硬件，不同系统对MySQL的性能影响</p>
+</li>
+</ol>
+<h2 id="为什么选择sysbench">为什么选择sysbench</h2>
+<ol>
+<li>因为MySQL官方的测试就是用sysbench哦  </li>
+<li>尽量选择最新版本的sysbench哦，大于0.4版本的sysbench有实时显示功能      </li>
+</ol>
+<h2 id="如何下载sysbench">如何下载sysbench</h2>
+<p><a href="http://github.com/akopytov/sysbench" target="_blank" rel="external">http://github.com/akopytov/sysbench</a></p>
+<h2 id="文档在哪里">文档在哪里</h2>
+<p><a href="http://github.com/akopytov/sysbench" target="_blank" rel="external">http://github.com/akopytov/sysbench</a></p>
+<h2 id="如何安装">如何安装</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">* 基本步骤</div><div class="line">cd sysbench-<span class="number">1.0</span>;</div><div class="line">./autogen.sh;</div><div class="line">./configure --<span class="keyword">with</span>-mysql-includes=/usr/local/mysql/include --<span class="keyword">with</span>-mysql-libs=/usr/local/mysql/<span class="keyword">lib</span>/;</div><div class="line">make;</div><div class="line">make install;  </div><div class="line"></div><div class="line">* 过程中可能会遇到的故障</div><div class="line">sysbench: <span class="keyword">error</span> <span class="keyword">while</span> loading <span class="keyword">shared</span> libraries: libmysqlclient.so<span class="number">.20</span>: cannot open <span class="keyword">shared</span> <span class="built_in">object</span> file: No such file <span class="keyword">or</span> directory</div><div class="line"></div><div class="line">* 解决方案</div><div class="line">export LD_LIBRARY_PATH=/usr/local/mysql/<span class="keyword">lib</span>/;</div><div class="line"></div><div class="line">* 测试是否安装成功</div><div class="line">shell&gt; sysbench --version</div><div class="line">sysbench <span class="number">1.0</span></div></pre></td></tr></table></figure>
+
+<h2 id="介绍sysbench的核心用法">介绍sysbench的核心用法</h2>
+<blockquote>
+<ol>
+<li>它可以用来测试很多东西，测试io，cpu，mem，mysql，oracle，pg等等。  </li>
+<li>这里主要介绍我关心的两个，IO &amp; MySQL  </li>
+<li>以下前半部分是0.4版本的用法，0.4以上的版本用法不一样，会注明。  </li>
+</ol>
+</blockquote>
+<h3 id="一、通用语法">一、通用语法</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">sysbench [common-<span class="keyword">options</span>] --test=name [test-<span class="keyword">options</span>] <span class="keyword">command</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>command </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>prepare</div><div class="line"> 准备阶段，也就是装载数据。</div><div class="line"> filo test 中： 就是创建指定大小的文件</div><div class="line"> oltp test 中： 就是创建指定大小的表</div><div class="line"></div><div class="line"><span class="bullet">* </span>run</div><div class="line"> 实际测试阶段</div><div class="line"></div><div class="line"><span class="bullet">* </span>cleanup</div><div class="line"> 收尾阶段，清除之前测试的数据。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>common-options</li>
+</ul>
+<blockquote>
+<p>只介绍常用的选项  </p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—num-threads</td>
+<td>多少个线程</td>
+<td>1</td>
+</tr>
+<tr>
+<td>—max-requests</td>
+<td>多少个请求，0意味着无限制</td>
+<td>1000</td>
+</tr>
+<tr>
+<td>—max-time</td>
+<td>测试多长时间，0意味着无限制</td>
+<td>0</td>
+</tr>
+<tr>
+<td>—test</td>
+<td>测试什么模块</td>
+<td>必须要求</td>
+</tr>
+<tr>
+<td>—report-interval</td>
+<td>阶段性的汇报测试统计信息,0.4以上版本新增</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>—test=fileio 模块的选项</li>
+</ul>
+<p>提前注明：—file-test-mode </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">* seqwr</div><div class="line">sequential <span class="built_in">write</span></div><div class="line"></div><div class="line">* seqrewr</div><div class="line">sequential rewrite</div><div class="line"></div><div class="line">* seqrd</div><div class="line">sequential <span class="built_in">read</span></div><div class="line"></div><div class="line">* rndrd</div><div class="line"><span class="built_in">random</span> <span class="built_in">read</span></div><div class="line"></div><div class="line">* rndwr</div><div class="line"><span class="built_in">random</span> <span class="built_in">write</span></div><div class="line"></div><div class="line">* rndrw</div><div class="line">combined <span class="built_in">random</span> <span class="built_in">read</span>/<span class="built_in">write</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>test option for fileio</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—file-num</td>
+<td>创建文件的数量</td>
+<td>128</td>
+</tr>
+<tr>
+<td>—file-block-size</td>
+<td>IO操作的大小</td>
+<td>16k</td>
+</tr>
+<tr>
+<td>—file-total-size</td>
+<td>所有文件的总大小</td>
+<td>2G</td>
+</tr>
+<tr>
+<td>—file-test-mode</td>
+<td>seqwr，seqrewr, seqrd, rndrd, rndwr, rndwr(上面已经介绍)</td>
+<td>必须</td>
+</tr>
+<tr>
+<td>—file-io-mode</td>
+<td>i/O 模式，sync,  async,  fastmmap,  slowmmap</td>
+<td>sync</td>
+</tr>
+<tr>
+<td>—file-extra-flags</td>
+<td>以额外的标记（O_SYNC，O_DSYNC，O_DIRECT）打开</td>
+<td>-</td>
+</tr>
+<tr>
+<td>—file-fsync-freq</td>
+<td>多少请求后使用fsync</td>
+<td>100</td>
+</tr>
+<tr>
+<td>—file-fsync-all</td>
+<td>每次写IO都必须fsync</td>
+<td>no</td>
+</tr>
+<tr>
+<td>—file-fsync-mode</td>
+<td>用什么样的模式来同步文件fsync,  fdatasync  (see above)</td>
+<td>fsync</td>
+</tr>
+<tr>
+<td>—file-rw-ratio</td>
+<td>随机读写请求的比例</td>
+<td>1.5</td>
+</tr>
+</tbody>
+</table>
+<p>举例：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="comment">$</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=3G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrw</span> <span class="comment">prepare</span></div><div class="line"><span class="comment">$</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=3G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrw</span> <span class="comment">run</span></div><div class="line"><span class="comment">$</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=3G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrw</span> <span class="comment">cleanup</span></div></pre></td></tr></table></figure>
+
+<h2 id="OLTP-MySQL">OLTP-MySQL</h2>
+<p>此模式用于测试真实数据库性能。在prepare阶段创建表，sbtest默认</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`sbtest`</span> (</span></div><div class="line"><span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">10</span>) unsigned <span class="keyword">NOT</span> <span class="literal">NULL</span> auto_increment,</div><div class="line"><span class="string">`k`</span> <span class="built_in">int</span>(<span class="number">10</span>) unsigned <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">default</span> <span class="string">'0'</span>,</div><div class="line"><span class="string">`c`</span> <span class="built_in">char</span>(<span class="number">120</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">default</span> <span class="string">''</span>,</div><div class="line"><span class="string">`pad`</span> <span class="built_in">char</span>(<span class="number">60</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">default</span> <span class="string">''</span>,</div><div class="line"><span class="keyword">PRIMARY</span> <span class="keyword">KEY</span>  (<span class="string">`id`</span>),</div><div class="line"><span class="keyword">KEY</span> <span class="string">`k`</span> (<span class="string">`k`</span>));</div></pre></td></tr></table></figure>
+
+<p>在run阶段</p>
+<ul>
+<li>simple模式</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> c <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id=N</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Point queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> c <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id=N</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Range queries:</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> c <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id <span class="keyword">BETWEEN</span> N <span class="keyword">AND</span> M</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Range SUM() queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> <span class="keyword">SUM</span>(K) <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id <span class="keyword">BETWEEN</span> N <span class="keyword">and</span> M</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Range ORDER BY queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> c <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id <span class="keyword">between</span> N <span class="keyword">and</span> M <span class="keyword">ORDER</span> <span class="keyword">BY</span> c</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Range DISTINCT queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SELECT</span> <span class="keyword">DISTINCT</span> c <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id <span class="keyword">BETWEEN</span> N <span class="keyword">and</span> M <span class="keyword">ORDER</span> <span class="keyword">BY</span> c</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>UPDATEs on index column</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">UPDATE</span> sbtest <span class="keyword">SET</span> k=k+<span class="number">1</span> <span class="keyword">WHERE</span> id=N</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>UPDATEs on non-index column:</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">UPDATE</span> sbtest <span class="keyword">SET</span> c=N <span class="keyword">WHERE</span> id=M</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>DELETE queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> sbtest <span class="keyword">WHERE</span> id=N</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>INSERT queries</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">INSERT INTO sbtest VALUES (<span class="keyword">...</span>)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>oltp test模式通用参数</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>选项</th>
+<th>描述</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>—oltp-table-name</td>
+<td>表的名字</td>
+<td>sbtest</td>
+</tr>
+<tr>
+<td>—oltp-table-size</td>
+<td>表的行数</td>
+<td>10000</td>
+</tr>
+<tr>
+<td>—oltp-tables-count</td>
+<td>表的个数</td>
+<td>1</td>
+</tr>
+<tr>
+<td>—oltp-dist-type</td>
+<td>热点数据分布{uniform(均匀分布),Gaussian(高斯分布),special(空间分布)}。默认是special</td>
+<td>special</td>
+</tr>
+<tr>
+<td>—oltp-dist-pct</td>
+<td>special：热点数据产生的比例</td>
+<td>1</td>
+</tr>
+<tr>
+<td>—oltp-dist-res</td>
+<td>special：热点数据的访问频率</td>
+<td>75</td>
+</tr>
+<tr>
+<td>—oltp-test-mode</td>
+<td>simple，complex（以上介绍）</td>
+<td>complex</td>
+</tr>
+<tr>
+<td>—oltp-read-only</td>
+<td>只有select 请求</td>
+<td>off</td>
+</tr>
+<tr>
+<td>—oltp-skip-trx</td>
+<td>不用事务</td>
+<td>off</td>
+</tr>
+<tr>
+<td>—oltp-point-selects</td>
+<td>一个事务中简单select查询数量</td>
+<td>10</td>
+</tr>
+<tr>
+<td>—oltp-simple-ranges</td>
+<td>一个事务中简单range查询的数量</td>
+<td>1</td>
+</tr>
+<tr>
+<td>—oltp-sum-ranges</td>
+<td>sum range的数量</td>
+<td>1</td>
+</tr>
+<tr>
+<td>—oltp-order=ranges</td>
+<td>order  range的数量</td>
+<td>1</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>mysql test 参数</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">--mysql-host=[LIST,<span class="keyword">...</span>]      MySQL server host [localhost]</div><div class="line">--mysql-port=[LIST,<span class="keyword">...</span>]      MySQL server port [<span class="number">3306</span>]</div><div class="line">--mysql-socket=[LIST,<span class="keyword">...</span>]    MySQL socket</div><div class="line">--mysql-user=STRING          MySQL user [sbtest]</div><div class="line">--mysql-password=STRING      MySQL password []</div><div class="line">--mysql-db=STRING            MySQL database name [sbtest]</div><div class="line">--mysql-table-engine=STRING  storage engine to use <span class="keyword">for</span> the test table {myisam,innodb,bdb,heap,ndbcluster,federated} [innodb]</div><div class="line">--mysql-engine-trx=STRING    whether storage engine used is transactional or not {yes,no,auto} [auto]</div><div class="line">--mysql-ssl=[on|off]         use SSL connections, <span class="keyword">if</span> available <span class="keyword">in</span> the client <span class="keyword">library</span> [off]</div><div class="line">--mysql-ssl-cipher=STRING    use specific cipher <span class="keyword">for</span> SSL connections []</div><div class="line">--mysql-compression=[on|off] use compression, <span class="keyword">if</span> available <span class="keyword">in</span> the client <span class="keyword">library</span> [off]</div><div class="line">--myisam-max-rows=N          max-rows parameter <span class="keyword">for</span> MyISAM tables [<span class="number">1000000</span>]</div><div class="line">--mysql-debug=[on|off]       dump all client <span class="keyword">library</span> calls [off]</div><div class="line">--mysql-ignore-errors=[LIST,<span class="keyword">...</span>]list of errors to ignore, or <span class="string">"all"</span> [<span class="number">1213</span>,<span class="number">1020</span>,<span class="number">1205</span>]</div><div class="line">--mysql-dry-run=[on|off]     Dry run, pretent that all MySQL client API calls are successful without executing them [off]</div></pre></td></tr></table></figure>
+
+<p>以上0.4版本的语法介绍完毕。  </p>
+<p>接下来是大于0.4版本的新语法，尤其是—test=oltp模块</p>
+<p>用—test=xx.lua (完整路径来传递)来代替  </p>
+<h2 id="FileIO实战">FileIO实战</h2>
+<blockquote>
+<p>磁盘：S3610 * 6 raid10, 内存128G<br>测试出相关场景下的极限IOPS  </p>
+</blockquote>
+<ul>
+<li>随机读写（3:2 oltp场景）</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">num=200</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=200G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrw</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">block</span><span class="literal">-</span><span class="comment">size=16384</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">extra</span><span class="literal">-</span><span class="comment">flags=direct</span> <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/ssd3600_rndrw32.jpg" alt="fileio_oltp_32" title="fileio_oltp_32"></p>
+<ul>
+<li>随机读写（5：1 oltp场景）</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">num=200</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=200G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrw</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">block</span><span class="literal">-</span><span class="comment">size=16384</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">extra</span><span class="literal">-</span><span class="comment">flags=direct</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">rw</span><span class="literal">-</span><span class="comment">ratio=5</span>  <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/fileio_rndrw51.jpg" alt="fileio_oltp_51" title="fileio_oltp_51"></p>
+<ul>
+<li>随机写</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">num=200</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=200G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndwr</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">block</span><span class="literal">-</span><span class="comment">size=16384</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">extra</span><span class="literal">-</span><span class="comment">flags=direct</span> <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/fileio_rndwr.jpg" alt="fileio_rndwr" title="fileio_rndwr"></p>
+<ul>
+<li>随机读</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=16</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">test=fileio</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">num=200</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">total</span><span class="literal">-</span><span class="comment">size=200G</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=rndrd</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">block</span><span class="literal">-</span><span class="comment">size=16384</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">file</span><span class="literal">-</span><span class="comment">extra</span><span class="literal">-</span><span class="comment">flags=direct</span> <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/fileio_rndrd.jpg" alt="fileio_rndrd" title="fileio_rndrd"></p>
+<h2 id="MySQL5-6_vs_MySQL5-7_测试">MySQL5.6 vs  MySQL5.7 测试</h2>
+<blockquote>
+<p>磁盘：S3610 * 6 raid10, 内存128G</p>
+</blockquote>
+<ul>
+<li>Point select</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">产生数据</span></div><div class="line"><span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=128</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=/root/sysbench</span><span class="literal">-</span><span class="comment">1</span><span class="string">.</span><span class="comment">0/sysbench/tests/db/select</span><span class="string">.</span><span class="comment">lua</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">engine=innodb</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">size=50000000</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">user=sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">password=sysbench</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">tables</span><span class="literal">-</span><span class="comment">count=2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">host=xx</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">port=3306</span> <span class="comment">prepare</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">*</span> <span class="comment">执行</span></div><div class="line"><span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=128</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=/root/sysbench</span><span class="literal">-</span><span class="comment">1</span><span class="string">.</span><span class="comment">0/sysbench/tests/db/select</span><span class="string">.</span><span class="comment">lua</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">engine=innodb</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">size=50000000</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">user=sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">password=sysbench</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">tables</span><span class="literal">-</span><span class="comment">count=2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">host=xx</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">port=3306</span> <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/sysbench_mysql_select_56_57.jpg" alt="select_sysbench" title="select_sysbench"></p>
+<ul>
+<li>Point oltp</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="comment">产生数据</span></div><div class="line"><span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=128</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=/root/sysbench</span><span class="literal">-</span><span class="comment">1</span><span class="string">.</span><span class="comment">0/sysbench/tests/db/oltp</span><span class="string">.</span><span class="comment">lua</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">engine=innodb</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">size=50000000</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">user=sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">password=sysbench</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">tables</span><span class="literal">-</span><span class="comment">count=2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">host=xx</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">port=3306</span> <span class="comment">prepare</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">*</span> <span class="comment">执行</span></div><div class="line"><span class="comment">sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=128</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=300</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=/root/sysbench</span><span class="literal">-</span><span class="comment">1</span><span class="string">.</span><span class="comment">0/sysbench/tests/db/oltp</span><span class="string">.</span><span class="comment">lua</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">engine=innodb</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">size=50000000</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">user=sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">password=sysbench</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">tables</span><span class="literal">-</span><span class="comment">count=2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">host=xx</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">port=3306</span> <span class="comment">run</span></div></pre></td></tr></table></figure>
+
+<p><img src="/image/mysql_standard/oltp_56_57_sysbench.jpg" alt="oltp_sysbench" title="oltp_sysbench"></p>
+<h3 id="结论">结论</h3>
+<blockquote>
+<ol>
+<li>在性能方面，虽然官方号称5.7性能比5.6快3倍，但是在实际测试中5.7比5.6却稍微差一点点   </li>
+<li>是否会选择5.7生产环境？当然，因为5.7的新特性太诱人了  </li>
+</ol>
+</blockquote>
+<h3 id="参考：">参考：</h3>
+<blockquote>
+<p><a href="https://www.percona.com/blog/2016/04/07/mysql-5-7-sysbench-oltp-read-results-really-faster/" target="_blank" rel="external">https://www.percona.com/blog/2016/04/07/mysql-5-7-sysbench-oltp-read-results-really-faster/</a><br><a href="http://dimitrik.free.fr/blog/archives/2013/09/mysql-performance-reaching-500k-qps-with-mysql-57.html" target="_blank" rel="external">http://dimitrik.free.fr/blog/archives/2013/09/mysql-performance-reaching-500k-qps-with-mysql-57.html</a><br><a href="https://github.com/akopytov/sysbench" target="_blank" rel="external">https://github.com/akopytov/sysbench</a></p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/08/18/mha_source/"  title="MySQL Master High Available 源码篇">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL Master High Available 源码篇
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/12/16/sysbench_mysql/" data-title="" data-url="https://Keithlan.github.io/2016/12/16/sysbench_mysql/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#使用sysbench对MySQL进行测试"><span class="toc-number">1.</span> <span class="toc-text">使用sysbench对MySQL进行测试</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么要测试，测什么东西？"><span class="toc-number">1.1.</span> <span class="toc-text">为什么要测试，测什么东西？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#为什么选择sysbench"><span class="toc-number">1.2.</span> <span class="toc-text">为什么选择sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何下载sysbench"><span class="toc-number">1.3.</span> <span class="toc-text">如何下载sysbench</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#文档在哪里"><span class="toc-number">1.4.</span> <span class="toc-text">文档在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何安装"><span class="toc-number">1.5.</span> <span class="toc-text">如何安装</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#介绍sysbench的核心用法"><span class="toc-number">1.6.</span> <span class="toc-text">介绍sysbench的核心用法</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#一、通用语法"><span class="toc-number">1.6.1.</span> <span class="toc-text">一、通用语法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#OLTP-MySQL"><span class="toc-number">1.7.</span> <span class="toc-text">OLTP-MySQL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#FileIO实战"><span class="toc-number">1.8.</span> <span class="toc-text">FileIO实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL5-6_vs_MySQL5-7_测试"><span class="toc-number">1.9.</span> <span class="toc-text">MySQL5.6 vs  MySQL5.7 测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#结论"><span class="toc-number">1.9.1.</span> <span class="toc-text">结论</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#参考："><span class="toc-number">1.9.2.</span> <span class="toc-text">参考：</span></a></li></ol></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>20</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>15</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>15</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
