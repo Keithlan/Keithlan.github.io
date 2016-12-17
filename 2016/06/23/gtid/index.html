@@ -84,7 +84,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
     </p>
   <p class="article-time">
     <time datetime="2016-06-23T09:54:24.000Z" itemprop="datePublished">Jun 23 2016</time>
-    Updated:<time datetime="2016-07-08T03:21:13.000Z" itemprop="dateModified">Jul 8 2016</time>
+    Updated:<time datetime="2016-12-17T07:08:15.000Z" itemprop="dateModified">Dec 17 2016</time>
     
   </p>
 </header>
@@ -210,9 +210,15 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 
 <h4 id="1-1-5_新的复制协议_COM_BINLOG_DUMP_GTID">1.1.5 新的复制协议  COM_BINLOG_DUMP_GTID</h4>
 <ul>
-<li><strong>Slave sends to master range of identifiers of executed transactions to master</strong>  </li>
-<li><strong>Master send all other transactions to slave</strong>  </li>
-<li><strong>同样的GTID不能被执行两次，如果有同样的GTID，会自动被skip掉。</strong>  </li>
+<li><strong>slave会将已经执行过的gtid，以及以及接受到relay log中的gtid的并集发送给master</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">* http://dev.mysql.com/doc/refman/5.7/en/<span class="operator"><span class="keyword">change</span>-<span class="keyword">master</span>-<span class="keyword">to</span>.html</span></div><div class="line"></div><div class="line"><span class="keyword">UNION</span>(@@<span class="keyword">global</span>.gtid_executed, Retrieved_gtid_set - last_received_GTID)</div></pre></td></tr></table></figure>
+
+<ul>
+<li><p><strong>Master send all other transactions to slave</strong>  </p>
+</li>
+<li><p><strong>同样的GTID不能被执行两次，如果有同样的GTID，会自动被skip掉。</strong>  </p>
+</li>
 </ul>
 <p><img src="/image/mysql_innodb_arch/com_binlog_dump_gtid.jpg" alt="com_binlog_dump_gtid" title="com_binlog_dump_gtid.jpg"></p>
 <p>slave1 : 将自身的UUID1:1 发送给 master，然后接收到了 UUID1:2,UUID1:3 event<br>slave2 : 将自身的UUID1:1,UUID1:2 发送给 master，然后接收到了UUID1:3 event   </p>
