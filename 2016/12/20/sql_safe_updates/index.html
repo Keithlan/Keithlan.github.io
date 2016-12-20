@@ -1,0 +1,458 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维之神奇的参数 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="sql_safe_updateshttp://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_safe_updates  
+
+背景(why)
+主要是针对大表的误操作。
+如果只是更改了几条记录，那么说不定业">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/12/20/sql_safe_updates/" title="MySQL运维之神奇的参数" itemprop="url">MySQL运维之神奇的参数</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-12-20T07:32:24.000Z" itemprop="datePublished">Dec 20 2016</time>
+    Updated:<time datetime="2016-12-20T07:38:46.000Z" itemprop="dateModified">Dec 20 2016</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景(why)"><span class="toc-number">1.</span> <span class="toc-text">背景(why)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境的误操作案例分享"><span class="toc-number">2.</span> <span class="toc-text">生产环境的误操作案例分享</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理和实战"><span class="toc-number">3.</span> <span class="toc-text">原理和实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p>sql_safe_updates<br><a href="http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_safe_updates" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_safe_updates</a>  </p>
+</blockquote>
+<h2 id="背景(why)">背景(why)</h2>
+<p>主要是针对大表的误操作。</p>
+<p>如果只是更改了几条记录，那么说不定业务方可以很容易的根据日志进行恢复。即便没有，也可以通过找binlog，进行逆向操作恢复。</p>
+<p>如果被误操作的表非常小，其实问题也不大，全备+binlog恢复 or  闪回 都可以进行很好的恢复。</p>
+<p>But，如果你要恢复的表非常大，比如：100G，100T，对于这类型的误操作，恐怕神仙都难救。</p>
+<p>所以，我们这里通过这个神奇的参数，可以避免掉80%的误操作场景。 PS: 不能避免100% ，下面的实战会告诉大家如何破解。</p>
+<h2 id="生产环境的误操作案例分享">生产环境的误操作案例分享</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="operator"><span class="keyword">update</span> xx <span class="keyword">set</span> url_desc=<span class="string">'防不胜防'</span> <span class="keyword">WHERE</span> <span class="number">4918</span>=<span class="number">4918</span> <span class="keyword">AND</span> <span class="keyword">SLEEP</span>(<span class="number">5</span>)<span class="comment">-- xYpp' where id=7046  </span></span></div><div class="line"></div><div class="line">这种表，线上有<span class="number">500</span>G，一次误操作，要恢复<span class="number">500</span>G的数据，会中断服务很长时间。</div><div class="line"></div><div class="line">如果设置了sql_safe_updates，此类事故就可以很华丽的避免掉了。</div></pre></td></tr></table></figure>
+
+<h2 id="原理和实战">原理和实战</h2>
+<ul>
+<li>表结构</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:lc&gt; show create table tb;</span></div><div class="line">+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table | Create Table                                                                                                                                                                                                                           |</span></div><div class="line">+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+</div><div class="line">| tb    | CREATE TABLE <span class="code">`tb`</span> (</div><div class="line"><span class="code">  `id` int(11) NOT NULL,</span></div><div class="line"><span class="code">  `id_2` int(11) DEFAULT NULL COMMENT 'lc22222233333',</span></div><div class="line"><span class="code">  `id_3` text,</span></div><div class="line"><span class="code">  PRIMARY KEY (`id`),</span></div><div class="line"><span class="code">  KEY `idx_2` (`id_2`),</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+</div></pre></td></tr></table></figure>
+
+<ul>
+<li>update 相关测试</li>
+</ul>
+<blockquote>
+<p>UPDATE statements must have a WHERE clause that uses a key or a LIMIT clause, or both.</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div></pre></td><td class="code"><pre><div class="line">* 不带<span class="keyword">where</span> 条件</div><div class="line"></div><div class="line">dba:lc&gt; update tb <span class="keyword">set</span> id_2=<span class="number">2</span> ;</div><div class="line">ERROR <span class="number">1175</span> (HY000): You are <span class="keyword">using</span> safe update mode <span class="keyword">and</span> you tried <span class="keyword">to</span> update a table without a <span class="keyword">WHERE</span> that <span class="keyword">uses</span> a KEY column</div><div class="line"></div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件有索引，但是没有limit </div><div class="line"></div><div class="line">dba:lc&gt; update tb <span class="keyword">set</span> id_3 = <span class="string">'bb'</span> <span class="keyword">where</span> id &gt; <span class="number">0</span>;</div><div class="line">^C^C -- query aborted</div><div class="line">ERROR <span class="number">1317</span> (<span class="number">70100</span>): Query execution was interrupted</div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件无索引，也没有limit</div><div class="line"></div><div class="line">dba:lc&gt; update tb <span class="keyword">set</span> id_3 = <span class="string">'bb'</span> <span class="keyword">where</span> id_3 = <span class="string">'0'</span>;</div><div class="line">ERROR <span class="number">1175</span> (HY000): You are <span class="keyword">using</span> safe update mode <span class="keyword">and</span> you tried <span class="keyword">to</span> update a table without a <span class="keyword">WHERE</span> that <span class="keyword">uses</span> a KEY column</div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件有索引，有limit</div><div class="line"></div><div class="line">dba:lc&gt; update tb <span class="keyword">set</span> id_3 = <span class="string">'bb'</span> <span class="keyword">where</span> id &gt; <span class="number">0</span> limit <span class="number">1</span>;</div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec)</div><div class="line">Rows matched: <span class="number">1</span>  Changed: <span class="number">1</span>  Warnings: <span class="number">0</span></div><div class="line"></div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件无索引，有limit</div><div class="line"></div><div class="line">dba:lc&gt; update tb <span class="keyword">set</span> id_3 = <span class="string">'bb'</span> <span class="keyword">where</span> id_3 &gt; <span class="number">0</span> limit <span class="number">1</span>;</div><div class="line">Query OK, <span class="number">0</span> rows affected (<span class="number">0.26</span> sec)</div><div class="line">Rows matched: <span class="number">0</span>  Changed: <span class="number">0</span>  Warnings: <span class="number">0</span></div></pre></td></tr></table></figure>
+
+<p>结论： 对于update，只有两种场景会被限制  </p>
+<ol>
+<li>无索引，无limit的情况  </li>
+<li>无where条件  </li>
+</ol>
+<ul>
+<li>delete相关测试</li>
+</ul>
+<blockquote>
+<p>DELETE statements must have both</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line">* 不带<span class="keyword">where</span> 条件</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb ;</div><div class="line"><span class="keyword">ERROR</span> <span class="number">1175</span> (HY000): You are <span class="keyword">using</span> safe update mode <span class="keyword">and</span> you tried <span class="keyword">to</span> update a table without a <span class="keyword">WHERE</span> that uses a <span class="keyword">KEY</span> column</div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件有索引，但是没有limit </div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id = <span class="number">0</span> ;</div><div class="line">Query OK, <span class="number">0</span> rows affected (<span class="number">0.00</span> sec)</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id &gt; <span class="number">0</span> ;</div><div class="line">^C^C -- query aborted</div><div class="line"><span class="keyword">ERROR</span> <span class="number">1317</span> (<span class="number">70100</span>): Query execution was interrupted</div><div class="line"></div><div class="line">dba:lc&gt; explain <span class="keyword">select</span> * <span class="keyword">from</span> tb <span class="keyword">where</span> id_2 &gt; <span class="number">0</span>;</div><div class="line">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+</div><div class="line">| id | select_type | table | partitions | type | possible_keys | <span class="keyword">key</span>  | key_len | ref  | rows   | filtered | Extra       |</div><div class="line">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | tb    | NULL       | ALL  | idx_2,idx_3   | NULL | NULL    | NULL | <span class="number">245204</span> |    <span class="number">50.00</span> | <span class="keyword">Using</span> <span class="keyword">where</span> |</div><div class="line">+----+-------------+-------+------------+------+---------------+------+---------+------+--------+----------+-------------+</div><div class="line"><span class="number">1</span> row <span class="keyword">in</span> <span class="keyword">set</span>, <span class="number">1</span> warning (<span class="number">0.00</span> sec)</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id_2 &gt; <span class="number">0</span> ;</div><div class="line">^C^C -- query aborted</div><div class="line">^C^C -- query aborted</div><div class="line"><span class="keyword">ERROR</span> <span class="number">1317</span> (<span class="number">70100</span>): Query execution was interrupted</div><div class="line"></div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件无索引，也没有limit</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id_3 = <span class="comment">'a' ;</span></div><div class="line"><span class="keyword">ERROR</span> <span class="number">1175</span> (HY000): You are <span class="keyword">using</span> safe update mode <span class="keyword">and</span> you tried <span class="keyword">to</span> update a table without a <span class="keyword">WHERE</span> that uses a <span class="keyword">KEY</span> column</div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件有索引，有limit</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id = <span class="number">205</span> limit <span class="number">1</span> ;</div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec)</div><div class="line"></div><div class="line">* <span class="keyword">where</span> 条件无索引，有limit</div><div class="line"></div><div class="line">dba:lc&gt; delete <span class="keyword">from</span> tb <span class="keyword">where</span> id_3 = <span class="comment">'aaaaa' limit 1 ;</span></div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">0.00</span> sec)</div></pre></td></tr></table></figure>
+
+<p>测试结果证明： 关于delete相关，官方文档描述有误。  </p>
+<p>结论： 对于delete，只有两种场景会被限制  </p>
+<ol>
+<li>无索引，无limit的情况  </li>
+<li>无where条件  </li>
+</ol>
+<p>综上所述：不管是update，还是delete ，被限制的前提只有两个   </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>无索引，无limit的情况  </div><div class="line"><span class="bullet">2. </span>无where条件</div></pre></td></tr></table></figure>
+
+<p>好了，通过以上的知识，大家都应该很了解，接下来就是实施的问题了。  </p>
+<p>对于新业务，新DB，直接设置这样的参数就好了，再测试环境也设置，这样开发在测试环境就能发现问题，不会在新业务上产生这样危险的语句。  </p>
+<p>对于老业务，怎么办呢？</p>
+<p>我们的做法：因为我们的MySQL是5.6，所以另外一个神奇的功能就是P_S（performance schema）, 通过P_S，我们可以获取哪些query语句是没有使用索引的。  </p>
+<p>这里又会引发另外一个问题，可能是Performance schema的bug，它竟然无法统计dml 是否使用索引</p>
+<p>经过我们大量的测试后证明：events_statements_summary_by_digest 表里面的SUM_NO_INDEX_USED，SUM_NO_GOOD_INDEX_USED ，对dml无效。  </p>
+<p>既然如此，我们所幸对dml语句自己进行分析，将dml转换成对应的select语句。<br>比如： update tb set id = 1 where id = 2; 转换成  select * from tb where id = 2 。。。。</p>
+<p>然后根据select语句，进行explain分析，如果没有使用索引，这样的语句就是我们认为的全表dml语句了。   </p>
+<h2 id="总结">总结</h2>
+<p>如果线上设置sql_safe_updates = 1 后，业务还有零星的dml被拒绝，业务方可以考虑如下解决方案：</p>
+<p>1）如果你确保你的SQL语句没有任何问题，可以这样： set sql_safe_updates=0; 但是开发必须考虑到这样做的后果。  </p>
+<p>2) 可以改写SQL语句，让其使用上索引字段。  </p>
+<p>3）为什么这边没有让大家使用limit呢？因为在大多数场景下，dml + limit = 不确定的SQL 。 很可能导致主从不一致。 ( dml + limit 的方式，是线上禁止的)   </p>
+<p>各位看官，以上神器请大家慢慢享用。 关于PS和sys，如果大家有更加新奇的想法，可以一起讨论研究。   </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/12/20/sql_safe_updates/" data-title="MySQL运维之神奇的参数 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2016/12/16/sysbench_mysql/"  title="使用sysbench对MySQL进行测试">
+ <strong>NEXT:</strong><br/> 
+ <span>使用sysbench对MySQL进行测试
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/12/20/sql_safe_updates/" data-title="MySQL运维之神奇的参数" data-url="https://Keithlan.github.io/2016/12/20/sql_safe_updates/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景(why)"><span class="toc-number">1.</span> <span class="toc-text">背景(why)</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#生产环境的误操作案例分享"><span class="toc-number">2.</span> <span class="toc-text">生产环境的误操作案例分享</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#原理和实战"><span class="toc-number">3.</span> <span class="toc-text">原理和实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>16</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>16</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
