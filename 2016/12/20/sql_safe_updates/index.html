@@ -81,7 +81,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-12-20T07:32:24.000Z" itemprop="datePublished">Dec 20 2016</time>
-    Updated:<time datetime="2016-12-22T07:22:32.000Z" itemprop="dateModified">Dec 22 2016</time>
+    Updated:<time datetime="2016-12-22T07:31:47.000Z" itemprop="dateModified">Dec 22 2016</time>
     
   </p>
 </header>
@@ -163,7 +163,7 @@
 <p>至少以上两种类型是抓不到的，所以，还是有问题，那么继续找方法。</p>
 <p>重新分析下我们的初心，我们的目的是啥？没错，我们的目的就是要先找到没有使用索引的dml，突然脑海中飘来一句话，MySQL自身是否可以打印出没有使用索引的语句呢？</p>
 <p>果然，去官方文档上一搜index关键字，结果log_queries_not_using_indexes就是我们迫切需要的，但是它会将select也打印出来，不过没关系，我们将select过滤掉即可。</p>
-<p>so，最后的终极解决方案就是：在测试环境加上log_queries_not_using_indexes=1，然后测试环境跑一个月，将没有使用索引的dml语句统统抓住来解决掉，这样就可以安心的上线sql_safe_updates=1 了。</p>
+<p>so，最后的终极解决方案就是：在测试环境加上log_queries_not_using_indexes=1(long_query_time=1000，这样可以不用混淆)，然后测试环境跑一个月，将没有使用索引的dml语句统统抓住来解决掉，这样就可以安心的上线sql_safe_updates=1 了。</p>
 <h2 id="总结">总结</h2>
 <p>如果线上设置sql_safe_updates = 1 后，业务还有零星的dml被拒绝，业务方可以考虑如下解决方案：</p>
 <p>1）如果你确保你的SQL语句没有任何问题，可以这样： set sql_safe_updates=0; 但是开发必须考虑到这样做的后果。</p>
