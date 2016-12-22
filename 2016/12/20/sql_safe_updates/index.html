@@ -81,7 +81,7 @@
     </p>
   <p class="article-time">
     <time datetime="2016-12-20T07:32:24.000Z" itemprop="datePublished">Dec 20 2016</time>
-    Updated:<time datetime="2016-12-21T05:06:30.000Z" itemprop="dateModified">Dec 21 2016</time>
+    Updated:<time datetime="2016-12-22T07:22:32.000Z" itemprop="dateModified">Dec 22 2016</time>
     
   </p>
 </header>
@@ -157,6 +157,13 @@
 <p>那么我们就获取dml语句后面的字段和关键字，用来构造我们的全表dml</p>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 检查dml 是否是带有limit的语句</div><div class="line">	如果有，允许通过 <span class="comment">-- ( 有limit ， 肯定可以执行  )</span></div><div class="line">	如果没有，则往下继续判断</div><div class="line"></div><div class="line"><span class="number">2.</span> 判断dml <span class="type">SQL</span>有无<span class="keyword">where</span>条件</div><div class="line">	如果没有， 则直接拒绝  <span class="comment">-- （没有where，没有limit，肯定是全表扫描的更新，直接拒绝 ）</span></div><div class="line">	如果有，则继续往下判断</div><div class="line"></div><div class="line"><span class="number">3.</span> 判断<span class="keyword">where</span>后面的字段是否符合索引前缀原理</div><div class="line">	如果符合，则允许执行  <span class="comment">-- （ where条件后面字段有索引，无limit， 允许通过 ）</span></div><div class="line">	如果不符合，则拒绝   <span class="comment">-- （ where条件后面字段无索引，无limit，直接拒绝  ）</span></div></pre></td></tr></table></figure>
 
+<p>恩，这样分析下来，是不是感觉很完美了？ 还是那句话，理想和现实总有差距，那么来几条牛逼的漏网之鱼看看呗</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">1. 类型转换导致的问题</div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">update</span> tb <span class="keyword">set</span> id=<span class="number">2</span> <span class="keyword">where</span> id_change = <span class="number">1</span>;</span>  <span class="comment">-- 注意：字段id_change是varchar类型。</span></div><div class="line"></div><div class="line">2. 函数</div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">UPDATE</span> pay_log_id <span class="keyword">SET</span> id=<span class="keyword">LAST_INSERT_ID</span>(id + <span class="number">1</span>)</span></div></pre></td></tr></table></figure>
+
+<p>至少以上两种类型是抓不到的，所以，还是有问题，那么继续找方法。</p>
+<p>重新分析下我们的初心，我们的目的是啥？没错，我们的目的就是要先找到没有使用索引的dml，突然脑海中飘来一句话，MySQL自身是否可以打印出没有使用索引的语句呢？</p>
+<p>果然，去官方文档上一搜index关键字，结果log_queries_not_using_indexes就是我们迫切需要的，但是它会将select也打印出来，不过没关系，我们将select过滤掉即可。</p>
+<p>so，最后的终极解决方案就是：在测试环境加上log_queries_not_using_indexes=1，然后测试环境跑一个月，将没有使用索引的dml语句统统抓住来解决掉，这样就可以安心的上线sql_safe_updates=1 了。</p>
 <h2 id="总结">总结</h2>
 <p>如果线上设置sql_safe_updates = 1 后，业务还有零星的dml被拒绝，业务方可以考虑如下解决方案：</p>
 <p>1）如果你确保你的SQL语句没有任何问题，可以这样： set sql_safe_updates=0; 但是开发必须考虑到这样做的后果。</p>
