@@ -84,7 +84,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
     </p>
   <p class="article-time">
     <time datetime="2016-06-23T09:54:24.000Z" itemprop="datePublished">Jun 23 2016</time>
-    Updated:<time datetime="2016-12-17T08:49:01.000Z" itemprop="dateModified">Dec 17 2016</time>
+    Updated:<time datetime="2016-12-28T02:54:38.000Z" itemprop="dateModified">Dec 28 2016</time>
     
   </p>
 </header>
@@ -356,12 +356,12 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 <p>这里先介绍几个重要GTID_MODE的value  </p>
 </blockquote>
 <ul>
-<li>GTID_MODE = OFF : 不产生Normal_GTID，只接受ANONYMOUS_GTID  </li>
-<li>GTID_MODE = OFF_PERMISSIVE : 不产生Normal_GTID，ANONYMOUS_GTID &amp; Normal_GTID 可以容忍</li>
-<li>GTID_MODE = ON_PERMISSIVE  : 产生Normal_GTID，ANONYMOUS_GTID &amp; Normal_GTID 可以容忍  </li>
-<li><p>GTID_MODE = ON : 产生Normal_GTID，只接受Normal_GTID  </p>
+<li>GTID_MODE = OFF : 不产生Normal_GTID，只接受来自master的ANONYMOUS_GTID</li>
+<li>GTID_MODE = OFF_PERMISSIVE : 不产生Normal_GTID，可以接受来自master的ANONYMOUS_GTID &amp; Normal_GTID</li>
+<li>GTID_MODE = ON_PERMISSIVE  : 产生Normal_GTID，可以接受来自master的ANONYMOUS_GTID &amp; Normal_GTID</li>
+<li><p>GTID_MODE = ON : 产生Normal_GTID，只接受来自master的Normal_GTID</p>
 </li>
-<li><p>master和slave的gtid_mode 组合搭配矩阵图  </p>
+<li><p>master和slave的gtid_mode 组合搭配矩阵图</p>
 <blockquote>
 <p>水平的GTID_MODE为：master ， 垂直的GTID_MODE为：slave</p>
 </blockquote>
@@ -370,37 +370,37 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 <table>
 <thead>
 <tr>
-<th>Master/Slave gtid_mode</th>
-<th>OFF</th>
-<th>OFF_PERMISSIVE</th>
-<th>ON_PERMISSIVE</th>
-<th>ON</th>
+<th>gtid_mode</th>
+<th>OFF(master)</th>
+<th>OFF_PERMISSIVE(master)</th>
+<th>ON_PERMISSIVE(master)</th>
+<th>ON(master)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>OFF</td>
+<td>OFF(slave)</td>
 <td>Y</td>
 <td>Y</td>
 <td>N</td>
 <td>N</td>
 </tr>
 <tr>
-<td>OFF_PERMISSIVE</td>
+<td>OFF_PERMISSIVE(slave)</td>
 <td>Y</td>
 <td>Y</td>
 <td>Y</td>
 <td>Y(auto_position可以开启)</td>
 </tr>
 <tr>
-<td>ON_PERMISSIVE</td>
+<td>ON_PERMISSIVE(slave)</td>
 <td>Y</td>
 <td>Y</td>
 <td>Y</td>
 <td>Y(auto_position可以开启)</td>
 </tr>
 <tr>
-<td>ON</td>
+<td>ON(slave)</td>
 <td>N</td>
 <td>N</td>
 <td>Y</td>
@@ -408,7 +408,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 </tr>
 </tbody>
 </table>
-<p>归纳总结：<br>1） 当master产生Normal_GTID的时候（ON_PERMISSIVE，ON），如果slave的gtid_mode不能容忍Normal_GTID（OFF，OFF_PERMISSIVE），那么就会报错<br>2） 当master产生ANONYMOUS_GTID的时候（OFF_PERMISSIVE，OFF），如果slave的gtid_mode不能容忍ANONYMOUS_GTID（ON_PERMISSIVE，ON），那么就会报错<br>3） 设置auto_position的条件： 当master gtid_mode=ON时，slave可以为OFF_PERMISSIVE，ON_PERMISSIVE，ON。除此之外，都不能设置auto_position = on  </p>
+<p>归纳总结：<br>1） 当master产生Normal_GTID的时候（ON_PERMISSIVE，ON），如果slave的gtid_mode（OFF）不能接受Normal_GTID，那么就会报错<br>2） 当master产生ANONYMOUS_GTID的时候（OFF_PERMISSIVE，OFF），如果slave的gtid_mode（ON）不能接受ANONYMOUS_GTID，那么就会报错<br>3） 设置auto_position的条件： 当master gtid_mode=ON时，slave可以为OFF_PERMISSIVE，ON_PERMISSIVE，ON。除此之外，都不能设置auto_position = on</p>
 <p>下面罗列下，如何online 升级为GTID模式。</p>
 <ul>
 <li><strong>step 1: 每台server执行</strong><blockquote>
