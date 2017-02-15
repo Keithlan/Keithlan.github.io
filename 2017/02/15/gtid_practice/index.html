@@ -1,0 +1,609 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7 GTID 运维实战 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="GTID 和 START SLAVE
+
+START SLAVE 语法
+
+1234567891011121314151617181920212223242526START SLAVE [thread_types] [until_option] [connection_options]thread_ty">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/02/15/gtid_practice/" title="MySQL5.7 GTID 运维实战" itemprop="url">MySQL5.7 GTID 运维实战</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-02-15T09:54:24.000Z" itemprop="datePublished">Feb 15 2017</time>
+    Updated:<time datetime="2017-02-15T10:09:23.000Z" itemprop="dateModified">Feb 15 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_START_SLAVE"><span class="toc-number">1.</span> <span class="toc-text">GTID 和 START SLAVE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_upgrade"><span class="toc-number">2.</span> <span class="toc-text">GTID 和 upgrade</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_mysql-gtid_executed"><span class="toc-number">3.</span> <span class="toc-text">GTID 和 mysql.gtid_executed</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_gtid_next"><span class="toc-number">4.</span> <span class="toc-text">GTID 和 gtid_next</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_MHA"><span class="toc-number">5.</span> <span class="toc-text">GTID 和 MHA</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_备份（物理备份+逻辑备份）"><span class="toc-number">6.</span> <span class="toc-text">GTID 和 备份（物理备份+逻辑备份）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_crash_safe_slave"><span class="toc-number">7.</span> <span class="toc-text">GTID 和 crash safe slave</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_MTS"><span class="toc-number">8.</span> <span class="toc-text">GTID 和 MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_生产环境中必须考虑的问题"><span class="toc-number">9.</span> <span class="toc-text">GTID 生产环境中必须考虑的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_online升级"><span class="toc-number">10.</span> <span class="toc-text">GTID 和 online升级</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_mysqlbinlog"><span class="toc-number">11.</span> <span class="toc-text">GTID 和 mysqlbinlog</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_重要函数"><span class="toc-number">12.</span> <span class="toc-text">GTID 和 重要函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_的限制和缺点"><span class="toc-number">13.</span> <span class="toc-text">GTID 的限制和缺点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考文档"><span class="toc-number">14.</span> <span class="toc-text">参考文档</span></a></li></ol>
+		</div>
+		
+		<h2 id="GTID_和_START_SLAVE">GTID 和 START SLAVE</h2>
+<ul>
+<li>START SLAVE 语法</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">START SLAVE [thread_types] [until_option] [connection_options]</div><div class="line"></div><div class="line">thread_types:</div><div class="line">    [thread_type [, thread_type] <span class="keyword">...</span> ]</div><div class="line"></div><div class="line">thread_type:</div><div class="line">    IO_THREAD | SQL_THREAD</div><div class="line"></div><div class="line">until_option:</div><div class="line">    UNTIL {   {SQL_BEFORE_GTIDS | SQL_AFTER_GTIDS} = gtid_set</div><div class="line">          |   MASTER_LOG_FILE = <span class="string">'log_name'</span>, MASTER_LOG_POS = log_pos</div><div class="line">          |   RELAY_LOG_FILE = <span class="string">'log_name'</span>, RELAY_LOG_POS = log_pos</div><div class="line">          |   SQL_AFTER_MTS_GAPS  }</div><div class="line"></div><div class="line"></div><div class="line">* SQL_BEFORE_GTIDS = $gitd_set ： $gtid_set之前的gtid都会被执行</div><div class="line"></div><div class="line">eg. START SLAVE SQL_THREAD UNTIL SQL_BEFORE_GTIDS = 3E11FA47-71CA-<span class="number">11E1</span>-<span class="number">9E33</span>-C80AA9429562:<span class="number">11</span>-<span class="number">56</span></div><div class="line"></div><div class="line">表示，当SQL_thread 执行到3E11FA47-71CA-<span class="number">11E1</span>-<span class="number">9E33</span>-C80AA9429562:<span class="number">10</span> 的时候停止，下一个事务是<span class="number">11</span></div><div class="line"></div><div class="line">* SQL_AFTER_GTIDS = $gitd_set : $gtid_set之前，以及$gtid_set包含的gtid都会被执行</div><div class="line"></div><div class="line">eg. START SLAVE SQL_THREAD UNTIL SQL_AFTER_GTIDS = 3E11FA47-71CA-<span class="number">11E1</span>-<span class="number">9E33</span>-C80AA9429562:<span class="number">11</span>-<span class="number">56</span></div><div class="line"></div><div class="line">表示，当SQL_thread 执行到3E11FA47-71CA-<span class="number">11E1</span>-<span class="number">9E33</span>-C80AA9429562:<span class="number">56</span> 的时候停止，<span class="number">56</span>是最后一个提交的事务。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如何从multi-threaded slave 转化成 single-threaded mode</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">START</span> <span class="keyword">SLAVE</span> UNTIL SQL_AFTER_MTS_GAPS;</span></div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">SET</span> @@<span class="keyword">GLOBAL</span>.slave_parallel_workers = <span class="number">0</span>;</span></div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">START</span> <span class="keyword">SLAVE</span> SQL_THREAD;</span></div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_upgrade">GTID 和 upgrade</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">如果 <span class="comment">--gtid-mode=ON ，那么在使用upgrade时候，不推荐使用--write-binlog 选项。</span></div><div class="line">因为，mysql_upgrade 会更新Myisam引擎的系统表. 而同时更新transction <span class="built_in">table</span> 和 non-trasaction <span class="built_in">table</span> 是gtid所不允许的</div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_mysql-gtid_executed">GTID 和 mysql.gtid_executed</h2>
+<ul>
+<li>gtid_mode = (ON|ON_PERMISSIVE), bin_log = off</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">gtid 会实时的写入到mysql.gtid_executed表中，且根据executed_gtids_compression_period</span>=<span class="string">N来压缩</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid_mode = (ON|ON_PERMISSIVE), bin_log = on</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">gtid 不会实时的写入到mysql.gtid_executed，executed_gtids_compression_period会失效。</div><div class="line">只有当binlog rotate或者mysql <span class="keyword">shutdown</span>的时候才会写入mysql.gtid_executed</div><div class="line"></div><div class="line">如果master 异常<span class="keyword">shutdown</span>，gtid还没有写入到mysql.gtid_executed怎么办呢？</div><div class="line">这种场景，一般通过mysql recover机制写入到mysql.gtid_executed中</div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_gtid_next">GTID 和 gtid_next</h2>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html#sysvar_gtid_next" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/replication-options-gtids.html#sysvar_gtid_next</a></p>
+</blockquote>
+<ul>
+<li>三种取值</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">* AUTOMATIC: <span class="operator"><span class="keyword">Use</span> the <span class="keyword">next</span> automatically-generated <span class="keyword">global</span> <span class="keyword">transaction</span> ID.</span></div><div class="line"></div><div class="line">* ANONYMOUS: Transactions <span class="keyword">do</span> <span class="keyword">not</span> have <span class="keyword">global</span> identifiers, <span class="keyword">and</span> <span class="keyword">are</span> <span class="keyword">identified</span> <span class="keyword">by</span> file <span class="keyword">and</span> <span class="keyword">position</span> <span class="keyword">only</span>.</div><div class="line"></div><div class="line">* A <span class="keyword">global</span> <span class="keyword">transaction</span> ID <span class="keyword">in</span> <span class="keyword">UUID</span>:<span class="built_in">NUMBER</span> <span class="keyword">format</span>.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>QA: GTID 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-50 对应的事务顺序，从小到大，一定是顺序执行的吗？</li>
+</ul>
+<blockquote>
+<p>答案：错，一般情况下事务是从小到大，顺序执行的。 但是如果再MTS场景，或者是人工设置gtid_next的情况下，就可能不是顺序执行了</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:(none)&gt; show master status;</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line"><span class="header">| File               | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set                         |</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line"><span class="header">| xx.000009 |     1719 |              |                  | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-46 |</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">dba:(none)&gt; set gtid<span class="emphasis">_next='0923e916-3c36-11e6-82a5-ecf4bbf1f518:50';</span></div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">dba:lc&gt; insert into gtid<span class="emphasis">_1 values(5);</span></div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line">dba:lc&gt; set gtid<span class="emphasis">_next=AUTOMATIC;</span></div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">dba:lc&gt; flush logs;</div><div class="line">Query OK, 0 rows affected (0.01 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; show master status;</span></div><div class="line">+--------------------+----------+--------------+------------------+----------------------------------------------+</div><div class="line"><span class="header">| File               | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set                            |</span></div><div class="line">+--------------------+----------+--------------+------------------+----------------------------------------------+</div><div class="line"><span class="header">| xx.000010 |      210 |              |                  | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-46:50 |</span></div><div class="line">+--------------------+----------+--------------+------------------+----------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">dba:lc&gt; insert into gtid<span class="emphasis">_1 values(6);</span></div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line">dba:lc&gt; insert into gtid<span class="emphasis">_1 values(6);</span></div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line">dba:lc&gt; insert into gtid<span class="emphasis">_1 values(6);</span></div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; show master status;</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line"><span class="header">| File               | Position | Binlog_Do_DB | Binlog_Ignore_DB | Executed_Gtid_Set                         |</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line"><span class="header">| xx.000010 |     1125 |              |                  | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-50 |</span></div><div class="line">+--------------------+----------+--------------+------------------+-------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">在这里面，很明显0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-50 事务执行顺序为： 1-46(最先执行) ， 50（其次执行） ， 47-49（最后执行）</div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_MHA">GTID 和 MHA</h2>
+<blockquote>
+<p>请参考<a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/innodb_storage_structure/mha_source.md" target="_blank" rel="external">MHA源码解析</a></p>
+</blockquote>
+<ul>
+<li>GTID模式下，需要relay-log吗？purge_relay_log设置为on可以吗？</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">* replication 架构</div><div class="line"></div><div class="line">host_1(host_1:3306) (current master)</div><div class="line"> +<span class="comment">--host_2(host_2:3306 candidate master)</span></div><div class="line"> +<span class="comment">--host_3(host_3:3306 no candidate)</span></div><div class="line"></div><div class="line">* 模拟：</div><div class="line">1. 大量并发的写入，一直持续的往host_1写数据,造成并发写入很大的样子</div><div class="line">2. host_2： <span class="operator"><span class="keyword">stop</span> <span class="keyword">slave</span> ， 造成host_2 延迟<span class="keyword">master</span>很多的样子</span></div><div class="line"><span class="number">3.</span> host_1:  <span class="keyword">purge</span> <span class="built_in">binary</span> <span class="keyword">logs</span>， 造成<span class="keyword">master</span>删掉了日志，导致host_2 修复的时候拿不到<span class="keyword">master</span>的最新<span class="keyword">binlog</span></div><div class="line"><span class="number">4.</span> host_3:  一直正常同步<span class="keyword">master</span>，拥有最新的<span class="keyword">binlog</span></div><div class="line"><span class="number">5.</span> host_3: <span class="keyword">flush</span> <span class="keyword">logs</span>; purge_relay_log=on; <span class="operator"><span class="keyword">flush</span> <span class="keyword">logs</span>；一直循环<span class="keyword">flush</span> <span class="keyword">logs</span>，造成host_3已经将最新的relay <span class="keyword">log</span>删掉了，host_2 是肯定拿不到host_3的relay 来修复自己了</span></div><div class="line"><span class="number">6.</span> 好了，一切条件均已经准备完毕，这个时候让<span class="keyword">master</span> 宕机，这样就能模拟出在relay <span class="keyword">log</span>没有的情况下，是否可以正常完成mha 切换了</div><div class="line"></div><div class="line">...............</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">7.</span> 结果完成了正常切换，那mha是怎么再gtid模式下，在没有relay <span class="keyword">log</span>的情况下，正常切换的恩？</div><div class="line"><span class="number">8.</span> 原理：host_2发现自己不是最新的<span class="keyword">slave</span>，所以就去<span class="keyword">change</span> <span class="keyword">master</span>到host_3,通过host_3的<span class="keyword">binlog</span>来恢复</div><div class="line"><span class="number">9.</span> 最后，当host_2和host_3都一致的情况下，再让host_3 重新指向host_2，完毕...</div><div class="line"></div><div class="line">*结论： gtid模式下，mha恢复切换的原理是不需要relay <span class="keyword">log</span>的，只需要<span class="keyword">binlog</span></div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_备份（物理备份+逻辑备份）">GTID 和 备份（物理备份+逻辑备份）</h2>
+<blockquote>
+<p>物理备份：xtrabackup，其他等<br>逻辑备份：mysqldump，mydumper，mysqlpump等</p>
+</blockquote>
+<ul>
+<li>物理备份</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">备份的时候，只要在备份的时候记录下Executed_Gtid_Set($gtid_dump)即可，这个可以用于重新<span class="operator"><span class="keyword">change</span> <span class="keyword">master</span>;</span></div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">reset</span> <span class="keyword">master</span>;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> @@<span class="keyword">GLOBAL</span>.GTID_PURGED=<span class="string">'$gtid_dump'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">change</span> <span class="keyword">master</span> <span class="keyword">to</span> master_auto_position=<span class="number">1</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>逻辑备份</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">* mysqldump 中 sql_log_bin 默认是关闭的。 <span class="keyword">SET</span> @@SESSION.SQL_LOG_BIN= <span class="number">0</span>;   所以这里用途非常重要</div><div class="line"></div><div class="line">* 如果dump文件，你要在master上执行，那么必须这样备份： mysqldump xx  --<span class="keyword">set</span>-gtid-purged=<span class="keyword">OFF</span> , 这样dump文件不会有<span class="keyword">SET</span> @@SESSION.SQL_LOG_BIN= <span class="number">0</span>存在</div><div class="line"></div><div class="line">* 如果dump文件，你要在slave上执行，想重新搭建一套slave环境。那么必须这样备份： mysqldump xx  --<span class="keyword">set</span>-gtid-purged=<span class="keyword">ON</span></div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_crash_safe_slave">GTID 和 crash safe slave</h2>
+<blockquote>
+<p>slave relay log 不完整怎么办？（relay-log-recover=0）<br>relay-log-recover=1 不考虑，因为它会舍弃掉relay log</p>
+</blockquote>
+<ul>
+<li><strong>为何要讨论这个</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">* 官方解释：</div><div class="line"></div><div class="line"><span class="number">1</span>) 非GTID模式下，如何保证slave crash safe 呢？</div><div class="line">	<span class="variable">relay_log_recovery=</span><span class="number">1</span>，<span class="variable">relay_log_info_repository=</span>TABLE，<span class="variable">master_info_repository=</span>TABLE,<span class="variable">innodb_flush_log_at_trx_commit=</span><span class="number">1</span>,<span class="variable">sync_binlog=</span><span class="number">1</span></div><div class="line"></div><div class="line"><span class="number">2</span>) GTID模式下，如何保证slave crash safe呢？</div><div class="line">    <span class="variable">relay_log_recovery=</span>(<span class="number">1</span>|<span class="number">0</span>)，<span class="variable">relay_log_info_repository=</span>TABLE，<span class="variable">master_info_repository=</span>TABLE,<span class="variable">innodb_flush_log_at_trx_commit=</span><span class="number">1</span>,<span class="variable">sync_binlog=</span><span class="number">1</span></div><div class="line"></div><div class="line">以上两种情况配置，可以保证crash safe</div><div class="line"></div><div class="line">这里看到区别就是relay_log_recovery了，gtid可以是any，这就需要讨论下了。</div><div class="line"></div><div class="line">当<span class="variable">relay_log_recovery=</span><span class="number">1</span>时，当mysql crash的时候，会丢弃掉之前获取的relay，所以这个不会产生一致性问题。</div><div class="line">当<span class="variable">relay_log_recovery=</span><span class="number">0</span>时</div><div class="line">	如果是非GTID模式，因为没办法保证写master_info.log和relay log file之间的原子性，会导致slave有可能多拉取一个事务，这样就有一致性问题。</div><div class="line">    如果是GTID模式，因为binlog-dump协议变了，master_info.log已经不用，slave会将已经exected_GTID与retrieve_gtid的并集发送给master，以此来获取没有执行过的gtid，所以没问题。</div><div class="line"></div><div class="line">这里面的retrieve_gtid就是IO_thread从master获取的gtid，会写入到relay log。</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>模拟relay log不完整的情况</strong><blockquote>
+<p>从上面可以知道，relay log的记录非常重要，那么relay log 不完整，会怎么样呢？</p>
+</blockquote>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">1) master 创建一张10G的表，然后执行全表更新操作。</div><div class="line">2）这时候，slave就在狂写relay log了</div><div class="line">3）此时，去slave <span class="operator"><span class="keyword">kill</span>掉mysql进程</span></div><div class="line"><span class="number">4</span>）这时候，relay <span class="keyword">log</span>就不完整了</div><div class="line"></div><div class="line">WARNING: The range <span class="keyword">of</span> printed <span class="keyword">events</span> ends <span class="keyword">with</span> a <span class="keyword">row</span> <span class="keyword">event</span> <span class="keyword">or</span> a <span class="keyword">table</span> map <span class="keyword">event</span> that does <span class="keyword">not</span> have the STMT_END_F flag <span class="keyword">set</span>.</div><div class="line">This might be because the <span class="keyword">last</span> statement was <span class="keyword">not</span> fully written <span class="keyword">to</span> the <span class="keyword">log</span>, <span class="keyword">or</span> because you <span class="keyword">are</span> <span class="keyword">using</span> a <span class="comment">--stop-position or --stop-datetime that refers to an event in the middle of a statement.</span></div><div class="line">The <span class="keyword">event</span>(s) <span class="keyword">from</span> the <span class="keyword">partial</span> statement have <span class="keyword">not</span> been written <span class="keyword">to</span> <span class="keyword">output</span>.</div></pre></td></tr></table></figure>
+
+<p>总结： relay log不完整，mysql起来后，会重新获取不完整的这个events，sql_thread在回放的时候，如果发现events不完整，会跳过，不会影响到同步。</p>
+<h2 id="GTID_和_MTS">GTID 和 MTS</h2>
+<blockquote>
+<p>MTS_GAPS</p>
+</blockquote>
+<ul>
+<li>如果MTS遇到Gap transction怎么办？</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>先解决问题</div><div class="line"></div><div class="line">START SLAVE UNTIL SQL<span class="emphasis">_AFTER_</span>MTS_GAPS</div><div class="line"></div><div class="line"><span class="bullet">2. </span>考虑设置slave<span class="emphasis">_preserve_</span>commit_order=1</div></pre></td></tr></table></figure>
+
+<h2 id="GTID_生产环境中必须考虑的问题">GTID 生产环境中必须考虑的问题</h2>
+<blockquote>
+<p>Migration to GTID replication<br>Non transactionally safe statement will raise errors now<br>MySQL Performance in GTID<br>mysql_upgrade script<br>Errant transactions<br>Filtration on the slave<br>Injecting empty transactions<br>以上问题请参考 <a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/innodb_storage_structure/gtid.md" target="_blank" rel="external">GTID原理与实战</a></p>
+</blockquote>
+<h2 id="GTID_和_online升级">GTID 和 online升级</h2>
+<blockquote>
+<p>online升级丢数据?<br>online升级会报错吗？<br>online升级步骤请参考  <a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/innodb_storage_structure/gtid.md" target="_blank" rel="external">GTID原理与实战</a></p>
+</blockquote>
+<ul>
+<li><strong>故障案例一</strong></li>
+</ul>
+<blockquote>
+<p>Last_IO_Error: Got fatal error 1236 from master when reading data from binary log: ‘Cannot replicate anonymous transaction when @@GLOBAL.GTID_MODE = ON …’</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">两种情况：</div><div class="line">1）slave的gtid_mode=on时，却还接受着来自master的non-gtid transaction的时候，会报以上错误。</div><div class="line">2）事实上，不管slave的gtid_mode是on，还是off，只要master的gtid_mode=on,那么整个replication slave，都必须是gtid的事务</div><div class="line"></div><div class="line">解决方案：在master上从gtid_mode=ON_PERMISSIVE 设置到 gtid_mode=ON之前，如何保证现在所有non-gtid事务都已经在slave执行完毕了？</div><div class="line"></div><div class="line">很简单，两种方法：</div><div class="line"></div><div class="line">第一种方案：</div><div class="line"></div><div class="line">1) 在master上，当设置gtid_mode=ON_PERMISSIVE的时候，其实就已经产生gtid事务了，这个时候<span class="operator"><span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span>；记下这个位置 $pos</span></div><div class="line"></div><div class="line"><span class="number">2</span>）然后再每个<span class="keyword">slave</span>上，执行 <span class="keyword">SELECT</span> <span class="keyword">MASTER_POS_WAIT</span>(file, <span class="keyword">position</span>);</div><div class="line"></div><div class="line">第二种更加直接方案：</div><div class="line"></div><div class="line">0）默认情况下，slave的gtid_mode都是off，所以去slave上<span class="operator"><span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span> 都应该是file，<span class="keyword">position</span></span></div><div class="line"><span class="number">1</span>) 先在<span class="keyword">master</span>上，设置gtid_mode=ON_PERMISSIVE</div><div class="line"><span class="number">2</span>）然后再每台<span class="keyword">slave</span>上再次执行<span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span>，如果发现结果由file，<span class="keyword">position</span> 变成 GTID_EXECUTED，那么说明<span class="keyword">slave</span>已经将non-gtid全部执行完毕了</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>故障案例二</strong></li>
+</ul>
+<blockquote>
+<p>Last_IO_Error: The replication receiver thread cannot start because the master has GTID_MODE = ON and this server has GTID_MODE = OFF.</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">slave的gtid_mode</span>=<span class="string">off时，却还接受着来自master的gtid transaction的时候，会报以上错误。</span></div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_mysqlbinlog">GTID 和 mysqlbinlog</h2>
+<p>mysqlbinlog 参数：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">exclude</span><span class="literal">-</span><span class="comment">gtids</span> <span class="comment">:</span> <span class="comment">排除这些gtid</span></div><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">include</span><span class="literal">-</span><span class="comment">gtids</span> <span class="comment">:</span> <span class="comment">只打印这些gtid</span></div><div class="line"><span class="comment">*</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">skip</span><span class="literal">-</span><span class="comment">gtids</span>    <span class="comment">:</span> <span class="comment">所有gtid都不打印</span></div><div class="line"></div><div class="line"><span class="comment">可以用</span><span class="literal">-</span><span class="literal">-</span><span class="comment">skip</span><span class="literal">-</span><span class="comment">gtids</span> <span class="comment">做传统模式的恢复。但是这个是官方不推荐的。</span></div><div class="line"><span class="comment">mysqlbinlog</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">skip</span><span class="literal">-</span><span class="comment">gtids</span> <span class="comment">binlog</span><span class="string">.</span><span class="comment">000001</span> &gt;  <span class="comment">/tmp/dump</span><span class="string">.</span><span class="comment">sql</span></div></pre></td></tr></table></figure>
+
+<h2 id="GTID_和_重要函数">GTID 和 重要函数</h2>
+<blockquote>
+<p>gtid_set 用引号扩起来</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GTID_SUBSET(subset,set)</td>
+<td>returns true (1) if all GTIDs in subset are also in set</td>
+</tr>
+<tr>
+<td>GTID_SUBTRACT(set,subset)</td>
+<td>returns only those GTIDs from set that are not in subset</td>
+</tr>
+<tr>
+<td>WAIT_FOR_EXECUTED_GTID_SET(gtid_set[, timeout])</td>
+<td>Wait until the given GTIDs have executed on slave.</td>
+</tr>
+<tr>
+<td>WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(gtid_set[, timeout][,channel])</td>
+<td>Wait until the given GTIDs have executed on slave</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>GTID_SUBSET(subset,set)</li>
+</ul>
+<blockquote>
+<p>subset 是否是 set 的子集，如果是返回1，不是返回0</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57');</span></div><div class="line">+-----------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57') |</span></div><div class="line">+-----------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                                                   1 |</span></div><div class="line">+-----------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23-25','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57');</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23-25','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57') |</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                                                      1 |</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23','3E11FA47-71CA-11E1-9E33-C80AA9429562:23');</span></div><div class="line">+--------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:23','3E11FA47-71CA-11E1-9E33-C80AA9429562:23') |</span></div><div class="line">+--------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                                                1 |</span></div><div class="line">+--------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57');</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBSET('3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25','3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57') |</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                                                      0 |</span></div><div class="line">+--------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>GTID_SUBTRACT(set,subset)</li>
+</ul>
+<blockquote>
+<p>哪些gtids仅仅是set独有的，subset没有的</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:21');</span></div><div class="line">+-------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:21') |</span></div><div class="line">+-------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| 3e11fa47-71ca-11e1-9e33-c80aa9429562:22-57                                                            |</span></div><div class="line">+-------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25');</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:20-25') |</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| 3e11fa47-71ca-11e1-9e33-c80aa9429562:26-57                                                               |</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; SELECT GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:23-24');</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| GTID_SUBTRACT('3E11FA47-71CA-11E1-9E33-C80AA9429562:21-57','3E11FA47-71CA-11E1-9E33-C80AA9429562:23-24') |</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| 3e11fa47-71ca-11e1-9e33-c80aa9429562:21-22:25-57                                                         |</span></div><div class="line">+----------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>以上两个函数可以用来干嘛呢？<br>通过GTID_SUBSET，master可以知道slave是否是自己的子集，可以很方便的检查数据一致性<br>通过GTID_SUBTRACT，假设slave是master的子集，那么可以很轻松的将slave没有，master有的gtid发送给slave，以便达到最终一致性</p>
+<ul>
+<li>WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS(gtid_set[, timeout][,channel])</li>
+</ul>
+<blockquote>
+<p>timeout 默认为0,表示无限等待slave gtid_set全部执行完毕<br>如果全部执行完毕，会返回执行的gtid的数量。如果没有执行完，会等待timeout秒。如果slave没有起来，或者没有开启gtid，会返回NULL</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:lc&gt; SELECT WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3');</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line"><span class="header">| WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3',1) |</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                               0 |</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">stop slave;</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; SELECT WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3');</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line"><span class="header">| WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3',1) |</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                            NULL |  ## 如果slave的IO,SQL thread 没有running，返回NULL，不管gtid set 有木有执行完毕</span></div><div class="line">+---------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>WAIT_FOR_EXECUTED_GTID_SET(gtid_set[, timeout])</li>
+</ul>
+<blockquote>
+<p>含义跟WAIT_UNTIL_SQL_THREAD_AFTER_GTIDS一样，唯一一个区别就是：如果slave 的replication 线程没有起来，不会返回NULL。</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">stop slave;</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; SELECT  WAIT_FOR_EXECUTED_GTID_SET('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3');</span></div><div class="line">+------------------------------------------------------------------------+</div><div class="line"><span class="header">| WAIT_FOR_EXECUTED_GTID_SET('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3') |</span></div><div class="line">+------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                      0 |          ## 如果都执行了，返回0 ， 跟slave的IO,SQL thread 起没起来无关</span></div><div class="line">+------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; SELECT  WAIT_FOR_EXECUTED_GTID_SET('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-4',1);</span></div><div class="line">+--------------------------------------------------------------------------+</div><div class="line"><span class="header">| WAIT_FOR_EXECUTED_GTID_SET('0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-4',1) |</span></div><div class="line">+--------------------------------------------------------------------------+</div><div class="line"><span class="header">|                                                                        1 |</span></div><div class="line">+--------------------------------------------------------------------------+</div><div class="line">1 row in set (1.00 sec)</div></pre></td></tr></table></figure>
+
+<h2 id="GTID_的限制和缺点">GTID 的限制和缺点</h2>
+<ul>
+<li><p>1) 同事更新nontransactional和transactional的表，会导致gtid问题</p>
+</li>
+<li><p>2) CREATE TABLE … SELECT statements 语法对GTID来说是不安全的</p>
+</li>
+<li><p>3) CREATE TEMPORARY TABLE and DROP TEMPORARY TABLE 对GTID也是不安全的</p>
+</li>
+<li><p>4) —enforce-gtid-consistency 必须设置on，可以避免以上2，3 不安全的statement</p>
+</li>
+<li><p>5) sql_slave_skip_counter 不允许执行，可以通过 Injecting empty transactions 来解决</p>
+</li>
+<li><p>6) GTID 和 mysqldump的问题，mysqldump 中 sql_log_bin 默认是关闭的.会导致导入master后，不会写入gtid到binlog. ( 可以通过 —set-gtid-purged=OFF 避免 )</p>
+</li>
+<li><p>7) GTID and mysql_upgrade, 因为部分系统表是myisam引擎的，会有问题。 （可以通过—write-binlog=off来避免 ）</p>
+</li>
+</ul>
+<h2 id="参考文档">参考文档</h2>
+<ul>
+<li>官方资料：</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">1.5 Server and Status Variables and Options Added, Deprecated, or Removed in MySQL 5.7</div><div class="line"></div><div class="line">5.5.4 mysqldump — A Database <span class="operator"><span class="keyword">Backup</span> Program</span></div><div class="line"><span class="number">5.6</span><span class="number">.7</span> mysqlbinlog — Utility <span class="keyword">for</span> Processing <span class="built_in">Binary</span> <span class="keyword">Log</span> Files</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">13.17</span> Functions Used <span class="keyword">with</span> <span class="keyword">Global</span> <span class="keyword">Transaction</span> IDs</div><div class="line"></div><div class="line"><span class="number">14.4</span><span class="number">.2</span><span class="number">.1</span> <span class="keyword">CHANGE</span> <span class="keyword">MASTER</span> <span class="keyword">TO</span> Syntax</div><div class="line"><span class="number">14.4</span><span class="number">.2</span><span class="number">.6</span> <span class="keyword">START</span> <span class="keyword">SLAVE</span> Syntax</div><div class="line"><span class="number">14.7</span><span class="number">.5</span><span class="number">.34</span> <span class="keyword">SHOW</span> <span class="keyword">SLAVE</span> <span class="keyword">STATUS</span> Syntax</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">18.1</span><span class="number">.3</span> Replication <span class="keyword">with</span> <span class="keyword">Global</span> <span class="keyword">Transaction</span> Identifiers</div><div class="line">	<span class="number">18.1</span><span class="number">.3</span><span class="number">.1</span> GTID Concepts</div><div class="line">	<span class="number">18.1</span><span class="number">.3</span><span class="number">.2</span> Setting Up Replication <span class="keyword">Using</span> GTIDs</div><div class="line">	<span class="number">18.1</span><span class="number">.3</span><span class="number">.3</span> <span class="keyword">Using</span> GTIDs <span class="keyword">for</span> Failover <span class="keyword">and</span> Scaleout</div><div class="line">	<span class="number">18.1</span><span class="number">.3</span><span class="number">.4</span> Restrictions <span class="keyword">on</span> Replication <span class="keyword">with</span> GTIDs</div><div class="line">	<span class="number">18.1</span><span class="number">.5</span><span class="number">.1</span> Replication <span class="keyword">Mode</span> Concepts</div><div class="line">	<span class="number">18.1</span><span class="number">.5</span><span class="number">.2</span> Enabling GTID Transactions Online</div><div class="line">	<span class="number">18.1</span><span class="number">.5</span><span class="number">.3</span> Disabling GTID Transactions Online</div><div class="line">	<span class="number">18.1</span><span class="number">.6</span><span class="number">.1</span> Replication <span class="keyword">and</span> <span class="built_in">Binary</span> Logging <span class="keyword">Option</span> <span class="keyword">and</span> Variable Reference</div><div class="line">	<span class="number">18.1</span><span class="number">.6</span><span class="number">.5</span> <span class="keyword">Global</span> <span class="keyword">Transaction</span> ID Options <span class="keyword">and</span> <span class="keyword">Variables</span></div><div class="line">	<span class="number">18.3</span><span class="number">.2</span> Handling an Unexpected Halt <span class="keyword">of</span> a Replication <span class="keyword">Slave</span></div><div class="line">	<span class="number">18.4</span><span class="number">.1</span><span class="number">.34</span> Replication <span class="keyword">and</span> <span class="keyword">Transaction</span> Inconsistencies</div><div class="line">	<span class="number">18.4</span><span class="number">.3</span> Upgrading a Replication Setup</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">19.2</span><span class="number">.1</span><span class="number">.5</span> Adding Instances <span class="keyword">to</span> the <span class="keyword">Group</span></div><div class="line"></div><div class="line"><span class="number">24.10</span><span class="number">.7</span><span class="number">.1</span> The events_transactions_current <span class="keyword">Table</span></div><div class="line"><span class="number">24.10</span><span class="number">.11</span><span class="number">.6</span> The replication_applier_status_by_worker <span class="keyword">Table</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>第三方资料</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">&gt; <span class="keyword">http</span>://www.fromdual.ch/things-you-should-consider-<span class="keyword">before</span>-<span class="keyword">using</span>-gtid</div><div class="line">&gt; <span class="keyword">http</span>://www.fromdual.ch/gtid_in_action</div><div class="line">&gt; <span class="keyword">http</span>://www.fromdual.ch/replication-troubleshooting-classic-vs-gtid</div><div class="line">&gt; <span class="keyword">http</span>://www.fromdual.ch/replication-<span class="operator">in</span>-<span class="operator">a</span>-star</div><div class="line">&gt; <span class="keyword">http</span>://www.fromdual.com/controlling-worldwide-manufacturing-plants-<span class="operator">with</span>-mysql</div><div class="line">&gt; <span class="keyword">https</span>://www.percona.com/blog/<span class="number">2014</span>/<span class="number">05</span>/<span class="number">19</span>/errant-transactions-major-hurdle-<span class="keyword">for</span>-gtid-based-failover-<span class="operator">in</span>-mysql-<span class="number">5</span>-<span class="number">6</span>/</div><div class="line">&gt; <span class="keyword">https</span>://www.percona.com/blog/<span class="number">2016</span>/<span class="number">12</span>/<span class="number">01</span>/database-daily-ops-series-gtid-replication-binary-logs-purge/</div><div class="line">&gt; <span class="keyword">https</span>://www.percona.com/blog/<span class="number">2016</span>/<span class="number">11</span>/<span class="number">10</span>/database-daily-ops-series-gtid-replication/</div><div class="line">&gt; <span class="keyword">https</span>://www.percona.com/blog/<span class="number">2015</span>/<span class="number">12</span>/<span class="number">02</span>/gtid-failover-<span class="operator">with</span>-mysqlslavetrx-fix-errant-transactions/</div><div class="line">&gt; <span class="keyword">https</span>://www.percona.com/blog/<span class="number">2014</span>/<span class="number">05</span>/<span class="number">09</span>/gtids-<span class="operator">in</span>-mysql-<span class="number">5</span>-<span class="number">6</span>-<span class="built_in">new</span>-replication-protocol-<span class="built_in">new</span>-ways-<span class="built_in">to</span>-break-replication/</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/02/15/gtid_practice/" data-title="MySQL5.7 GTID 运维实战 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/02/07/umount/"  title="device is busy">
+ <strong>NEXT:</strong><br/> 
+ <span>device is busy
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/02/15/gtid_practice/" data-title="MySQL5.7 GTID 运维实战" data-url="https://Keithlan.github.io/2017/02/15/gtid_practice/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_START_SLAVE"><span class="toc-number">1.</span> <span class="toc-text">GTID 和 START SLAVE</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_upgrade"><span class="toc-number">2.</span> <span class="toc-text">GTID 和 upgrade</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_mysql-gtid_executed"><span class="toc-number">3.</span> <span class="toc-text">GTID 和 mysql.gtid_executed</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_gtid_next"><span class="toc-number">4.</span> <span class="toc-text">GTID 和 gtid_next</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_MHA"><span class="toc-number">5.</span> <span class="toc-text">GTID 和 MHA</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_备份（物理备份+逻辑备份）"><span class="toc-number">6.</span> <span class="toc-text">GTID 和 备份（物理备份+逻辑备份）</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_crash_safe_slave"><span class="toc-number">7.</span> <span class="toc-text">GTID 和 crash safe slave</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_MTS"><span class="toc-number">8.</span> <span class="toc-text">GTID 和 MTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_生产环境中必须考虑的问题"><span class="toc-number">9.</span> <span class="toc-text">GTID 生产环境中必须考虑的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_online升级"><span class="toc-number">10.</span> <span class="toc-text">GTID 和 online升级</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_mysqlbinlog"><span class="toc-number">11.</span> <span class="toc-text">GTID 和 mysqlbinlog</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_和_重要函数"><span class="toc-number">12.</span> <span class="toc-text">GTID 和 重要函数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#GTID_的限制和缺点"><span class="toc-number">13.</span> <span class="toc-text">GTID 的限制和缺点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考文档"><span class="toc-number">14.</span> <span class="toc-text">参考文档</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>18</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>17</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
