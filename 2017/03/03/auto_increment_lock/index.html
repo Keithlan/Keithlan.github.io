@@ -1,0 +1,623 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>自增锁引发的悲剧 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="背景
+
+先描述下故障吧
+
+
+step0: 环境介绍
+
+123456789101112131415161718191. MySQL5.6.272. InnoDB3. Centos基本介绍完毕，应该跟大部分公司的实例一样CREATE TABLE `new_table` (  `id` int(11) N">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/03/03/auto_increment_lock/" title="自增锁引发的悲剧" itemprop="url">自增锁引发的悲剧</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-03-03T02:32:24.000Z" itemprop="datePublished">Mar 3 2017</time>
+    Updated:<time datetime="2017-03-03T06:00:59.000Z" itemprop="dateModified">Mar 3 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#模拟问题，场景复现"><span class="toc-number">2.</span> <span class="toc-text">模拟问题，场景复现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#自增锁"><span class="toc-number">3.</span> <span class="toc-text">自增锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#和auto_increment相关的insert种类"><span class="toc-number">3.1.</span> <span class="toc-text">和auto_increment相关的insert种类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#锁模式"><span class="toc-number">3.2.</span> <span class="toc-text">锁模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#延伸"><span class="toc-number">3.3.</span> <span class="toc-text">延伸</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#当innodb_autoinc_lock_mode_=_2_，SBR为什么不安全"><span class="toc-number">3.3.1.</span> <span class="toc-text">当innodb_autoinc_lock_mode = 2 ，SBR为什么不安全</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RBR为什么就安全呢？"><span class="toc-number">3.3.2.</span> <span class="toc-text">RBR为什么就安全呢？</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<h2 id="背景">背景</h2>
+<blockquote>
+<p>先描述下故障吧</p>
+</blockquote>
+<ul>
+<li>step0: 环境介绍</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">1. MySQL5.6.27</div><div class="line">2. InnoDB</div><div class="line">3. Centos</div><div class="line"></div><div class="line">基本介绍完毕，应该跟大部分公司的实例一样</div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`new_table`</span> (</span></div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`x`</span> <span class="built_in">varchar</span>(<span class="number">200</span>) <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">5908151</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8 </div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`old_table`</span> (</div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`xx`</span> <span class="built_in">varchar</span>(<span class="number">200</span>) <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">5908151</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step1: 业务需要导入历史数据到新表，新表有写入</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> new_table(x) <span class="keyword">select</span> xx <span class="keyword">from</span> old_table</span></div><div class="line"></div><div class="line"><span class="number">2.</span> 批量插入在new_table上</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step2: 结果</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">show</span> <span class="keyword">processlist</span>;</span></div><div class="line"></div><div class="line">看到好多语句都处于executing阶段，DB假死，任何语句都非常慢，too many connection</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step3: 查看innoDB状况</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">show</span> <span class="keyword">engine</span> <span class="keyword">innodb</span> statu\G</span></div><div class="line"></div><div class="line">结果：</div><div class="line"></div><div class="line">==<span class="keyword">lock</span>==</div><div class="line"><span class="comment">---TRANSACTION 7509250, ACTIVE 0 sec setting auto-inc lock  --一堆</span></div><div class="line"><span class="keyword">TABLE</span> <span class="keyword">LOCK</span> <span class="keyword">table</span> <span class="string">`xx`</span>.<span class="string">`y'y`</span> trx id <span class="number">7498948</span> <span class="keyword">lock</span> <span class="keyword">mode</span> AUTO-INC waiting  <span class="comment">--一堆</span></div></pre></td></tr></table></figure>
+
+<h2 id="模拟问题，场景复现">模拟问题，场景复现</h2>
+<blockquote>
+<p>让问题再次发生才好定位解决问题</p>
+</blockquote>
+<ul>
+<li>表结构</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">| t_inc | <span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`t_inc`</span> (</span></div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`x`</span> <span class="built_in">varchar</span>(<span class="number">199</span>) <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">5908151</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8 |</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`t_inc_template`</span> (</div><div class="line">  <span class="string">`id`</span> <span class="built_in">bigint</span>(<span class="number">20</span>) unsigned <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`cookie_unique`</span> <span class="built_in">varchar</span>(<span class="number">255</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">''</span> COMMENT <span class="string">''</span>,</div><div class="line">    <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>),</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">5857489</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step1</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">session1：<span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> cookie_unique <span class="keyword">from</span> t_inc_template;</span></div><div class="line"></div><div class="line"></div><div class="line">session2：mysqlslap -hxx -ulc_rx -plc_rx -P3306  <span class="comment">--concurrency=10 --iterations=1000 --create-schema='lc'  --query="insert into t_inc(x) select 'lanchun';" --number-of-queries=10</span></div><div class="line"></div><div class="line">产生并发,然其自动分配自增id。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step2：观察</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">| 260126 | lc_rx       | x:22833 | NULL | Sleep   |       8 |                                                        | NULL                                                          |</div><div class="line">| 260127 | lc_rx       | x:22834 | lc   | Query   |       8 | executing                                              | <span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</span></div><div class="line">| <span class="number">260128</span> | lc_rx       | x:<span class="number">22835</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260129</span> | lc_rx       | x:<span class="number">22836</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260130</span> | lc_rx       | x:<span class="number">22837</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260131</span> | lc_rx       | x:<span class="number">22838</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260132</span> | lc_rx       | x:<span class="number">22840</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260133</span> | lc_rx       | x:<span class="number">22839</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260134</span> | lc_rx       | x:<span class="number">22842</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260135</span> | lc_rx       | x:<span class="number">22841</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div><div class="line">| <span class="number">260136</span> | lc_rx       | x:<span class="number">22843</span> | lc   | <span class="keyword">Query</span>   |       <span class="number">8</span> | executing                                              | <span class="keyword">insert</span> <span class="keyword">into</span> t_inc(x) <span class="keyword">select</span> <span class="string">'lanchun'</span>                         |</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step3 show engine innodb status</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">TABLE <span class="operator"><span class="keyword">LOCK</span> <span class="keyword">table</span> <span class="string">`lc`</span>.<span class="string">`t_inc`</span> trx id <span class="number">113776506</span> <span class="keyword">lock</span> <span class="keyword">mode</span> AUTO-INC waiting</span></div><div class="line"></div><div class="line">一堆这样的waiting</div><div class="line"></div><div class="line">然后卡死</div></pre></td></tr></table></figure>
+
+<p>好了问题已经复现，大概也知道是什么原因造成了，那就是：AUTO-INC lock</p>
+<h2 id="自增锁">自增锁</h2>
+<blockquote>
+<p>接下来聊聊自增锁  </p>
+</blockquote>
+<h3 id="和auto_increment相关的insert种类">和auto_increment相关的insert种类</h3>
+<ol>
+<li>INSERT-like</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">解释：任何会产生新记录的语句，都叫上INSERT-like，比如：</div><div class="line"></div><div class="line"> INSERT, INSERT <span class="keyword">...</span> SELECT, REPLACE, REPLACE <span class="keyword">...</span> SELECT, and LOAD DATA</div><div class="line"> </div><div class="line"> </div><div class="line">总之包括：“simple-inserts”, “bulk-inserts”, and “mixed-mode” inserts.</div></pre></td></tr></table></figure>
+
+<ol>
+<li>simple insert</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">插入的记录行数是确定的：比如：insert into values，replace</div><div class="line">但是不包括： INSERT <span class="keyword">...</span> ON DUPLICATE KEY UPDATE.</div></pre></td></tr></table></figure>
+
+<ol>
+<li>Bulk inserts</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">插入的记录行数不能马上确定的，比如： INSERT <span class="keyword">...</span> SELECT, REPLACE <span class="keyword">...</span> SELECT, and LOAD DATA</div></pre></td></tr></table></figure>
+
+<ol>
+<li>Mixed-mode inserts</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">这些都是simple-<span class="operator"><span class="keyword">insert</span>，但是部分auto increment值给定或者不给定</span></div><div class="line"></div><div class="line"><span class="number">1.</span> <span class="keyword">INSERT</span> <span class="keyword">INTO</span> t1 (c1,c2) <span class="keyword">VALUES</span> (<span class="number">1</span>,<span class="string">'a'</span>), (<span class="literal">NULL</span>,<span class="string">'b'</span>), (<span class="number">5</span>,<span class="string">'c'</span>), (<span class="literal">NULL</span>,<span class="string">'d'</span>);</div><div class="line"></div><div class="line">2. <span class="operator"><span class="keyword">INSERT</span> ... <span class="keyword">ON</span> DUPLICATE <span class="keyword">KEY</span> <span class="keyword">UPDATE</span></span></div><div class="line"></div><div class="line">以上都是Mixed-<span class="keyword">mode</span> inserts</div></pre></td></tr></table></figure>
+
+<h3 id="锁模式">锁模式</h3>
+<ol>
+<li>innodb_autoinc_lock_mode = 0 (“traditional” lock mode)</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">优点：极其安全</div><div class="line"></div><div class="line">缺点：对于这种模式，写入性能最差，因为任何一种<span class="operator"><span class="keyword">insert</span>-<span class="keyword">like</span>语句，都会产生一个<span class="keyword">table</span>-<span class="keyword">level</span> AUTO-INC <span class="keyword">lock</span></span></div></pre></td></tr></table></figure>
+
+<ol>
+<li>innodb_autoinc_lock_mode = 1 (“consecutive” lock mode)</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">原理：这是默认锁模式，当发生bulk inserts的时候，会产生一个特殊的AUTO-INC table-level <span class="operator"><span class="keyword">lock</span>直到语句结束，注意：（这里是语句结束就释放锁，并不是事务结束哦，因为一个事务可能包含很多语句）</span></div><div class="line"></div><div class="line">对于Simple inserts，则使用的是一种轻量级锁，只要获取了相应的auto increment就释放锁，并不会等到语句结束。</div><div class="line"></div><div class="line">PS：当发生AUTO-INC <span class="keyword">table</span>-<span class="keyword">level</span> <span class="keyword">lock</span>的时候，这种轻量级的锁也不会加锁成功，会等待。。。。</div><div class="line"></div><div class="line">优点：非常安全，性能与innodb_autoinc_lock_mode = <span class="number">0</span>相比要好很多。</div><div class="line"></div><div class="line">缺点：还是会产生表级别的自增锁</div><div class="line"></div><div class="line">深入思考： 为什么这个模式要产生表级别的锁呢？</div><div class="line">因为：他要保证bulk <span class="keyword">insert</span>自增id的连续性，防止在bulk <span class="keyword">insert</span>的时候，被其他的<span class="keyword">insert</span>语句抢走auto increment值。</div></pre></td></tr></table></figure>
+
+<ol>
+<li>innodb_autoinc_lock_mode = 2 (“interleaved” lock mode)</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">原理：当进行bulk <span class="operator"><span class="keyword">insert</span>的时候，不会产生<span class="keyword">table</span>级别的自增锁，因为它是允许其他<span class="keyword">insert</span>插入的。</span></div><div class="line"></div><div class="line">来一个记录，插入分配一个auto 值，不会预分配。</div><div class="line"></div><div class="line">优点：性能非常好，提高并发，SBR不安全</div><div class="line">缺点：</div><div class="line">    一条bulk <span class="keyword">insert</span>，得到的自增id可能不连续</div><div class="line">    SBR模式下：会导致复制出错，不一致</div></pre></td></tr></table></figure>
+
+<h3 id="延伸">延伸</h3>
+<h4 id="当innodb_autoinc_lock_mode_=_2_，SBR为什么不安全">当innodb_autoinc_lock_mode = 2 ，SBR为什么不安全</h4>
+<ul>
+<li>master 插入逻辑和结果</li>
+</ul>
+<p>表结构：a primary key auto_increment,b varchar(3)</p>
+<table>
+<thead>
+<tr>
+<th>time_logic_clock</th>
+<th>session1：bulk insert（）</th>
+<th>session2： insert like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>1,A</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>1</td>
+<td></td>
+<td>2,AA</td>
+</tr>
+<tr>
+<td>2</td>
+<td>3,B</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>3</td>
+<td>4,C</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td></td>
+<td>5,CC</td>
+</tr>
+<tr>
+<td>5</td>
+<td>6,D</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>最终的结果是：</p>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>A  </td>
+</tr>
+<tr>
+<td>2</td>
+<td>AA  </td>
+</tr>
+<tr>
+<td>3</td>
+<td>B  </td>
+</tr>
+<tr>
+<td>4</td>
+<td>C  </td>
+</tr>
+<tr>
+<td>5</td>
+<td>CC  </td>
+</tr>
+<tr>
+<td>6</td>
+<td>D  </td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>slave的最终结果</li>
+</ul>
+<blockquote>
+<p>因为binlog中session2的语句先执行完，导致结果为</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>a</th>
+<th>b</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>AA  </td>
+</tr>
+<tr>
+<td>2</td>
+<td>CC </td>
+</tr>
+<tr>
+<td>3</td>
+<td>A </td>
+</tr>
+<tr>
+<td>4</td>
+<td>B  </td>
+</tr>
+<tr>
+<td>5</td>
+<td>C  </td>
+</tr>
+<tr>
+<td>6</td>
+<td>D  </td>
+</tr>
+</tbody>
+</table>
+<h4 id="RBR为什么就安全呢？">RBR为什么就安全呢？</h4>
+<p>因为RBR都是根据row image来的，跟语句没关系的。</p>
+<p>好了，通过以上对比分析，相信大家都知道该如何抉择了吧？</p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>如果你的binlog-format是row模式，而且不关心一条bulk-insert的auto值连续（一般不用关心），那么设置innodb_autoinc_lock_mode = 2 可以提高更好的写入性能。</li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/03/03/auto_increment_lock/" data-title="自增锁引发的悲剧 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/02/15/gtid_practice/"  title="MySQL5.7 GTID 运维实战">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7 GTID 运维实战
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/03/03/auto_increment_lock/" data-title="自增锁引发的悲剧" data-url="https://Keithlan.github.io/2017/03/03/auto_increment_lock/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#模拟问题，场景复现"><span class="toc-number">2.</span> <span class="toc-text">模拟问题，场景复现</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#自增锁"><span class="toc-number">3.</span> <span class="toc-text">自增锁</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#和auto_increment相关的insert种类"><span class="toc-number">3.1.</span> <span class="toc-text">和auto_increment相关的insert种类</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#锁模式"><span class="toc-number">3.2.</span> <span class="toc-text">锁模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#延伸"><span class="toc-number">3.3.</span> <span class="toc-text">延伸</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#当innodb_autoinc_lock_mode_=_2_，SBR为什么不安全"><span class="toc-number">3.3.1.</span> <span class="toc-text">当innodb_autoinc_lock_mode = 2 ，SBR为什么不安全</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#RBR为什么就安全呢？"><span class="toc-number">3.3.2.</span> <span class="toc-text">RBR为什么就安全呢？</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>19</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>18</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
