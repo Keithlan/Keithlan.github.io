@@ -1,0 +1,450 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.6：一个神奇的执行计划 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="今天遇到一个非常神奇的sql执行计划时好时坏，我们一起来领略一下吧
+废话不多说，直接进入实战
+环境
+12345678910111213141516171819202122232425262728* version：MySQL5.6.27 社区版* 表结构CREATE TABLE `xx` (  `T">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/03/04/wrong_sql_plan/" title="MySQL5.6：一个神奇的执行计划" itemprop="url">MySQL5.6：一个神奇的执行计划</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-03-04T02:32:24.000Z" itemprop="datePublished">Mar 4 2017</time>
+    Updated:<time datetime="2017-03-04T03:56:03.000Z" itemprop="dateModified">Mar 4 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DB症状"><span class="toc-number">2.</span> <span class="toc-text">DB症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#定位问题"><span class="toc-number">3.</span> <span class="toc-text">定位问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析问题"><span class="toc-number">4.</span> <span class="toc-text">分析问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#展望"><span class="toc-number">6.</span> <span class="toc-text">展望</span></a></li></ol>
+		</div>
+		
+		<p>今天遇到一个非常神奇的sql执行计划时好时坏，我们一起来领略一下吧</p>
+<p>废话不多说，直接进入实战</p>
+<h2 id="环境">环境</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">* version：MySQL5.6.27 社区版</div><div class="line"></div><div class="line">* 表结构</div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`xx`</span> (</span></div><div class="line">  <span class="string">`TagId`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`TagType`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`SubType`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`CommId`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`TagFlag`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`TagName`</span> <span class="built_in">varchar</span>(<span class="number">255</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`OrderId`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`Unum`</span> <span class="built_in">int</span>(<span class="number">10</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`IsBest`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`BrokerId`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`AddDate`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`UpdateDate`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`updatetime`</span> <span class="keyword">timestamp</span> <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="keyword">CURRENT_TIMESTAMP</span> <span class="keyword">ON</span> <span class="keyword">UPDATE</span> <span class="keyword">CURRENT_TIMESTAMP</span>,</div><div class="line">  <span class="string">`tmpnum`</span> <span class="built_in">int</span>(<span class="number">10</span>) <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="string">`cityid`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">''</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`TagId`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idx_4`</span> (<span class="string">`IsBest`</span>,<span class="string">`TagFlag`</span>,<span class="string">`CommId`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idxnew`</span> (<span class="string">`UpdateDate`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idx_lc_1`</span> (<span class="string">`TagName`</span>,<span class="string">`TagType`</span>,<span class="string">`TagId`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idx_lc_2`</span> (<span class="string">`CommId`</span>,<span class="string">`TagName`</span>,<span class="string">`TagType`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idx_tagName_brokerId_cityId`</span> (<span class="string">`TagName`</span>,<span class="string">`BrokerId`</span>,<span class="string">`cityid`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`idx_lc_3`</span> (<span class="string">`SubType`</span>,<span class="string">`TagType`</span>,<span class="string">`cityid`</span>),</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">20628140</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<h2 id="DB症状">DB症状</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>slow query 非常多</div><div class="line"><span class="bullet">2. </span>thread_running 非常多</div><div class="line"><span class="bullet">3. </span>cpu 90%</div><div class="line"><span class="bullet">4. </span>too many connection</div><div class="line"></div><div class="line">多症齐发</div></pre></td></tr></table></figure>
+
+<h2 id="定位问题">定位问题</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">很明显就是去寻找slow query，毕竟slow是我衡量DB性能重要标准。</div><div class="line"></div><div class="line">然后发现99%都是类似这样的语句：</div><div class="line"></div><div class="line"># Time: 170304 10:32:07</div><div class="line"># User@Host[] @  []  Id: 26019853</div><div class="line"># Query_time: 0.251174  Lock_time: 0.000078 Rows_sent: 1  Rows_examined: 470135</div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">timestamp</span>=<span class="number">1488594727</span>;</span></div><div class="line"><span class="operator"><span class="keyword">select</span> <span class="string">`TagId`</span>,<span class="string">`TagType`</span>,<span class="string">`SubType`</span>,<span class="string">`CommId`</span>,<span class="string">`TagFlag`</span>,<span class="string">`TagName`</span>,<span class="string">`OrderId`</span>,<span class="string">`Unum`</span>,<span class="string">`IsBest`</span>,<span class="string">`BrokerId`</span>,<span class="string">`AddDate`</span>,<span class="string">`UpdateDate`</span>,<span class="string">`updatetime`</span>,<span class="string">`tmpnum`</span>,<span class="string">`cityid`</span> <span class="keyword">from</span> <span class="string">`xx`</span> <span class="keyword">where</span> <span class="string">`TagType`</span> = <span class="string">'1'</span>  <span class="keyword">and</span> <span class="string">`TagName`</span> = <span class="string">'**高'</span>  <span class="keyword">order</span> <span class="keyword">by</span> <span class="string">`TagId`</span> <span class="keyword">ASC</span> <span class="keyword">limit</span> <span class="number">1</span> ;</span></div></pre></td></tr></table></figure>
+
+<h2 id="分析问题">分析问题</h2>
+<ul>
+<li>step1：查看执行计划</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= '<span class="number">1</span>'  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='**高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> limit <span class="number">1</span><span class="comment">;</span></div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line">| id | select_type | table           | type  | possible_keys                        | key     | key_len | ref  | rows | Extra       |</div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | index | idx_lc_1,idx_tagName_brokerId_cityId | PRIMARY | <span class="number">4</span>       | NULL |  <span class="number">175</span> | Using where |</div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line"><span class="number">1</span> row in set (<span class="number">0.00</span> sec)</div><div class="line"></div><div class="line"></div><div class="line">这条语句执行时间是： <span class="number">0.99</span>s</div><div class="line"></div><div class="line"></div><div class="line">奇怪，从表结构上看，应该会使用idx_lc_1才对，为什么执行计划是错的呢？</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step2：第二反应</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">会不会是TagType是int类型，但是sql语句确实字符串呢？隐士类型转换的导致的执行计划出错之前也是碰到过的。</div><div class="line">试试吧，</div><div class="line"></div><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= <span class="number">1</span>  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='**高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> limit <span class="number">1</span><span class="comment">;</span></div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line">| id | select_type | table           | type  | possible_keys                        | key     | key_len | ref  | rows | Extra       |</div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | index | idx_lc_1,idx_tagName_brokerId_cityId | PRIMARY | <span class="number">4</span>       | NULL |  <span class="number">175</span> | Using where |</div><div class="line">+----+-------------+-----------------+-------+--------------------------------------+---------+---------+------+------+-------------+</div><div class="line"><span class="number">1</span> row in set (<span class="number">0.00</span> sec)</div><div class="line"></div><div class="line"></div><div class="line">这条语句执行时间是： <span class="number">0.89</span>s</div><div class="line"></div><div class="line">还是非常缓慢，看来不是这个原因。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step3：会不会是数据的问题呢？</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">因为从slow的分布看，基本上都是<span class="escape">`T</span>agName<span class="escape">` </span>='**高' 的slow，其他的值也没发现，所以开始怀疑value，调整下看看呢</div><div class="line"></div><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= <span class="number">1</span>  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='<span class="var_expand">%%</span>高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> limit <span class="number">1</span><span class="comment">;</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">| id | select_type | table           | type | possible_keys                        | key      | key_len | ref         | rows | Extra                              |</div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | ref  | idx_lc_1,idx_tagName_brokerId_cityId | idx_lc_1 | <span class="number">773</span>     | const,const |    <span class="number">3</span> | Using index condition<span class="comment">; Using where |</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line"></div><div class="line">这条语句执行时间：<span class="number">0.00</span>s</div><div class="line"></div><div class="line">哇塞，<span class="number">0</span>s就解决战斗，但是这又是为什么呢？</div><div class="line"></div><div class="line"></div><div class="line">再试一下：将‘**’高，换成‘*高’</div><div class="line"></div><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= <span class="number">1</span>  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='*高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> limit <span class="number">1</span><span class="comment">;</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">| id | select_type | table           | type | possible_keys                        | key      | key_len | ref         | rows | Extra                              |</div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | ref  | idx_lc_1,idx_tagName_brokerId_cityId | idx_lc_1 | <span class="number">773</span>     | const,const |    <span class="number">3</span> | Using index condition<span class="comment">; Using where |</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line"></div><div class="line">执行计划也正确，执行时间也非常快。</div><div class="line"></div><div class="line">然后笃定的认为问题找到了，竟然是 ‘**’导致的。</div><div class="line"></div><div class="line">当我自己给自己sleep <span class="number">10</span>s 之后，开始思考，这是为什么呢？ 等值匹配跟*有关系吗？</div></pre></td></tr></table></figure>
+
+<ul>
+<li>step4: 再次调整语句</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line">* 去掉limit呢？ 因为limit是执行计划的杀手，这个我想大部分DBA知道的吧。。。</div><div class="line"></div><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= <span class="number">1</span>  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='*高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> <span class="comment">;</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+-----------------------------+---------+-------+-------+----------------------------------</div><div class="line">------------------+</div><div class="line">| id | select_type | table           | type | possible_keys                        | key                         | key_len | ref   | rows  | Extra</div><div class="line">                  |</div><div class="line">+----+-------------+-----------------+------+--------------------------------------+-----------------------------+---------+-------+-------+----------------------------------</div><div class="line">------------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | ref  | idx_lc_1,idx_tagName_brokerId_cityId | idx_tagName_brokerId_cityId | <span class="number">768</span>     | const | <span class="number">13854</span> | Using index condition<span class="comment">; Using wher</span></div><div class="line">e<span class="comment">; Using filesort |</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+-----------------------------+---------+-------+-------+----------------------------------</div><div class="line">------------------+</div><div class="line"></div><div class="line"></div><div class="line">惊奇的发现，执行计划再次发生了改变。。。。</div><div class="line"></div><div class="line">idx_tagName_brokerId_cityId 为什么又冒出来了呢？</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">那我们再回头看看表结构：</div><div class="line"></div><div class="line">PRIMARY KEY (<span class="escape">`T</span>agId<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dx_4<span class="escape">` </span>(<span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dxnew<span class="escape">` </span>(<span class="escape">`U</span>pdateDate<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dx_lc_1<span class="escape">` </span>(<span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`T</span>agId<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dx_lc_2<span class="escape">` </span>(<span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dx_tagName_brokerId_cityId<span class="escape">` </span>(<span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">`)</span>,</div><div class="line">  KEY <span class="escape">`i</span>dx_lc_3<span class="escape">` </span>(<span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">`)</span></div><div class="line"></div><div class="line">去掉干扰项后：</div><div class="line"></div><div class="line">PRIMARY KEY (<span class="escape">`T</span>agId<span class="escape">`)</span>,</div><div class="line"><span class="escape">`i</span>dx_lc_1<span class="escape">` </span>(<span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`T</span>agId<span class="escape">`)</span>,</div><div class="line"><span class="escape">`i</span>dx_tagName_brokerId_cityId<span class="escape">` </span>(<span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">`)</span>,</div><div class="line"></div><div class="line">执行计划竟然没有选择idx_lc_1，而是idx_tagName_brokerId_cityId，那么这个肯定是干扰索引。</div><div class="line"></div><div class="line">所以，就更加清晰的定位到idx_tagName_brokerId_cityId索引的问题，然后开始调整这个索引，主要是第一个字段TagName的干扰，选择性的问题。</div><div class="line"></div><div class="line">将：  KEY <span class="escape">`i</span>dx_tagName_brokerId_cityId<span class="escape">` </span>(<span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">`)</span> =&gt;  KEY <span class="escape">`i</span>dx_tagName_brokerId_cityId<span class="escape">` </span>(<span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">`)</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>step 5: 再次观察执行计划</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">explain select <span class="escape">`T</span>agId<span class="escape">`,</span><span class="escape">`T</span>agType<span class="escape">`,</span><span class="escape">`S</span>ubType<span class="escape">`,</span><span class="escape">`C</span>ommId<span class="escape">`,</span><span class="escape">`T</span>agFlag<span class="escape">`,</span><span class="escape">`T</span>agName<span class="escape">`,</span><span class="escape">`O</span>rderId<span class="escape">`,</span><span class="escape">`U</span>num<span class="escape">`,</span><span class="escape">`I</span>sBest<span class="escape">`,</span><span class="escape">`B</span>rokerId<span class="escape">`,</span><span class="escape">`A</span>ddDate<span class="escape">`,</span><span class="escape">`U</span>pdateDate<span class="escape">`,</span><span class="escape">`u</span>pdatetime<span class="escape">`,</span><span class="escape">`t</span>mpnum<span class="escape">`,</span><span class="escape">`c</span>ityid<span class="escape">` </span>from <span class="escape">`x</span>x<span class="escape">` </span>where <span class="escape">`T</span>agType<span class="escape">` </span>= <span class="number">1</span>  <span class="literal">and</span> <span class="escape">`T</span>agName<span class="escape">` </span>='**高'  order by <span class="escape">`T</span>agId<span class="escape">` </span> limit <span class="number">1</span><span class="comment">;</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">| id | select_type | table           | type | possible_keys                        | key      | key_len | ref         | rows | Extra                              |</div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line">|  <span class="number">1</span> | SIMPLE      | xx | ref  | idx_lc_1,idx_tagName_brokerId_cityId | idx_lc_1 | <span class="number">773</span>     | const,const |    <span class="number">3</span> | Using index condition<span class="comment">; Using where |</span></div><div class="line">+----+-------------+-----------------+------+--------------------------------------+----------+---------+-------------+------+------------------------------------+</div><div class="line"></div><div class="line"></div><div class="line">sql执行时间：<span class="number">0.00</span>s</div></pre></td></tr></table></figure>
+
+<h2 id="总结">总结</h2>
+<ul>
+<li><p>至此，问题已经解决，第一个前缀索引是如此的重要。</p>
+</li>
+<li><p>索引调优是门艺术</p>
+</li>
+</ul>
+<h2 id="展望">展望</h2>
+<ul>
+<li>以后如何调整和优化类似的索引执行计划呢？</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">原则： 高索引基数的filed，必须放前面。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>希望MySQL的优化器以后越来越强大</li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/03/04/wrong_sql_plan/" data-title="MySQL5.6：一个神奇的执行计划 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/03/03/auto_increment_lock/"  title="自增锁引发的悲剧">
+ <strong>NEXT:</strong><br/> 
+ <span>自增锁引发的悲剧
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/03/04/wrong_sql_plan/" data-title="MySQL5.6：一个神奇的执行计划" data-url="https://Keithlan.github.io/2017/03/04/wrong_sql_plan/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DB症状"><span class="toc-number">2.</span> <span class="toc-text">DB症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#定位问题"><span class="toc-number">3.</span> <span class="toc-text">定位问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#分析问题"><span class="toc-number">4.</span> <span class="toc-text">分析问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">5.</span> <span class="toc-text">总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#展望"><span class="toc-number">6.</span> <span class="toc-text">展望</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>21</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>20</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>19</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
