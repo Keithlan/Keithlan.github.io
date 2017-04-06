@@ -4,18 +4,23 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Mixed format + DML limit 引发的血案 | Focus on MySQL,Focus on Focus</title>
+    <title>omega监控系列之connection | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
     <meta name="description" content="背景
 
+什么是omega
 
-MySQL版本 5.6.16
-DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; S  
-相信做DB拆分，机房搬迁，数据库升级，都会用到这种类似的架构吧。 
-那么问题来了，最近做数据校验的时候，发现New_S 的数据竟然比 M,New_M 还多，">
+12345简单说就是一个平台， 运维和运营为一体的智能DB管理平台所有DB相关的事情都能通过此平台 完成-&amp;gt;自助完成-&amp;gt;智能完成目前知道这个就够了，其他的以后慢慢介绍
+
+
+
+
+为什么要介绍omega系统里面的connection
+
+1234561. 因为我们这">
     
     
     
@@ -75,15 +80,15 @@ DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; 
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/11/16/mixed_dml_limit/" title="Mixed format + DML limit 引发的血案" itemprop="url">Mixed format + DML limit 引发的血案</a>
+      <a href="/2017/04/06/omega_connection/" title="omega监控系列之connection" itemprop="url">omega监控系列之connection</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-11-15T16:05:24.000Z" itemprop="datePublished">Nov 16 2015</time>
-    Updated:<time datetime="2016-08-19T02:05:05.000Z" itemprop="dateModified">Aug 19 2016</time>
+    <time datetime="2017-04-06T02:32:24.000Z" itemprop="datePublished">Apr 6 2017</time>
+    Updated:<time datetime="2017-04-06T09:51:29.000Z" itemprop="dateModified">Apr 6 2017</time>
     
   </p>
 </header>
@@ -92,78 +97,130 @@ DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; 
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例&分析"><span class="toc-number">2.</span> <span class="toc-text">案例&分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#M的binlog"><span class="toc-number">2.1.</span> <span class="toc-text">M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#New_M的binlog"><span class="toc-number">2.2.</span> <span class="toc-text">New_M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Mixed_模式"><span class="toc-number">2.3.</span> <span class="toc-text">Mixed 模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ROW_模式"><span class="toc-number">2.4.</span> <span class="toc-text">ROW 模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#omega：connection视图"><span class="toc-number">2.</span> <span class="toc-text">omega：connection视图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#omega：thread视图"><span class="toc-number">3.</span> <span class="toc-text">omega：thread视图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
 		</div>
 		
-		<hr>
-<h2 id="背景">背景</h2>
-<blockquote>
-<ol>
-<li>MySQL版本 5.6.16</li>
-<li>DB架构（级联复制） M —&gt; New_M（log_slave_update）—&gt; S  </li>
-<li>相信做DB拆分，机房搬迁，数据库升级，都会用到这种类似的架构吧。 </li>
-<li>那么问题来了，最近做数据校验的时候，发现New_S 的数据竟然比 M,New_M 还多，是否奇怪？   </li>
-</ol>
-</blockquote>
-<p><img src="/image/mysql_error/m_s_s.png" alt="m" title="m"></p>
-<h2 id="案例&amp;分析">案例&amp;分析</h2>
-<blockquote>
-<ol>
-<li>如何做数据校验？  pt-table-checksum ，或自己写对比程序。  </li>
-<li>校验出来后，发现A表在M，S，New_M三个实例上 有300条记录， New_S,Bak_etl 却有500条记录  </li>
-</ol>
-</blockquote>
-<p><img src="/image/mysql_error/m_s_s_2.png" alt="m" title="m"></p>
-<p>为什么New_M的数据比New_S的数据还要少呢？？？<br>这种情况下，只能比对binlog了，但是binlog数据量如此之大，如何查呢？<br>具体分析下，M,S,New_M的数据是一样的，说明他们之间的复制同步没有问题。<br>New_S和Bak_etl 数据是一样的，说明他们之间执行的binlog也没问题。<br>那么问题就出在M的binlog ， New_M的binlog不一致了。<br>换句话说就是：一条delete语句，在M上删除了N条，但是在New_M的binlog中只记录了delete N-200<br>从而导致最后的slave比master要多200条记录了。<br>接下来，我们验证下  </p>
-<h3 id="M的binlog">M的binlog</h3>
-<p><img src="/image/mysql_error/m_s_s_3.png" alt="m" title="m"></p>
-<h3 id="New_M的binlog">New_M的binlog</h3>
-<p><img src="/image/mysql_error/m_s_s_4.png" alt="m" title="m"></p>
-<p>很明显，New_M 相比 M，少了很多binlog event，有部分binlog（从214568151开始，全部丢失）都没了。</p>
-<p>ok，问题确认了，但是由于SQL语句已经被强制转换成了ROW模式的关系，SQL语句如何定位呢？<br>还好，这里有5.6新特性Performance schema的帮助，很快定位到了问题SQL</p>
-<p>performance_schema&gt; select * from events_statements_summary_by_digest where DIGEST_TEXT like ‘%broker_user_relation_sub%’\G</p>
-<p><img src="/image/mysql_error/m_s_s_7.png" alt="m" title="m"></p>
-<p>到这个地步，有几个问题：</p>
-<blockquote>
-<p>1） 为什么binlog会丢失？<br>2） 什么情况下会丢失？  </p>
-</blockquote>
-<p>这几个问题，经过反复测试，得出以下结论。</p>
+		<h2 id="背景">背景</h2>
 <ul>
-<li><strong>为什么binlog会丢失？</strong></li>
+<li>什么是omega</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">简单说就是一个平台， 运维和运营为一体的智能DB管理平台</div><div class="line"></div><div class="line">所有DB相关的事情都能通过此平台 完成-&gt;自助完成-&gt;智能完成</div><div class="line"></div><div class="line">目前知道这个就够了，其他的以后慢慢介绍</div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>为什么要介绍omega系统里面的connection</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>因为我们这边业务使用PHP是主流，短连接非常多，经常会遇到connection和thread的问题，所以关注比较多</div><div class="line"></div><div class="line"><span class="bullet">2. </span>另一方面，我们omega系统提供了一套完整的connection和thread监控，但是里面有一些专业术语</div><div class="line">很多人并不知道【包括一些DBA自己】</div><div class="line"></div><div class="line"><span class="bullet">3. </span>既然不明白里面的参数，那么肯定也就不知道这样的监控有何意义，又有何实战价值，所以稍微普及一下。</div></pre></td></tr></table></figure>
+
+<h2 id="omega：connection视图">omega：connection视图</h2>
+<p><img src="/image/mysql_error/omega_connection.jpg" alt="omega_connection" title="omega_connection"></p>
+<ul>
+<li>官方解释</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Connections</td>
+<td>The number of connection attempts (successful or not) to the MySQL server</td>
+</tr>
+<tr>
+<td>abort_clients</td>
+<td>The number of connections that were aborted because the client died without closing the connection properly</td>
+</tr>
+<tr>
+<td>abort_connects</td>
+<td>The number of failed attempts to connect to the MySQL server</td>
+</tr>
+</tbody>
+</table>
+<p>官方的东东，比较拗口，我知道你看不懂，所以看下面的实战。  </p>
+<ul>
+<li>实战意义</li>
 </ul>
 <blockquote>
-<p>条件1：当binlog format 设置为mixed时，普通复制不会有问题，但是级联复制在特殊情况下会binlog丢失。<br>条件2：当出现大量数据（400W左右）扫描的更新，删除，插入的时候，且有不确定dml语句（如：delete from table where data&lt;’N’ limit ）的时候.<br>当条件1 和 条件2 同时满足时，会导致问题的发生。以上案例，就是证据。  </p>
+<p>以上三个参数都是累积值，omega里面的单位平均每秒多少多少  </p>
 </blockquote>
-<p>接下来，我们再来测试下我们的理论。这次我们不用delete + limit，用 insert into select  </p>
-<h3 id="Mixed_模式">Mixed 模式</h3>
-<p><img src="/image/mysql_error/m_s_s_5.png" alt="m" title="m"></p>
-<h3 id="ROW_模式">ROW 模式</h3>
-<p><img src="/image/mysql_error/m_s_s_6.png" alt="m" title="m"></p>
-<h2 id="总结">总结</h2>
-<p>强烈建议MySQL binlog format 设置成ROW模式来确保主从数据的一致性。</p>
+<p>[Connections]   </p>
+<p>重点一：表示一分钟内平均尝试连接到mysql server的次数。<br>重点二：这里面的连接数包括成功的连接，也包括失败的连接，大部分人这里不是很清楚。  </p>
+<p>[abort_clients]  </p>
+<p>1）客户端已经成功创建连接，但是后来断开了。  </p>
+<p>2）如果这个值逐渐增大，那么说明什么问题呢？     </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>）wait_timeout 超时，mysql自动<span class="built_in">kill</span>掉连接</div><div class="line">b) 客户端由于某些原因被干掉  </div><div class="line"></div><div class="line">总之：就是已经创建好了连接，由于某种原因断开掉了。</div></pre></td></tr></table></figure>
+
+<p>[abort_connects]</p>
+<p>1） 客户端没有创建连接，在尝试建立连接的时候失败了。  </p>
+<p>2） 如果这个值逐渐增大，有哪些可能的原因呢？</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">a) too many connection 已经发生  </div><div class="line">b) 权限，端口，密码等等错误，导致不能创建连接的情况  </div><div class="line"><span class="built_in">c</span>）客户端设置了connect_timeout等造成的连接不上，网络问题。</div><div class="line"></div><div class="line">总之，就是有很多种原因导致没有成功的创建连接</div></pre></td></tr></table></figure>
+
+<h2 id="omega：thread视图">omega：thread视图</h2>
+<p><img src="/image/mysql_error/omega_thread.jpg" alt="omega_thread" title="omega_thread"></p>
+<ul>
+<li>官方解释</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>name</th>
+<th>desc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>threads_connected</td>
+<td>The number of currently open connections.</td>
+</tr>
+<tr>
+<td>threads_running</td>
+<td>The number of threads that are not sleeping.</td>
+</tr>
+<tr>
+<td>threads_sleep</td>
+<td>我自己yy的，意思是The number of threads that are sleeping.</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>实战意义</li>
+</ul>
 <blockquote>
-<p> set global binlog_format=ROW;<br> 禁止非确定性因素的DML，尤其是dml + limit 且没有order by的情况。</p>
+<p>以上三个值是瞬间值</p>
 </blockquote>
+<p>[threads_connected]</p>
+<p>show processlist里面看到的数量就是这个值</p>
+<p>[threads_running]</p>
+<p>非sleep的连接，如果这个值非常高，说明SQL卡住了或者SQL非常慢，高并发的SQL非常多，通常伴随着cpu，io非常高等特点</p>
+<p>[threads_sleep]</p>
+<p>sleep的连接，就是该thread不干任何事，一旦这样的数值特别大，说明某些业务哪里占了连接不释放，或者其他服务缓慢有问题，导致链接不释放，一般我们的做法就是让MySQL自动关闭这样的连接，保护数据库。  </p>
+<h2 id="总结">总结</h2>
+<p>至此，上面的参数和status解释完毕，上面状态的各种组合常常能够反映出各种问题，可以帮助DBA快速定位问题，各位可以尝试下，谁用谁知道。</p>
+<p>好了，最后给大家出一个问题思考下：上面第一个截图代表啥意思呢？  </p>
   
 	</div>
 		<footer class="article-footer clearfix">
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-Error/">MySQL Error</a>
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/11/16/mixed_dml_limit/" data-title="Mixed format + DML limit 引发的血案 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2017/04/06/omega_connection/" data-title="omega监控系列之connection | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -172,19 +229,11 @@ DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; 
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/12/06/innodb_semaphore/" title="InnoDB hung&amp;crash : a long semaphore wait">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  InnoDB hung&amp;crash : a long semaphore wait</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/11/02/mysql_replicate_rule/"  title="Mysql 复制过滤详解">
+<a href="/2017/03/04/wrong_sql_plan/"  title="MySQL5.6：一个神奇的执行计划">
  <strong>NEXT:</strong><br/> 
- <span>Mysql 复制过滤详解
+ <span>MySQL5.6：一个神奇的执行计划
 </span>
 </a>
 </div>
@@ -194,7 +243,7 @@ DB架构（级联复制） M —&amp;gt; New_M（log_slave_update）—&amp;gt; 
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/11/16/mixed_dml_limit/" data-title="Mixed format + DML limit 引发的血案" data-url="https://Keithlan.github.io/2015/11/16/mixed_dml_limit/"></div>
+<div class="ds-thread" data-thread-key="/2017/04/06/omega_connection/" data-title="omega监控系列之connection" data-url="https://Keithlan.github.io/2017/04/06/omega_connection/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -215,7 +264,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#案例&分析"><span class="toc-number">2.</span> <span class="toc-text">案例&分析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#M的binlog"><span class="toc-number">2.1.</span> <span class="toc-text">M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#New_M的binlog"><span class="toc-number">2.2.</span> <span class="toc-text">New_M的binlog</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Mixed_模式"><span class="toc-number">2.3.</span> <span class="toc-text">Mixed 模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#ROW_模式"><span class="toc-number">2.4.</span> <span class="toc-text">ROW 模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#omega：connection视图"><span class="toc-number">2.</span> <span class="toc-text">omega：connection视图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#omega：thread视图"><span class="toc-number">3.</span> <span class="toc-text">omega：thread视图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
   </div>
 
 <div id="asidepart">

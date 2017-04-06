@@ -68,6 +68,44 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2015/08/18/how_to_backup_recovery/" title="MySQL 备份与恢复" itemprop="url">
+      
+        MySQL 备份与恢复
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。接下来，我们聊聊备份恢复的那些事儿   
+
+备份和恢复业界指标
+
+常用备份方式
+
+备份&amp;amp;恢复速度
+ 
+恢复架构图
+  
+恢复的原理和实践
+
+mysqlbinlog + script
+
+11) 这种方法，我想</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2015-08-18T07:32:24.000Z" itemprop="datePublished">Aug 18 2015</time>
+      
+          <a href="/2015/08/18/how_to_backup_recovery/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2015/07/17/22_performance_schema/" title="Mysql5.6 Performance_schema 深入浅出" itemprop="url">
       
         Mysql5.6 Performance_schema 深入浅出
@@ -214,20 +252,48 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   <article>
     <h1 itemprop="name">
       
-        <a href="/2015/07/14/mysql_group_order_limit/" title="Mysql 5.6 执行计划错误案例分析" itemprop="url">
+        <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">
       
-        Mysql 5.6 执行计划错误案例分析
+        MySQL 5.6 中 In 优化的那些事
       </a>
     </h1>
     
      
-       <p itemprop="description" >Understanding the Query Execution Plan</p>
+       <p itemprop="description" >背景
+这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都ro</p>
       
     
     <p class="article-more-link">
       <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
       
-          <a href="/2015/07/14/mysql_group_order_limit/">阅读更多&raquo;</a>
+          <a href="/2015/07/14/mysql_in/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2015/07/14/mysql_recovery_myisam_slave/" title="特殊场景下的slave重构" itemprop="url">
+      
+        特殊场景下的slave重构
+      </a>
+    </h1>
+    
+     
+       <p itemprop="description" >Mysql Backup and Recovery
+背景说明
+
+备份和恢复，这是一个非常大的话题，但这不是本章的重点，关于详情，请看之前分享过的一篇PDF Mysql Backup and Recovery 分享 。 备份，主要是用于灾难恢复。 那么，今天我们就来讨论一下再没有备</p>
+      
+    
+    <p class="article-more-link">
+      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
+      
+          <a href="/2015/07/14/mysql_recovery_myisam_slave/">阅读更多&raquo;</a>
       
     </p>
 
@@ -288,60 +354,6 @@ mysqlsla 主要分为三个大的packages，我们先大致了解一下package �
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_shutdown_err/" title="mysql shutdown 异常处理和分析" itemprop="url">
-      
-        mysql shutdown 异常处理和分析
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >先了解一下mysql的shutdown流程
-
-
-The shutdown process is initiated.
-The server creates a shutdown thread if necessary.
-The server stops accepting new</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_shutdown_err/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2015/07/14/mysql_in/" title="MySQL 5.6 中 In 优化的那些事" itemprop="url">
-      
-        MySQL 5.6 中 In 优化的那些事
-      </a>
-    </h1>
-    
-     
-       <p itemprop="description" >背景
-这里不准备讲 In 和 Or 的效率和区别。也不会讲 In 和 exist 的效率和区别。只是纯聊 Mysql 中常常会出现的 where xx in （）; 在实际工作中，这种用法很常见，然后再最近一段时间在优化slow query的时候，发现某些有In的查询基本上都ro</p>
-      
-    
-    <p class="article-more-link">
-      <time datetime="2015-07-14T03:32:24.000Z" itemprop="datePublished">Jul 14 2015</time>
-      
-          <a href="/2015/07/14/mysql_in/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
     <a class="extend prev" rel="prev" href="/page/3/">&laquo; Prev</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><a class="extend next" rel="next" href="/page/5/">Next &raquo;</a>
@@ -387,7 +399,7 @@ The server stops accepting new</p>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
-			<li><a href="/categories/分享/" title="分享">分享<sup>20</sup></a></li>
+			<li><a href="/categories/分享/" title="分享">分享<sup>21</sup></a></li>
 		
 		</ul>
 </div>
@@ -396,7 +408,7 @@ The server stops accepting new</p>
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -415,7 +427,7 @@ The server stops accepting new</p>
 		
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>19</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>20</sup></a></li>
 		
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
 		
