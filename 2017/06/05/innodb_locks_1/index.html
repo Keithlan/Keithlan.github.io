@@ -1,0 +1,607 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL锁系列（一）之锁的种类和概念 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="背景
+
+锁是MySQL里面最难理解的知识，但是又无处不在。一开始接触锁的时候，感觉被各种锁类型和名词弄得晕头转向，就别说其他了。本文是通过DBA的视角（非InnoDB内核开发）来分析和窥探锁的奥秘，并解决实际工作当中遇到的问题  
+锁的种类&amp;amp;概念
+
+想要啃掉这块最难的大骨头，必须先画一个框架">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/06/05/innodb_locks_1/" title="MySQL锁系列（一）之锁的种类和概念" itemprop="url">MySQL锁系列（一）之锁的种类和概念</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-06-05T07:32:24.000Z" itemprop="datePublished">Jun 5 2017</time>
+    Updated:<time datetime="2017-06-05T08:01:33.000Z" itemprop="dateModified">Jun 5 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#锁的种类&概念"><span class="toc-number">2.</span> <span class="toc-text">锁的种类&概念</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#锁的兼容矩阵"><span class="toc-number">3.</span> <span class="toc-text">锁的兼容矩阵</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-number">4.</span> <span class="toc-text">参考资料</span></a></li></ol>
+		</div>
+		
+		<h2 id="背景">背景</h2>
+<hr>
+<p>锁是MySQL里面最难理解的知识，但是又无处不在。<br>一开始接触锁的时候，感觉被各种锁类型和名词弄得晕头转向，就别说其他了。<br>本文是通过DBA的视角（非InnoDB内核开发）来分析和窥探锁的奥秘，并解决实际工作当中遇到的问题  </p>
+<h2 id="锁的种类&amp;概念">锁的种类&amp;概念</h2>
+<blockquote>
+<p>想要啃掉这块最难的大骨头，必须先画一个框架，先了解其全貌，才能逐个击破  </p>
+</blockquote>
+<ul>
+<li>Shared and Exclusive Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* Shared <span class="operator"><span class="keyword">lock</span>: 共享锁,官方描述：permits the <span class="keyword">transaction</span> that holds the <span class="keyword">lock</span> <span class="keyword">to</span> <span class="keyword">read</span> a <span class="keyword">row</span></span></div><div class="line"></div><div class="line">eg：<span class="keyword">select</span> * <span class="keyword">from</span> xx <span class="keyword">where</span> a=<span class="number">1</span> <span class="keyword">lock</span> <span class="keyword">in</span> <span class="keyword">share</span> <span class="keyword">mode</span></div><div class="line"></div><div class="line">* Exclusive Locks：排他锁： permits the <span class="keyword">transaction</span> that holds the <span class="keyword">lock</span> <span class="keyword">to</span> <span class="keyword">update</span> <span class="keyword">or</span> <span class="keyword">delete</span> a <span class="keyword">row</span></div><div class="line"></div><div class="line">eg: <span class="keyword">select</span> * <span class="keyword">from</span> xx <span class="keyword">where</span> a=<span class="number">1</span> <span class="keyword">for</span> <span class="keyword">update</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Intention Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1. 这个锁是加在table上的，表示要对下一个层级（记录）进行加锁  </div><div class="line">2. Intention shared (IS）：Transaction T intends to <span class="operator"><span class="keyword">set</span> S locks <span class="keyword">on</span> individual <span class="keyword">rows</span> <span class="keyword">in</span> <span class="keyword">table</span> t  </span></div><div class="line"><span class="number">3.</span> Intention exclusive (IX):  <span class="keyword">Transaction</span> T intends <span class="keyword">to</span> <span class="keyword">set</span> X locks <span class="keyword">on</span> those <span class="keyword">rows</span>  </div><div class="line"><span class="number">4.</span> 在数据库层看到的结果是这样的：</div><div class="line">    <span class="keyword">TABLE</span> <span class="keyword">LOCK</span> <span class="keyword">table</span> <span class="string">`lc_3`</span>.<span class="string">`a`</span> trx id <span class="number">133588125</span> <span class="keyword">lock</span> <span class="keyword">mode</span> IX</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Record Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 在数据库层看到的结果是这样的：</div><div class="line">    RECORD LOCKS space id <span class="number">281</span> page no <span class="number">3</span> n bits <span class="number">72</span> index PRIMARY of table <span class="escape">`l</span>c_3<span class="escape">`.</span><span class="escape">`a</span><span class="escape">` </span>trx id <span class="number">133588125</span> lock_mode X locks rec but <span class="literal">not</span> gap</div><div class="line"></div><div class="line"><span class="number">2</span>. 该锁是加在索引上的（从上面的index PRIMARY of table <span class="escape">`l</span>c_3<span class="escape">`.</span><span class="escape">`a</span><span class="escape">` </span>就能看出来）</div><div class="line"></div><div class="line"><span class="number">3</span>. 记录锁可以有两种类型：lock_mode X locks rec but <span class="literal">not</span> gap  && lock_mode S locks rec but <span class="literal">not</span> gap</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Gap Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 在数据库层看到的结果是这样的：</div><div class="line">    RECORD LOCKS <span class="constant">space</span> <span class="property">id</span> <span class="number">281</span> page no <span class="number">5</span> n bits <span class="number">72</span> index idx_c <span class="keyword">of</span> table `lc_3`.`a` trx <span class="property">id</span> <span class="number">133588125</span> lock_mode X locks gap <span class="keyword">before</span> rec  </div><div class="line"></div><div class="line"><span class="number">2.</span> Gap锁是用来防止insert的  </div><div class="line"></div><div class="line"><span class="number">3.</span> Gap锁，中文名间隙锁，锁住的不是记录，而是范围,比如：(negative infinity, <span class="number">10</span>），(<span class="number">10</span>, <span class="number">11</span>）区间，这里都是开区间哦</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Next-Key Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 在数据库层看到的结果是这样的：</div><div class="line">    RECORD LOCKS space id <span class="number">281</span> page <span class="keyword">no</span> <span class="number">5</span> n bits <span class="number">72</span> <span class="keyword">index</span> idx_c of table <span class="string">`lc_3`</span>.<span class="string">`a`</span> trx id <span class="number">133588125</span> lock_mode X</div><div class="line"></div><div class="line"><span class="number">2</span>. Next-Key Locks = Gap Locks + Record Locks 的结合, 不仅仅锁住记录，还会锁住间隙，比如： (negative infinity, <span class="number">10</span>】，(<span class="number">10</span>, <span class="number">11</span>】区间，这些右边都是闭区间哦</div></pre></td></tr></table></figure>
+
+<ul>
+<li>Insert Intention Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 在数据库层看到的结果是这样的：</div><div class="line">    RECORD LOCKS space id <span class="number">279</span> page <span class="keyword">no</span> <span class="number">3</span> n bits <span class="number">72</span> <span class="keyword">index</span> PRIMARY of table <span class="string">`lc_3`</span>.<span class="string">`t1`</span> trx id <span class="number">133587907</span> lock_mode X insert intention waiting</div><div class="line"></div><div class="line"><span class="number">2</span>. Insert Intention Locks 可以理解为特殊的Gap锁的一种，用以提升并发写入的性能</div></pre></td></tr></table></figure>
+
+<ul>
+<li>AUTO-INC Locks</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">1. 在数据库层看到的结果是这样的：</div><div class="line">    TABLE <span class="operator"><span class="keyword">LOCK</span> <span class="keyword">table</span> xx trx id <span class="number">7498948</span> <span class="keyword">lock</span> <span class="keyword">mode</span> AUTO-INC waiting</span></div><div class="line"></div><div class="line"><span class="number">2.</span> 属于表级别的锁  </div><div class="line"></div><div class="line"><span class="number">3.</span> 自增锁的详细情况可以之前的一篇文章:</div><div class="line">    http://keithlan.github.io/<span class="number">2017</span>/<span class="number">03</span>/<span class="number">03</span>/auto_increment_lock/</div></pre></td></tr></table></figure>
+
+<ul>
+<li>显示锁 vs 隐示锁</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">* 显示锁(<span class="keyword">explicit</span> <span class="keyword">lock</span>)</div><div class="line">    显示的加锁，在show engine innoDB status 中能够看到  ，会在内存中产生对象，占用内存  </div><div class="line">    eg: <span class="keyword">select</span> ... <span class="keyword">for</span> update , <span class="keyword">select</span> ... <span class="keyword">lock</span> <span class="keyword">in</span> share mode   </div><div class="line"></div><div class="line">* 隐示锁(<span class="keyword">implicit</span> <span class="keyword">lock</span>)</div><div class="line">    <span class="keyword">implicit</span> <span class="keyword">lock</span> 是在索引中对记录逻辑的加锁，但是实际上不产生锁对象，不占用内存空间  </div><div class="line">    </div><div class="line">* 哪些语句会产生<span class="keyword">implicit</span> <span class="keyword">lock</span> 呢？</div><div class="line">   eg: insert <span class="keyword">into</span> xx values(xx) </div><div class="line">   eg: update xx <span class="keyword">set</span> t=t+<span class="number">1</span> <span class="keyword">where</span> id = <span class="number">1</span> ; 会对辅助索引加<span class="keyword">implicit</span> <span class="keyword">lock</span>  </div><div class="line"></div><div class="line">* <span class="keyword">implicit</span> <span class="keyword">lock</span> 在什么情况下会转换成 <span class="keyword">explicit</span> <span class="keyword">lock</span></div><div class="line">  eg： 只有<span class="keyword">implicit</span> <span class="keyword">lock</span> 产生冲突的时候，会自动转换成<span class="keyword">explicit</span> <span class="keyword">lock</span>,这样做的好处就是降低锁的开销    </div><div class="line">  eg: 比如：我插入了一条记录<span class="number">10</span>，本身这个记录加上<span class="keyword">implicit</span> <span class="keyword">lock</span>，如果这时候有人再去更新这条<span class="number">10</span>的记录，那么就会自动转换成<span class="keyword">explicit</span> <span class="keyword">lock</span></div><div class="line"></div><div class="line">* 数据库怎么知道<span class="keyword">implicit</span> <span class="keyword">lock</span>的存在呢？如何实现锁的转化呢？</div><div class="line">  <span class="number">1.</span> 对于聚集索引上面的记录，有db_trx_id,如果该事务id在活跃事务列表中，那么说明还没有提交，那么<span class="keyword">implicit</span>则存在  </div><div class="line">  <span class="number">2.</span> 对于非聚集索引：由于上面没有事务id，那么可以通过上面的主键id，再通过主键id上面的事务id来判断，不过算法要非常复杂，这里不做介绍</div></pre></td></tr></table></figure>
+
+<ul>
+<li>metadata lock</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 这是Server 层实现的锁，跟引擎层无关  </div><div class="line"><span class="number">2.</span> 当你执行<span class="keyword">select</span>的时候，如果这时候有ddl语句，那么ddl会被阻塞，因为<span class="keyword">select</span>语句拥有metadata <span class="keyword">lock</span>，防止元数据被改掉</div></pre></td></tr></table></figure>
+
+<ul>
+<li>锁迁移</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>锁迁移，又名锁继承  </div><div class="line"><span class="bullet">2. </span>什么是锁迁移呢？</div><div class="line"><span class="code">    a) 满足的场景条件：</span></div><div class="line"><span class="code">    b）我锁住的记录是一条已经被标记为删除的记录，但是还没有被puge  </span></div><div class="line"><span class="code">    c) 然后这条被标记为删除的记录，被purge掉了  </span></div><div class="line"><span class="code">    d) 那么上面的锁自然而然就继承给了下一条记录，我们称之为锁迁移</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>锁升级</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">锁升级指的是：一条全表更新的语句，那么数据库就会对所有记录进行加锁，那么可能造成锁开销非常大，可能升级为页锁，或者表锁。</div><div class="line">MySQL 没有锁升级</div></pre></td></tr></table></figure>
+
+<ul>
+<li>锁分裂</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>InnoDB的实现加锁，其实是在页上面做的，没有办法直接对记录加锁  </div><div class="line"><span class="bullet">2. </span>一个页被读取到内存，然后会产生锁对象，锁对象里面会有位图信息来表示哪些heapno被锁住，heapno表示的就是堆的序列号，可以认为就是定位到某一条记录  </div><div class="line"><span class="bullet">3. </span>大家又知道，由于B+tree的存在，当insert的时候，会产生页的分裂动作  </div><div class="line"><span class="bullet">4. </span>如果页分裂了，那么原来对页上面的加锁位图信息也就变了，为了保持这种变化和锁信息，锁对象也会分裂，由于继续维护分裂后页的锁信息</div></pre></td></tr></table></figure>
+
+<ul>
+<li>锁合并</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">锁的合并，和锁的分裂，其实原理是一样的，参考上面即可。  </div><div class="line"></div><div class="line">至于锁合并和锁分裂的算法，比较复杂，这里就不介绍了</div></pre></td></tr></table></figure>
+
+<ul>
+<li>latch vs lock</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">* latch</div><div class="line">  mutex</div><div class="line">  rw-<span class="keyword">lock</span></div><div class="line">  临界资源用完释放</div><div class="line">  不支持死锁检测</div><div class="line">  以上是应用程序中的锁，不是数据库的锁</div><div class="line"></div><div class="line">* <span class="keyword">lock</span></div><div class="line">  当事务结束后，释放</div><div class="line">  支持死锁检测</div><div class="line">  数据库中的锁</div></pre></td></tr></table></figure>
+
+<h2 id="锁的兼容矩阵">锁的兼容矩阵</h2>
+<ul>
+<li>X vs S</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>兼容性</th>
+<th>X</th>
+<th>S</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr>
+<td>S</td>
+<td>N</td>
+<td>Y</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>IS,IX,S,X</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>兼容性</th>
+<th>IS</th>
+<th>IX</th>
+<th>S</th>
+<th>X</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>IS</td>
+<td>Y</td>
+<td>Y</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr>
+<td>IX</td>
+<td>Y</td>
+<td>Y</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr>
+<td>S</td>
+<td>Y</td>
+<td>N</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr>
+<td>X</td>
+<td>N</td>
+<td>N</td>
+<td>N</td>
+<td>N</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>AI,IS,IX,S,X</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>兼容性</th>
+<th>AI</th>
+<th>IS</th>
+<th>IX</th>
+<th>S</th>
+<th>X</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AI</td>
+<td>N</td>
+<td>Y</td>
+<td>Y</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr>
+<td>IS</td>
+<td>Y</td>
+<td>Y</td>
+<td>Y</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr>
+<td>IX</td>
+<td>Y</td>
+<td>Y</td>
+<td>Y</td>
+<td>N</td>
+<td>N</td>
+</tr>
+<tr>
+<td>S</td>
+<td>N</td>
+<td>Y</td>
+<td>N</td>
+<td>Y</td>
+<td>N</td>
+</tr>
+<tr>
+<td>X</td>
+<td>N</td>
+<td>N</td>
+<td>N</td>
+<td>N</td>
+<td>N</td>
+</tr>
+</tbody>
+</table>
+<h2 id="参考资料">参考资料</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. http<span class="variable">s:</span>//dev.mysql.<span class="keyword">com</span>/doc/refman/<span class="number">5.7</span>/<span class="keyword">en</span>/innodb-locking.html</div><div class="line"><span class="number">2</span>. MySQL技术内幕：InnoDB 存储引擎</div><div class="line"><span class="number">3</span>. MySQL内核：InnoDB 存储引擎</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/InnoDB-Lock/">InnoDB Lock</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/06/05/innodb_locks_1/" data-title="MySQL锁系列（一）之锁的种类和概念 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/04/06/omega_connection/"  title="omega监控系列之connection">
+ <strong>NEXT:</strong><br/> 
+ <span>omega监控系列之connection
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/06/05/innodb_locks_1/" data-title="MySQL锁系列（一）之锁的种类和概念" data-url="https://Keithlan.github.io/2017/06/05/innodb_locks_1/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#锁的种类&概念"><span class="toc-number">2.</span> <span class="toc-text">锁的种类&概念</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#锁的兼容矩阵"><span class="toc-number">3.</span> <span class="toc-text">锁的兼容矩阵</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#参考资料"><span class="toc-number">4.</span> <span class="toc-text">参考资料</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>22</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>21</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>20</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
