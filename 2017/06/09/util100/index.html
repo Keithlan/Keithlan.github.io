@@ -1,0 +1,489 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>util 100% 怪异问题分析 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="环境
+121. DB: Server version: 5.7.18-log MySQL Community Server (GPL)  2. OS: CentOS release 6.6 (Final)
+
+问题描述
+
+问题要害  
+
+121. 不定时的磁盘util 100%  2. 每次持续时间就">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/06/09/util100/" title="util 100% 怪异问题分析" itemprop="url">util 100% 怪异问题分析</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-06-09T07:32:24.000Z" itemprop="datePublished">Jun 9 2017</time>
+    Updated:<time datetime="2017-06-09T08:08:20.000Z" itemprop="dateModified">Jun 9 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#问题描述"><span class="toc-number">2.</span> <span class="toc-text">问题描述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#问题分析"><span class="toc-number">3.</span> <span class="toc-text">问题分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结&改进"><span class="toc-number">4.</span> <span class="toc-text">总结&改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">5.</span> <span class="toc-text">最后</span></a></li></ol>
+		</div>
+		
+		<h2 id="环境">环境</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> DB: <span class="built_in">Server</span> version: <span class="number">5.7</span><span class="number">.18</span>-<span class="built_in">log</span> MySQL Community <span class="built_in">Server</span> (GPL)  </div><div class="line"><span class="number">2.</span> OS: CentOS release <span class="number">6.6</span> (Final)</div></pre></td></tr></table></figure>
+
+<h2 id="问题描述">问题描述</h2>
+<ul>
+<li>问题要害  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>不定时的磁盘util 100%  </div><div class="line"><span class="bullet">2. </span>每次持续时间就几秒钟</div></pre></td></tr></table></figure>
+
+<h2 id="问题分析">问题分析</h2>
+<ul>
+<li>第一反应</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 看到这个问题，我的第一反应就是去看看mysql slow <span class="keyword">query</span>  </div><div class="line"><span class="number">2</span>. 结果通过omega系统里面的智能slow <span class="keyword">query</span>系统得到的答案是：无明显slow</div></pre></td></tr></table></figure>
+
+
+
+<p>问题到这，基本上根据经验已经无法快速得到答案，然后继续思考  </p>
+<ul>
+<li>看各项监控  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>cpu 正常，历史曲线一致  </div><div class="line"><span class="bullet">2. </span>load 正常， 历史曲线一致  </div><div class="line"><span class="bullet">3. </span>InnoDB 核心监控正常，历史曲线一致  </div><div class="line"><span class="bullet">4. </span>网络正常，历史曲线一致</div></pre></td></tr></table></figure>
+
+<p>看下来都很正常，唯独磁盘io不正常  </p>
+<ul>
+<li>既然是io压力，那么很自然的查看iostat和iotop  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> iostat </div><div class="line"></div><div class="line">经过一段时间的iostat（因为要问题复现必须要等待，因为通过监控得到，问题时间不规律）发现，磁盘<span class="built_in">io</span> <span class="number">100</span>%  </div><div class="line">的时候，基本上wio=<span class="number">2000</span>，wMB/s <span class="number">800</span>M左右  </div><div class="line"></div><div class="line"><span class="number">2.</span> iotop</div><div class="line"></div><div class="line">经过一段时间的观察，唯独了一个系统进程[flush-<span class="number">8</span>:<span class="number">16</span>] <span class="built_in">io</span>占用特别高</div></pre></td></tr></table></figure>
+
+<p>到这里，是不是就基本锁定问题了呢？<br>去查了下，[flush-8:16] 就是OS内核再刷新数据<br>到这一步，基本上快接近真相了，但是剧情并没有按照想象的发展，那么问题来了，这个刷新是谁导致的呢？最后的凶手又是谁呢？</p>
+<ul>
+<li>回顾问题</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>基本确定是内核刷新数据导致，排除掉硬件故障  </div><div class="line"><span class="bullet">2. </span>是系统自己刷新？还是MySQL再刷新？  </div><div class="line"><span class="bullet">3. </span>io 100% 为什么以前没有发生这样的现象，唯独最近一周发生，这一周我们做了哪些改变  </div><div class="line"><span class="code">	a）MySQL 从5.6 升级到 5.7  </span></div><div class="line"><span class="code">    b）MySQL的参数从5.6，优化到 5.7，参数优化的变量因子还是挺多的，没办法一一去掉后排查  </span></div><div class="line"><span class="code">    c）最近由于机器问题，切换了一次master</span></div></pre></td></tr></table></figure>
+
+<p>那就分析下是os自己的刷新，还是MySQL内核的刷新  </p>
+<ul>
+<li>分析下是否MySQL的脏页刷新导致</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> MySQL 刷新数据，io占用比较高的地方有哪些</div><div class="line">    a）binlog： binlog 并不在出问题的分区上，所以binlog 可以排除  </div><div class="line">    b）<span class="keyword">redo</span> <span class="keyword">log</span> ： </div><div class="line">				b<span class="number">.1</span>) <span class="keyword">redo</span> <span class="keyword">log</span> 是顺序写，checkpoint的age在<span class="number">800</span>M左右，大小上来看非常温和，但是要记住，这仅仅是age，并不是一次性要刷新这么多  </div><div class="line">				b<span class="number">.2</span>) <span class="keyword">redo</span> <span class="keyword">log</span> 是没有o_direct的，所以可能导致操作系统刷新数据  </div><div class="line">				b<span class="number">.3</span>) <span class="keyword">redo</span> <span class="keyword">log</span>的刷新条件和触发时机有一个是：每秒钟都刷新，每一次commit都刷新，所以更加可以排除掉<span class="keyword">redo</span>造成的问题，因为一个commit在一秒内不可能有这么大的日志量  </div><div class="line">    c）data <span class="keyword">file</span> ： </div><div class="line">        		c<span class="number">.1</span>) data <span class="keyword">file</span> 如果要刷新<span class="number">800</span>M，那至少要刷新好几万个page吧，如果要刷新那么多页，MySQL估计就已经hung住了  </div><div class="line">			    c<span class="number">.2</span>) data <span class="keyword">file</span> 我们设置的是： flush_method=O_Direct, 这表示InnoDB自己管理内存刷新  </div><div class="line">                c<span class="number">.2</span>) checkpoint的触发时机：当checkpoint_age达到<span class="number">75</span><span class="variable">%的</span><span class="keyword">redo</span> 总大小时触发,然而远远没有达到  </div><div class="line">				c<span class="number">.3</span>)  查看modified pages 的频率，并没有明显的异常</div><div class="line"></div><div class="line">所以，排除掉是MySQL的刷新问题</div></pre></td></tr></table></figure>
+
+<ul>
+<li>分析下是否系统产生的脏页导致的问题</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">while</span> <span class="literal">true</span>; <span class="keyword">do</span> cat /<span class="keyword">proc</span>/vmstat  |grep nr_dir; date; sleep <span class="number">1</span>; done</div><div class="line"></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">18</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">182832</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">19</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">494958</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">20</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">815964</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">21</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">1140783</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">22</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">1474413</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">23</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line">nr_dirty <span class="number">1382764</span></div><div class="line"><span class="type">Wed</span> <span class="type">Jun</span>  <span class="number">7</span> <span class="number">15</span>:<span class="number">59</span>:<span class="number">24</span> <span class="type">CST</span> <span class="number">2017</span></div><div class="line"></div><div class="line"></div><div class="line">当脏页非常多的时候，过几秒，io <span class="number">100</span>%就必现</div></pre></td></tr></table></figure>
+
+<p>基本可以断定，是操作系统的刷新导致的问题  </p>
+<ul>
+<li>再次iotop</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>） 这一次的iotop，由于目不转睛的人肉扫描，终于发现另一个可疑进程  cp  xx.<span class="built_in">err</span> xx.<span class="built_in">err</span>.bak</div><div class="line"><span class="number">2</span>)  然后查看了下这个xx.<span class="built_in">err</span>文件，竟然有<span class="number">8</span>G的大小  </div><div class="line"><span class="number">3</span>） 然后问题终于已经定位成功</div></pre></td></tr></table></figure>
+
+
+
+
+<h2 id="总结&amp;改进">总结&amp;改进</h2>
+<ul>
+<li>为什么MySQL error log 会这么大呢？  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="number">5.7</span>新增参数innodb <span class="keyword">print</span> dead locks=<span class="number">1</span>，这样可以打印出详细的死锁日志  </div><div class="line"><span class="number">2</span>) 然后线上一堆死锁  </div><div class="line"><span class="number">3</span>) 导致<span class="keyword">error</span> <span class="keyword">log</span>日志非常大  </div><div class="line"><span class="number">4</span>) 然后我们自己的监控回去定期cp <span class="keyword">error</span> <span class="keyword">log</span>  </div><div class="line"><span class="number">5</span>) 然后问题就发生了  </div><div class="line"></div><div class="line">至于为什么有那么的死锁信息，这个后面有MySQL锁的专题文章专门介绍  </div><div class="line"></div><div class="line">改进方案：</div><div class="line"></div><div class="line"><span class="number">1</span>）去掉这个参数  ，没必要打印出所有的死锁信息，当有死锁的时候，实时查看也可以的  </div><div class="line"><span class="number">2</span>）<span class="keyword">error</span> <span class="keyword">log</span>的日志监控  </div><div class="line"><span class="number">3</span>）cp的方式优化掉</div></pre></td></tr></table></figure>
+
+<ul>
+<li>为什么iotop 一开始没有发现到这个cp 进程呢？  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) 由于<span class="keyword">cp</span>的时间就几秒非常短，所以当我们看到的时候，已经是在flush 阶段了</div></pre></td></tr></table></figure>
+
+<ul>
+<li>有什么先进的工具可以直接定位到文件，哪个文件所占用的io最大呢？  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">1） pt-ioprofile  </div><div class="line"></div><div class="line">优点：可以分析出文件的io占比  </div><div class="line"></div><div class="line">缺点：</div><div class="line">	比较重，是用ptrace的方式来实现，可能会对mysql有影响  </div><div class="line">	貌似只会对MySQL的文件才监控</div></pre></td></tr></table></figure>
+
+<h2 id="最后">最后</h2>
+<ol>
+<li><p>问题的难点：问题出现时间短，无规律  </p>
+</li>
+<li><p>这个问题的解决，其实也非常简单，可是为什么没能一开始就找到答案呢，说明自己水平还是有限的，还需要多总结增加经验和不断学习  </p>
+</li>
+<li><p>这次的收获也非常多，经过这次的问题，分析问题的过程中对MySQL的体系结构又再次深入了解学习了下   </p>
+</li>
+<li><p>要把这种细小的问题分析透彻，是需要一定的坚持和固执的，因为就偶尔几秒钟的io100%，很可能不会引起大家的关注   </p>
+</li>
+<li><p>最后非常感谢姜承尧和宋武斌的帮助，才能够最终彻底发现这样的问题  </p>
+</li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/Error/">Error</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/06/09/util100/" data-title="util 100% 怪异问题分析 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/06/05/innodb_locks_show_engine/"  title="MySQL锁系列（二）之 锁解读">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL锁系列（二）之 锁解读
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/06/09/util100/" data-title="util 100% 怪异问题分析" data-url="https://Keithlan.github.io/2017/06/09/util100/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#环境"><span class="toc-number">1.</span> <span class="toc-text">环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#问题描述"><span class="toc-number">2.</span> <span class="toc-text">问题描述</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#问题分析"><span class="toc-number">3.</span> <span class="toc-text">问题分析</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结&改进"><span class="toc-number">4.</span> <span class="toc-text">总结&改进</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最后"><span class="toc-number">5.</span> <span class="toc-text">最后</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>24</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>21</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>2</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>20</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
