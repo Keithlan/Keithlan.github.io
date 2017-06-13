@@ -1,0 +1,462 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL锁系列（四）之 undo log | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="什么是undo
+121) redo 记录的是对页的重做日志，undo 记录的是对事务的逆向操作  2) undo 会产生redo，undo的产生也会伴随这redo的产生，因为重启恢复的时候，可以通过redo还原这些undo的操作,以达到回滚的目的
+
+undo有什么用
+121) 用于对事务的回滚  2">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/06/13/innodb_locks_undo/" title="MySQL锁系列（四）之 undo log" itemprop="url">MySQL锁系列（四）之 undo log</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-06-13T07:32:24.000Z" itemprop="datePublished">Jun 13 2017</time>
+    Updated:<time datetime="2017-06-13T08:23:33.000Z" itemprop="dateModified">Jun 13 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是undo"><span class="toc-number">1.</span> <span class="toc-text">什么是undo</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo有什么用"><span class="toc-number">2.</span> <span class="toc-text">undo有什么用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo的存储结构"><span class="toc-number">3.</span> <span class="toc-text">undo的存储结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo的格式"><span class="toc-number">4.</span> <span class="toc-text">undo的格式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo存放在哪里"><span class="toc-number">5.</span> <span class="toc-text">undo存放在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是purge"><span class="toc-number">6.</span> <span class="toc-text">什么是purge</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#purge后空间就释放了吗"><span class="toc-number">7.</span> <span class="toc-text">purge后空间就释放了吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DML的相关物理实现算法"><span class="toc-number">8.</span> <span class="toc-text">DML的相关物理实现算法</span></a></li></ol>
+		</div>
+		
+		<h2 id="什么是undo">什么是undo</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="keyword">redo</span> 记录的是对页的重做日志，<span class="keyword">undo</span> 记录的是对事务的逆向操作  </div><div class="line"><span class="number">2</span>) <span class="keyword">undo</span> 会产生<span class="keyword">redo</span>，<span class="keyword">undo</span>的产生也会伴随这<span class="keyword">redo</span>的产生，因为重启恢复的时候，可以通过<span class="keyword">redo</span>还原这些<span class="keyword">undo</span>的操作,以达到回滚的目的</div></pre></td></tr></table></figure>
+
+<h2 id="undo有什么用">undo有什么用</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1) 用于对事务的回滚  </div><div class="line">2）用于MVCC</div></pre></td></tr></table></figure>
+
+<h2 id="undo的存储结构">undo的存储结构</h2>
+<ul>
+<li>rollback segment </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>在MySQL5.1的年代，一个MySQL实例，就只有一个rollback segment</div><div class="line"><span class="bullet">* </span>在MySQL5.1+ 的年代，一个MySQL实例里面，可以有128个rollback segment</div></pre></td></tr></table></figure>
+
+<ul>
+<li>undo segment </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">* 一个segment 有 <span class="number">1024</span> 个 <span class="keyword">undo</span> slot，一个<span class="keyword">undo</span> slot 对应一个<span class="keyword">undo</span> <span class="built_in">log</span>  </div><div class="line">* 一个事务(dml)对应一个<span class="keyword">undo</span> <span class="built_in">log</span></div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>总结</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">据此推断：</div><div class="line"></div><div class="line">1) 5.1 最多能够承载的并发事务（dml），1 <span class="keyword">*</span> 1024 = 1024   </div><div class="line">2）5.1+ 最多能够承载的并发事务（dml），128 <span class="keyword">*</span> 1024 = 10w左右    </div><div class="line"></div><div class="line">从此可以看出，5.1 之后的版本支持的并发写入事务数更多，性能更好</div></pre></td></tr></table></figure>
+
+<h2 id="undo的格式">undo的格式</h2>
+<ul>
+<li>insert_undo</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="built_in">insert</span>操作产生的<span class="keyword">undo</span>  </div><div class="line"><span class="number">2</span>）为什么要单独出来，因为<span class="built_in">insert</span>的<span class="keyword">undo</span>可以立马释放(不需要purge)，不需要判断是否有其他事务引用，本来<span class="built_in">insert</span>的事务也没有任何事务可以看见它嘛</div></pre></td></tr></table></figure>
+
+<ul>
+<li>update_undo</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>）<span class="built_in">delete</span> 或者 <span class="keyword">update</span> 操作产生的<span class="keyword">undo</span>日志  </div><div class="line"><span class="number">2</span>）判断<span class="keyword">undo</span>是否可以被删除，必须看这个<span class="keyword">undo</span>上面是否被其他事务所引用  </div><div class="line"><span class="number">3</span>) 如果没有任何事务引用，那么可以由后台线程purge掉这个<span class="keyword">undo</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>如何判断undo日志是否有其他事务引用呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 每一个undo <span class="command">log</span>中都有一个DB_trx_id , 这个<span class="property">id</span>记录的是该undo最近一次被更新的事务<span class="property">id</span>  </div><div class="line"><span class="number">2.</span> 如果这个<span class="property">id</span> 不在readview(活跃事务列表) 里面，就可以认为没事务引用，即可删除？</div></pre></td></tr></table></figure>
+
+<h2 id="undo存放在哪里">undo存放在哪里</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="number">5.7</span>之前的版本，<span class="keyword">undo</span>都是存放在ibdata，也就是所谓的共享表空间里面的  </div><div class="line"><span class="number">2</span>）<span class="number">5.7</span>以及之后的版本，可以配置存放在单独的<span class="keyword">undo</span>表空间中</div></pre></td></tr></table></figure>
+
+<h2 id="什么是purge">什么是purge</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="built_in">delete</span>语句操作的后，只会对其进行<span class="built_in">delete</span> <span class="keyword">mark</span>，这些被标记为删除的记录只能通过purge来进行物理的删除，但是并不回收空间 </div><div class="line"><span class="number">2</span>）<span class="keyword">undo</span> <span class="built_in">log</span>，如果<span class="keyword">undo</span> 没有任何事务再引用，那么也只能通过purge线程来进行物理的删除，但是并不回收空间</div></pre></td></tr></table></figure>
+
+<h2 id="purge后空间就释放了吗">purge后空间就释放了吗</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="keyword">undo</span> page里面可以存放多个<span class="keyword">undo</span> <span class="built_in">log</span>日志  </div><div class="line"><span class="number">2</span>）只有当<span class="keyword">undo</span> page里面的所有<span class="keyword">undo</span> <span class="built_in">log</span>日志都被purge掉之后，这个页的空间才可能被释放掉，否则这些<span class="keyword">undo</span> page可以被重用</div></pre></td></tr></table></figure>
+
+<h2 id="DML的相关物理实现算法">DML的相关物理实现算法</h2>
+<ul>
+<li>主键索引</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 对于<span class="built_in">delete</span>   --需要<span class="keyword">undo</span>绑定该记录才能进行回滚，所以只能打上标记，否则<span class="keyword">undo</span>指向哪里呢  </div><div class="line"></div><div class="line">	<span class="built_in">delete</span> <span class="keyword">mark</span>  </div><div class="line"></div><div class="line"><span class="number">2</span>. 对于<span class="keyword">update</span>  --原记录可以物理删除，因为可以在新插入进来的地方进行<span class="keyword">undo</span>绑定  </div><div class="line"></div><div class="line">	* 如果不能原地更新： <span class="built_in">delete</span>(注意：这里是直接<span class="built_in">delete</span>,而不是<span class="built_in">delete</span> <span class="keyword">mark</span>)  + <span class="built_in">insert</span> </div><div class="line">	* 如果可以原地更新，那么直接<span class="keyword">update</span>就好</div></pre></td></tr></table></figure>
+
+<ul>
+<li>二级索引</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 对于<span class="built_in">delete</span>  --不能直接被物理删除，因为二级索引没有<span class="keyword">undo</span>，只能通过打标记，然后回滚。否则如果被物理删除，则无法回滚</div><div class="line"></div><div class="line">	<span class="built_in">delete</span> <span class="keyword">mark</span>    </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">2</span>. 对于<span class="keyword">update</span>  --不能直接被物理删除，因为二级索引没有<span class="keyword">undo</span>，只能通过打标记，然后回滚。否则如果被物理删除，则无法回滚</div><div class="line"></div><div class="line">	<span class="built_in">delete</span> <span class="keyword">mark</span> + <span class="built_in">insert</span></div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/InnoDB-Lock/">InnoDB Lock</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/06/13/innodb_locks_undo/" data-title="MySQL锁系列（四）之 undo log | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/06/12/innodb_locks_redo/"  title="MySQL锁系列（三）之 redo log">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL锁系列（三）之 redo log
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/06/13/innodb_locks_undo/" data-title="MySQL锁系列（四）之 undo log" data-url="https://Keithlan.github.io/2017/06/13/innodb_locks_undo/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是undo"><span class="toc-number">1.</span> <span class="toc-text">什么是undo</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo有什么用"><span class="toc-number">2.</span> <span class="toc-text">undo有什么用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo的存储结构"><span class="toc-number">3.</span> <span class="toc-text">undo的存储结构</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo的格式"><span class="toc-number">4.</span> <span class="toc-text">undo的格式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#undo存放在哪里"><span class="toc-number">5.</span> <span class="toc-text">undo存放在哪里</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#什么是purge"><span class="toc-number">6.</span> <span class="toc-text">什么是purge</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#purge后空间就释放了吗"><span class="toc-number">7.</span> <span class="toc-text">purge后空间就释放了吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DML的相关物理实现算法"><span class="toc-number">8.</span> <span class="toc-text">DML的相关物理实现算法</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>26</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>21</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>4</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>20</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
