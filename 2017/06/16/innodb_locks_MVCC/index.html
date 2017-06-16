@@ -4,16 +4,12 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>Focus on MySQL,Focus on Focus</title>
+    <title>MySQL锁系列（六）之 MVCC | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="MySQL锁系列（六）之 MVCC
-
-Multi Version Concurrency Control  
-
-agenda
+    <meta name="description" content="agenda
 
 我们能学到什么    
 
@@ -29,7 +25,15 @@ MVCC的实现原理
 
 名词解释
 
-12英文名：Multi Version">
+12英文名：Multi Version Concurrency Control中文名：多版本一致性控制
+
+
+
+
+应用场景
+
+
+大家有没有这样的疑问，线">
     
     
     
@@ -89,15 +93,15 @@ MVCC的实现原理
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2017/06/16/innodb_locks_MVCC/" title="" itemprop="url"></a>
+      <a href="/2017/06/16/innodb_locks_MVCC/" title="MySQL锁系列（六）之 MVCC" itemprop="url">MySQL锁系列（六）之 MVCC</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2017-06-16T09:57:03.000Z" itemprop="datePublished">Jun 16 2017</time>
-    Updated:<time datetime="2017-06-16T09:57:03.000Z" itemprop="dateModified">Jun 16 2017</time>
+    <time datetime="2017-06-16T07:32:24.000Z" itemprop="datePublished">Jun 16 2017</time>
+    Updated:<time datetime="2017-06-16T09:58:23.000Z" itemprop="dateModified">Jun 16 2017</time>
     
   </p>
 </header>
@@ -106,14 +110,10 @@ MVCC的实现原理
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL锁系列（六）之_MVCC"><span class="toc-number">1.</span> <span class="toc-text">MySQL锁系列（六）之 MVCC</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">1.2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">1.3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">1.4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">1.4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">1.4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">1.4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">1.4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol>
 		</div>
 		
-		<h1 id="MySQL锁系列（六）之_MVCC">MySQL锁系列（六）之 MVCC</h1>
-<blockquote>
-<p>Multi Version Concurrency Control  </p>
-</blockquote>
-<h2 id="agenda">agenda</h2>
+		<h2 id="agenda">agenda</h2>
 <blockquote>
 <p>我们能学到什么    </p>
 </blockquote>
@@ -171,12 +171,22 @@ MVCC的实现原理
 	</div>
 		<footer class="article-footer clearfix">
 
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/InnoDB-Lock/">InnoDB Lock</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/" data-title="MySQL锁系列（六）之 MVCC | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -199,7 +209,7 @@ MVCC的实现原理
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2017/06/16/innodb_locks_MVCC/" data-title="" data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/"></div>
+<div class="ds-thread" data-thread-key="/2017/06/16/innodb_locks_MVCC/" data-title="MySQL锁系列（六）之 MVCC" data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -220,7 +230,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL锁系列（六）之_MVCC"><span class="toc-number">1.</span> <span class="toc-text">MySQL锁系列（六）之 MVCC</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">1.2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">1.3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">1.4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">1.4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">1.4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">1.4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">1.4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
@@ -257,7 +267,7 @@ var duoshuoQuery = {short_name:keithlan};
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>27</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>28</sup></a></li>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
@@ -281,7 +291,7 @@ var duoshuoQuery = {short_name:keithlan};
 		
 			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
 		
-			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>5</sup></a></li>
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>6</sup></a></li>
 		
 			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
 		
