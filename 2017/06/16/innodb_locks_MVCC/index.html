@@ -4,22 +4,32 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>我们的分享：上海站1 | Focus on MySQL,Focus on Focus</title>
+    <title>Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="简介
+    <meta name="description" content="MySQL锁系列（六）之 MVCC
 
-分享主题：对DBA的一些思考分享地点：上海市东方路1217号陆家嘴金融服务广场分享时间：2015-10-13 15:00:00分享嘉宾：兰春
+Multi Version Concurrency Control  
 
-DBA的认知
+agenda
 
-开发：DBA整天都在做啥？除了执行下SQL，其他也没啥事吧
+我们能学到什么    
 
-DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦屁股，救火
 
-">
+什么是MVCC
+
+MVCC能解决什么问题
+
+MVCC的实现原理  
+
+
+一、什么是MVCC
+
+名词解释
+
+12英文名：Multi Version">
     
     
     
@@ -79,15 +89,15 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/10/11/DBA_think_1/" title="我们的分享：上海站1" itemprop="url">我们的分享：上海站1</a>
+      <a href="/2017/06/16/innodb_locks_MVCC/" title="" itemprop="url"></a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-10-11T07:32:24.000Z" itemprop="datePublished">Oct 11 2015</time>
-    Updated:<time datetime="2015-10-12T07:51:11.000Z" itemprop="dateModified">Oct 12 2015</time>
+    <time datetime="2017-06-16T09:57:03.000Z" itemprop="datePublished">Jun 16 2017</time>
+    Updated:<time datetime="2017-06-16T09:57:03.000Z" itemprop="dateModified">Jun 16 2017</time>
     
   </p>
 </header>
@@ -96,70 +106,77 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">2.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">3.</span> <span class="toc-text">DBA的价值</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">4.</span> <span class="toc-text">DBA的未来</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL锁系列（六）之_MVCC"><span class="toc-number">1.</span> <span class="toc-text">MySQL锁系列（六）之 MVCC</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">1.2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">1.3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">1.4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">1.4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">1.4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">1.4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">1.4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol></li></ol>
 		</div>
 		
-		<h2 id="简介">简介</h2>
+		<h1 id="MySQL锁系列（六）之_MVCC">MySQL锁系列（六）之 MVCC</h1>
 <blockquote>
-<p>分享主题：对DBA的一些思考<br>分享地点：上海市东方路1217号陆家嘴金融服务广场<br>分享时间：2015-10-13 15:00:00<br>分享嘉宾：兰春</p>
+<p>Multi Version Concurrency Control  </p>
 </blockquote>
-<h2 id="DBA的认知">DBA的认知</h2>
+<h2 id="agenda">agenda</h2>
+<blockquote>
+<p>我们能学到什么    </p>
+</blockquote>
 <ul>
-<li><p><strong>开发：DBA整天都在做啥？除了执行下SQL，其他也没啥事吧</strong></p>
+<li><p>什么是MVCC</p>
 </li>
-<li><p><strong>DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦屁股，救火</strong></p>
+<li><p>MVCC能解决什么问题</p>
+</li>
+<li><p>MVCC的实现原理  </p>
 </li>
 </ul>
-<h2 id="DBA的价值">DBA的价值</h2>
+<h2 id="一、什么是MVCC">一、什么是MVCC</h2>
 <ul>
-<li><p><strong>稳定</strong></p>
+<li>名词解释</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">英文名：Multi <span class="keyword">Version</span> Concurrency <span class="keyword">Control</span></div><div class="line">中文名：多版本一致性控制</div></pre></td></tr></table></figure>
+
+
+
 <ul>
-<li>卓越：避免故障发生，防火比救火重要</li>
-<li>优雅：保证服务不受影响，胸有成足</li>
-<li>高效：快速修复，急中生智</li>
+<li>应用场景</li>
 </ul>
-</li>
-<li><p><strong>性能</strong></p>
+<ol>
+<li>大家有没有这样的疑问，线上的表一直被更新，可是为什么还可以去select呢?     </li>
+<li>我的更新事务还没有提交，为什么另外一个事务可以读到数据呢？  </li>
+<li>我的更新事务已经提交，另一个事务又是怎么选择数据返回给用户呢？  </li>
+</ol>
+<h2 id="二、MVCC能解决什么问题">二、MVCC能解决什么问题</h2>
 <ul>
-<li>高性能</li>
-<li>高扩展</li>
+<li>解决的问题</li>
 </ul>
-</li>
-<li><p><strong>服务</strong></p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>snapshot查询不会加锁，读和读，读和写之间互不影响，提高数据库的并发能力  </div><div class="line"><span class="bullet">2. </span>隔离级别的实现</div></pre></td></tr></table></figure>
+
+<h2 id="三、MVCC的实现原理">三、MVCC的实现原理</h2>
+<h3 id="3-1_row的记录格式">3.1 row的记录格式</h3>
+<blockquote>
+<p>记住这个格式，很重要  </p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/innodb_locks_mvcc_1.jpg" alt="row_format" title="row_format"></p>
+<h3 id="3-2_row_和_undo">3.2 row 和 undo</h3>
+<p><img src="/image/mysql_innodb_arch/innodb_locks_MVCC_2.jpg" alt="innodb_locks_MVCC_2" title="innodb_locks_MVCC_2"></p>
+<h3 id="3-3_readview">3.3 readview</h3>
+<p><img src="/image/mysql_innodb_arch/innodb_locks_MVCC_3.jpg" alt="innodb_locks_MVCC_3" title="innodb_locks_MVCC_3"></p>
+<h3 id="3-4_可见性判断">3.4 可见性判断</h3>
 <ul>
-<li>如何让老板幸福</li>
-<li>如何让开发幸福</li>
-<li>如何让自己幸福</li>
+<li>实现原理</li>
 </ul>
-</li>
-</ul>
-<h2 id="DBA的未来">DBA的未来</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">readview = 活跃事务列表</div><div class="line">readview（RR）： 事务开始时产生readview</div><div class="line">readview（RC）： 每条语句都会产生readview</div><div class="line"></div><div class="line">如何判断可见性：</div><div class="line"></div><div class="line">假设：活跃事务为（<span class="number">3</span>，<span class="number">4</span>，<span class="number">5</span>，<span class="number">6</span>）=readview，当前事务<span class="property">id</span>号为<span class="number">10</span>，做了修改这条记录 ， 那么这条记录上的db_trx_id=<span class="number">10</span></div><div class="line"></div><div class="line">流程如下：</div><div class="line"></div><div class="line">当前事务(trxid=<span class="number">10</span>)拿着刚刚产生的readview =（<span class="number">3</span>[active_trx_min]，<span class="number">4</span>，<span class="number">5</span>，<span class="number">6</span>【active_trx_max】）去查看记录，</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">1.</span>如果row上的db_trx_id <span class="keyword">in</span> (活跃事务列表),那么说明此记录还未提交，这条记录对于此事务不可见.需要调用上一个undo，用同样的判断标准过滤，循环</div><div class="line"><span class="number">2.</span>如果row上的db_trx_id &lt; 活跃事务列表最小值，那么说明已经提交，这条记录对于此事务可见</div><div class="line"><span class="number">3.</span>如果row上的db_trx_id &gt; 活跃事务列表最大值, 那么说明该记录在当前事务之后提交，这条记录对于此事务不可见.需要调用上一个undo，用同样的判断标准过滤，循环</div><div class="line"></div><div class="line"></div><div class="line">这里有个问题： 当前事务<span class="property">id</span>更新后，会锁住该记录并更新db_trx_id=<span class="number">10</span>，那么该记录上的trx_id肯定是&lt;=当前事务<span class="property">id</span>（<span class="number">10</span>）的，那既然这样，怎么会产生db_trx_id &gt; 活跃事务列表最大值呢？</div><div class="line"></div><div class="line">原因：因为当前事务不仅仅是读取这条被锁住的记录，可能还需要读取其他记录（这些记录当然可能被其他更靠后的事务<span class="property">id</span>更新了），那么这时候其他记录上的db_trx_id&gt;=<span class="number">10</span>就很正常不过了。</div><div class="line"></div><div class="line">创建readview的位置，不是begin的那个位置，而是begin后面的SQL语句的位置。（换句话说：就是begin的时候不会分配事务<span class="property">id</span>，只有执行了sql之后才会分配事务<span class="property">id</span>）</div><div class="line">如果你想在开启<span class="keyword">transaction</span>的时候就产生readview，分配事务<span class="property">id</span>，那么可以这样操作：start <span class="keyword">transaction</span> <span class="keyword">with</span> consistent snapshot</div><div class="line"></div><div class="line">percona 中可以有这样的信息，官方没有: Trx <span class="command">read</span> view will <span class="keyword">not</span> see trx <span class="keyword">with</span> <span class="property">id</span> &gt;= <span class="number">413</span>  , sees &lt; <span class="number">411</span></div></pre></td></tr></table></figure>
+
 <ul>
-<li><p><strong>危机感</strong></p>
-</li>
-<li><p><strong>拨开云雾</strong></p>
-</li>
+<li>案例剖析</li>
 </ul>
+<p><img src="/image/mysql_innodb_arch/innodb_locks_MVCC_4.jpg" alt="innodb_locks_MVCC_4" title="innodb_locks_MVCC_4"></p>
   
 	</div>
 		<footer class="article-footer clearfix">
 
-  <div class="article-tags">
-  
-  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
-  </div>
-
-
-<div class="article-categories">
-  <span></span>
-  <a class="article-category-link" href="/categories/分享/">分享</a>
-</div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/10/11/DBA_think_1/" data-title="我们的分享：上海站1 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/" data-title="Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -168,19 +185,11 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/10/14/DBA_life/" title="我们的分享：上海站1 下">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  我们的分享：上海站1 下</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/08/18/how_to_backup_recovery/"  title="MySQL 备份与恢复">
+<a href="/2017/06/14/innodb_locks_mvcc_isolation/"  title="MySQL锁系列（五）之 隔离级别">
  <strong>NEXT:</strong><br/> 
- <span>MySQL 备份与恢复
+ <span>MySQL锁系列（五）之 隔离级别
 </span>
 </a>
 </div>
@@ -190,7 +199,7 @@ DBA：一天到晚忙死了，但是也不知道忙了个啥，整天就在擦�
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/10/11/DBA_think_1/" data-title="我们的分享：上海站1" data-url="https://Keithlan.github.io/2015/10/11/DBA_think_1/"></div>
+<div class="ds-thread" data-thread-key="/2017/06/16/innodb_locks_MVCC/" data-title="" data-url="https://Keithlan.github.io/2017/06/16/innodb_locks_MVCC/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -211,7 +220,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#简介"><span class="toc-number">1.</span> <span class="toc-text">简介</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的认知"><span class="toc-number">2.</span> <span class="toc-text">DBA的认知</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的价值"><span class="toc-number">3.</span> <span class="toc-text">DBA的价值</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#DBA的未来"><span class="toc-number">4.</span> <span class="toc-text">DBA的未来</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#MySQL锁系列（六）之_MVCC"><span class="toc-number">1.</span> <span class="toc-text">MySQL锁系列（六）之 MVCC</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#agenda"><span class="toc-number">1.1.</span> <span class="toc-text">agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是MVCC"><span class="toc-number">1.2.</span> <span class="toc-text">一、什么是MVCC</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、MVCC能解决什么问题"><span class="toc-number">1.3.</span> <span class="toc-text">二、MVCC能解决什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MVCC的实现原理"><span class="toc-number">1.4.</span> <span class="toc-text">三、MVCC的实现原理</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_row的记录格式"><span class="toc-number">1.4.1.</span> <span class="toc-text">3.1 row的记录格式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_row_和_undo"><span class="toc-number">1.4.2.</span> <span class="toc-text">3.2 row 和 undo</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_readview"><span class="toc-number">1.4.3.</span> <span class="toc-text">3.3 readview</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_可见性判断"><span class="toc-number">1.4.4.</span> <span class="toc-text">3.4 可见性判断</span></a></li></ol></li></ol></li></ol>
   </div>
 
 <div id="asidepart">
