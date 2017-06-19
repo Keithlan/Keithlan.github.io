@@ -81,7 +81,7 @@ undo有什么用
     </p>
   <p class="article-time">
     <time datetime="2017-06-13T07:32:24.000Z" itemprop="datePublished">Jun 13 2017</time>
-    Updated:<time datetime="2017-06-13T08:23:33.000Z" itemprop="dateModified">Jun 13 2017</time>
+    Updated:<time datetime="2017-06-19T08:00:18.000Z" itemprop="dateModified">Jun 19 2017</time>
     
   </p>
 </header>
@@ -134,7 +134,7 @@ undo有什么用
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 每一个undo <span class="command">log</span>中都有一个DB_trx_id , 这个<span class="property">id</span>记录的是该undo最近一次被更新的事务<span class="property">id</span>  </div><div class="line"><span class="number">2.</span> 如果这个<span class="property">id</span> 不在readview(活跃事务列表) 里面，就可以认为没事务引用，即可删除？</div></pre></td></tr></table></figure>
 
 <h2 id="undo存放在哪里">undo存放在哪里</h2>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="number">5.7</span>之前的版本，<span class="keyword">undo</span>都是存放在ibdata，也就是所谓的共享表空间里面的  </div><div class="line"><span class="number">2</span>）<span class="number">5.7</span>以及之后的版本，可以配置存放在单独的<span class="keyword">undo</span>表空间中</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="number">5.6</span>之前的版本，<span class="keyword">undo</span>都是存放在ibdata，也就是所谓的共享表空间里面的  </div><div class="line"><span class="number">2</span>）<span class="number">5.6</span>以及之后的版本，可以配置存放在单独的<span class="keyword">undo</span>表空间中</div></pre></td></tr></table></figure>
 
 <h2 id="什么是purge">什么是purge</h2>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) <span class="built_in">delete</span>语句操作的后，只会对其进行<span class="built_in">delete</span> <span class="keyword">mark</span>，这些被标记为删除的记录只能通过purge来进行物理的删除，但是并不回收空间 </div><div class="line"><span class="number">2</span>）<span class="keyword">undo</span> <span class="built_in">log</span>，如果<span class="keyword">undo</span> 没有任何事务再引用，那么也只能通过purge线程来进行物理的删除，但是并不回收空间</div></pre></td></tr></table></figure>
