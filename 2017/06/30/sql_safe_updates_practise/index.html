@@ -1,0 +1,527 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维之神奇的参数(终结篇) | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、主要内容
+
+
+生产前的测试方案
+
+
+
+生产环境如何平滑实施
+
+
+
+生产坏境中遇到哪些困难  
+
+
+
+我们的解决方案    
+
+
+
+价值与意义  
+
+
+
+二、背景
+这个项目的起源，来源于生产环境中的N次误删数据，所以才有他的姊妹篇文章，一个神奇的参数前传  
+三、生产前的测试方案
+3.1 why
+">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/06/30/sql_safe_updates_practise/" title="MySQL运维之神奇的参数(终结篇)" itemprop="url">MySQL运维之神奇的参数(终结篇)</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-06-30T12:00:00.000Z" itemprop="datePublished">Jun 30 2017</time>
+    Updated:<time datetime="2017-06-30T12:19:16.000Z" itemprop="dateModified">Jun 30 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、主要内容"><span class="toc-number">1.</span> <span class="toc-text">一、主要内容</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、背景"><span class="toc-number">2.</span> <span class="toc-text">二、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、生产前的测试方案"><span class="toc-number">3.</span> <span class="toc-text">三、生产前的测试方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_why"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 why</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_如何测试"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 如何测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_哪些语句会触发sql_safe_update报错"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 哪些语句会触发sql_safe_update报错</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、生产环境如何平滑实施"><span class="toc-number">4.</span> <span class="toc-text">四、生产环境如何平滑实施</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、生产坏境中遇到哪些困难"><span class="toc-number">5.</span> <span class="toc-text">五、生产坏境中遇到哪些困难</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、我们的解决方案"><span class="toc-number">6.</span> <span class="toc-text">六、我们的解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#价值和意义"><span class="toc-number">7.</span> <span class="toc-text">价值和意义</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、主要内容">一、主要内容</h2>
+<ul>
+<li><ol>
+<li>生产前的测试方案</li>
+</ol>
+</li>
+<li><ol>
+<li>生产环境如何平滑实施</li>
+</ol>
+</li>
+<li><ol>
+<li>生产坏境中遇到哪些困难  </li>
+</ol>
+</li>
+<li><ol>
+<li>我们的解决方案    </li>
+</ol>
+</li>
+<li><ol>
+<li>价值与意义  </li>
+</ol>
+</li>
+</ul>
+<h2 id="二、背景">二、背景</h2>
+<p>这个项目的起源，来源于生产环境中的N次误删数据，所以才有他的姊妹篇文章，<a href="http://keithlan.github.io/2016/12/20/sql_safe_updates/" target="_blank" rel="external">一个神奇的参数前传</a>  </p>
+<h2 id="三、生产前的测试方案">三、生产前的测试方案</h2>
+<h3 id="3-1_why">3.1 why</h3>
+<ul>
+<li>为什么要做测试方案</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>大家都知道设置sql<span class="emphasis">_safe_</span>update=1 会拒绝掉很多你想不到的SQL，这样会导致业务出问题，服务中断，影响非常严重  </div><div class="line"><span class="bullet">2. </span>我们需要测试出哪些SQL语句会被拒绝？  </div><div class="line"><span class="bullet">3. </span>我们需要知道已经上线的SQL语句中，哪些会被拒绝？  </div><div class="line"></div><div class="line">总之，我们需要无缝升级，怎么样才能既加强安全防范，又不影响业务呢？  </div><div class="line">这就是我们的SQL防火墙系统的升级改造之路</div></pre></td></tr></table></figure>
+
+<h3 id="3-2_如何测试">3.2 如何测试</h3>
+<blockquote>
+<p>非常感谢DBA团队袁俊敏同学的细心测试  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">1. 根据官方文档的提示，以及之前碰壁的经验，我们详细的设计了各种SQL方案</div><div class="line">	a. 单键索引</div><div class="line">		a.1 <span class="operator"><span class="keyword">update</span>语句</span></div><div class="line">		a<span class="number">.2</span> <span class="keyword">delete</span>语句</div><div class="line">		a<span class="number">.3</span> <span class="keyword">replace</span> <span class="keyword">into</span>系列</div><div class="line">		a<span class="number">.4</span> 有<span class="keyword">limit</span></div><div class="line">		a<span class="number">.5</span> 无<span class="keyword">limit</span></div><div class="line">		a<span class="number">.6</span> 有<span class="keyword">where</span>条件</div><div class="line">		a<span class="number">.7</span> 无<span class="keyword">where</span>条件</div><div class="line">		a<span class="number">.8</span> 隐式类型字符转换</div><div class="line">		a<span class="number">.9</span> <span class="keyword">SQL</span>带有函数方法</div><div class="line">	b. 组合索引</div><div class="line">        b<span class="number">.1</span> <span class="keyword">update</span>语句</div><div class="line">        b<span class="number">.2</span> <span class="keyword">delete</span>语句</div><div class="line">        b<span class="number">.3</span> <span class="keyword">replace</span> <span class="keyword">into</span>系列</div><div class="line">        b<span class="number">.4</span> 有<span class="keyword">limit</span></div><div class="line">        b<span class="number">.5</span> 无<span class="keyword">limit</span>	</div><div class="line">		b<span class="number">.6</span> 有<span class="keyword">where</span>条件</div><div class="line">		b<span class="number">.7</span> 无<span class="keyword">where</span>条件</div><div class="line">		b<span class="number">.8</span> 隐式类型字符转换</div><div class="line">		b<span class="number">.9</span> <span class="keyword">SQL</span>带有函数方法</div><div class="line">	等等</div></pre></td></tr></table></figure>
+
+<h3 id="3-3_哪些语句会触发sql_safe_update报错">3.3 哪些语句会触发sql_safe_update报错</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1. 有where 条件且没有使用索引,且没有limit语句  <span class="comment">--触发</span></div><div class="line">2. 没有where 条件 ， 有limit，<span class="operator"><span class="keyword">delete</span>语句 <span class="comment">--触发</span></span></div><div class="line"><span class="number">3.</span> 没有<span class="keyword">where</span> 条件 ， 没有<span class="keyword">limit</span>， <span class="keyword">delete</span>+<span class="keyword">update</span>语句  <span class="comment">--触发</span></div><div class="line"></div><div class="line">总结： 没有使用索引的DML语句，都会被触发</div></pre></td></tr></table></figure>
+
+<h2 id="四、生产环境如何平滑实施">四、生产环境如何平滑实施</h2>
+<blockquote>
+<p>log_queries_not_using_indexes=on<br>long_query_time = 10000<br>log_queries_not_using_indexes 无长连接的概念,立即对所有链接生效    </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">通过<span class="variable">log_queries_not_using_indexes=</span>on + <span class="variable">long_query_time =</span> <span class="number">10000</span> 可以抓出所有我们需要的dml，解决掉这些sql，我们的目的就达到了</div></pre></td></tr></table></figure>
+
+<h2 id="五、生产坏境中遇到哪些困难">五、生产坏境中遇到哪些困难</h2>
+<blockquote>
+<p>这边说一个典型的坑  </p>
+</blockquote>
+<ul>
+<li>你们真的以为设置了log_queries_not_using_indexes就一定能够抓出我们需要的DML吗？  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>首先：log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes=on，的确是可以抓出所有没有使用索引的DML  </div><div class="line"><span class="bullet">2. </span>但是：再设置log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes之前，这个connection已经存在了，那么log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes对早已经存在的connection是不起作用的</div></pre></td></tr></table></figure>
+
+<ul>
+<li>故障一</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>master 由于对于长连接不生效，所以全表更新dml在master执行了，但是在slave却不能执行，导致主从同步失败</div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>故障二</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>master 由于对于长连接不生效，所以全表更新dml在master执行了，那么意味着，你以为可以保障MySQL安全，其实只是自欺欺人而已</div></pre></td></tr></table></figure>
+
+<h2 id="六、我们的解决方案">六、我们的解决方案</h2>
+<blockquote>
+<p>解决长连接问题</p>
+</blockquote>
+<ul>
+<li>删掉所有链接</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>有人说，那简单，我们直接全部删掉所有链接就好了。  </div><div class="line"><span class="code">	的确，全部删除，的确可以做到，但是是不是有点粗暴呢？</span></div><div class="line"></div><div class="line"><span class="bullet">2. </span>那就让业务方将所有长连接应用重启</div><div class="line"><span class="code">	这。。。业务方会很崩溃，也不可能停掉所有的长连接服务</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>只kill具有dml权限的长连接  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line">* 如何找到长连接</div><div class="line"></div><div class="line">1. 长连接的特点：长</div><div class="line">2. 那么MySQL里面的<span class="operator"><span class="keyword">show</span> <span class="keyword">processlist</span>有两个非常重要的属性</span></div><div class="line">	Id: <span class="keyword">session</span> id</div><div class="line">	<span class="keyword">Time</span>: command <span class="keyword">status</span> <span class="keyword">time</span></div><div class="line"><span class="number">3.</span> 误区</div><div class="line">	这里有大部分人会根据<span class="keyword">Time</span>来识别这个链接是不是长连接，那么他一定不理解<span class="keyword">time</span>的含义  </div><div class="line">	它并不是链接的时间长短，而是command某个状态的时间而已  </div><div class="line"></div><div class="line"><span class="number">4.</span> 大家已经猜到，最终的方案就是通过<span class="keyword">session</span> id来判断识别长连接</div><div class="line"></div><div class="line">	<span class="number">4.0</span> 先在<span class="keyword">master</span>上设置sql_safe_update=<span class="keyword">on</span></div><div class="line">	<span class="number">4.1</span> 然后假设<span class="number">10</span>:<span class="number">00</span> <span class="keyword">show</span> <span class="keyword">processlist</span>，记录下所有的id</div><div class="line">	<span class="number">4.2</span> 那么明天<span class="number">10</span>:<span class="number">00</span> <span class="keyword">show</span> <span class="keyword">processlist</span>，与上一次的id进行匹配，如果匹配中了，那么说明这个<span class="keyword">connection</span>已经存在一天，那么可以认为他是长连接了  </div><div class="line">	<span class="number">4.3</span> 判断这些id对应的用户权限，只读账号忽略  </div><div class="line">    <span class="number">4.4</span> <span class="keyword">kill</span>掉这些长连接即可（注意：repl，system <span class="keyword">user</span> 这些系统进程不要被误删掉了，否则哭都来不及）</div><div class="line">	<span class="number">4.5</span> 可以根据host:port告知业务方，一起配合重启和<span class="keyword">kill</span>之后的观察</div></pre></td></tr></table></figure>
+
+
+
+<h2 id="价值和意义">价值和意义</h2>
+<blockquote>
+<p>目前我们已经完成了N组DB集群的设置  </p>
+</blockquote>
+<p>这里有很多人有疑问：</p>
+<ol>
+<li>花这么大的代价，只是为了设置这样的一个参数，值得吗？  </li>
+<li>万一搞不好，弄出问题来，岂不是没事找事，给自己找罪受？  </li>
+<li>这样操作，开发会支持你吗？你们老大支持你吗？  </li>
+</ol>
+<p>我是这么理解的：</p>
+<ol>
+<li>刚开始的时候，的确难度非常大，后来我们经过无数次测试和技术方案演练，还是决定冒着枪林弹雨，只为以后的数据安全  </li>
+<li>一切以用户为中心，我们必须用我们专业的判断对用户负责   </li>
+</ol>
+<ul>
+<li>final：我将这件事看做： ‘功在当代，利在千秋’ 的一件事   </li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/06/30/sql_safe_updates_practise/" data-title="MySQL运维之神奇的参数(终结篇) | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/06/21/innodb_locks_algorithms/"  title="MySQL锁系列（七）之 锁算法详解">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL锁系列（七）之 锁算法详解
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/06/30/sql_safe_updates_practise/" data-title="MySQL运维之神奇的参数(终结篇)" data-url="https://Keithlan.github.io/2017/06/30/sql_safe_updates_practise/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、主要内容"><span class="toc-number">1.</span> <span class="toc-text">一、主要内容</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、背景"><span class="toc-number">2.</span> <span class="toc-text">二、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、生产前的测试方案"><span class="toc-number">3.</span> <span class="toc-text">三、生产前的测试方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_why"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 why</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_如何测试"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 如何测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_哪些语句会触发sql_safe_update报错"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 哪些语句会触发sql_safe_update报错</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、生产环境如何平滑实施"><span class="toc-number">4.</span> <span class="toc-text">四、生产环境如何平滑实施</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、生产坏境中遇到哪些困难"><span class="toc-number">5.</span> <span class="toc-text">五、生产坏境中遇到哪些困难</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、我们的解决方案"><span class="toc-number">6.</span> <span class="toc-text">六、我们的解决方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#价值和意义"><span class="toc-number">7.</span> <span class="toc-text">价值和意义</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>29</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>22</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>7</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>21</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
