@@ -104,7 +104,7 @@
     </p>
   <p class="article-time">
     <time datetime="2017-06-30T12:00:00.000Z" itemprop="datePublished">Jun 30 2017</time>
-    Updated:<time datetime="2017-06-30T12:19:16.000Z" itemprop="dateModified">Jun 30 2017</time>
+    Updated:<time datetime="2017-07-03T03:08:01.000Z" itemprop="dateModified">Jul 3 2017</time>
     
   </p>
 </header>
@@ -175,7 +175,7 @@
 <ul>
 <li>故障一</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>master 由于对于长连接不生效，所以全表更新dml在master执行了，但是在slave却不能执行，导致主从同步失败</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>master 由于对于长连接不生效，所以全表更新dml在master执行了，但是在slave却不能执行，导致主从同步失败(MIXED,STATEMENT)</div><div class="line"><span class="bullet">2. </span>以上情况ROW模式不受影响，因为Row模式已经是对每一行记录进行更改，不可能不安全</div></pre></td></tr></table></figure>
 
 
 
