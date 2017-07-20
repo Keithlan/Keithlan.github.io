@@ -104,7 +104,7 @@
     </p>
   <p class="article-time">
     <time datetime="2017-06-30T12:00:00.000Z" itemprop="datePublished">Jun 30 2017</time>
-    Updated:<time datetime="2017-07-03T03:08:01.000Z" itemprop="dateModified">Jul 3 2017</time>
+    Updated:<time datetime="2017-07-20T07:37:33.000Z" itemprop="dateModified">Jul 20 2017</time>
     
   </p>
 </header>
@@ -168,9 +168,17 @@
 <p>这边说一个典型的坑  </p>
 </blockquote>
 <ul>
-<li>你们真的以为设置了log_queries_not_using_indexes就一定能够抓出我们需要的DML吗？  </li>
+<li>你们真的以为设置了sql_safe_updates就一定能够拒绝没有使用索引的SQL吗？</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>首先：log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes=on，的确是可以抓出所有没有使用索引的DML  </div><div class="line"><span class="bullet">2. </span>但是：再设置log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes之前，这个connection已经存在了，那么log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes对早已经存在的connection是不起作用的</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 首先：<span class="variable">log_queries_not_using_indexes=</span>on，的确是可以抓出所有没有使用索引的DML</div><div class="line"><span class="number">2</span>. 但是：再设置<span class="variable">sql_safe_updates=</span><span class="number">1</span>之前，如果这个connection已经存在了，那么<span class="variable">sql_safe_updates=</span><span class="number">1</span>对早已经存在的connection是不起作用的</div></pre></td></tr></table></figure>
+
+<ul>
+<li>不可预见的问题</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>online目前long<span class="emphasis">_query_</span>time=0.1，本来打算当场设置long<span class="emphasis">_query_</span>time = 10000, 来排除掉slow的因素，然后设置log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes=on 将所有没有使用索引的SQL抓出来。</div><div class="line"></div><div class="line"><span class="bullet">2. </span>结果出乎意料的是：将使用索引的DML也抓了出来</div><div class="line"></div><div class="line"><span class="bullet">3. </span>后来通过slow发现这些dml都是大于100ms的，才得知结论：长连接还在使用long<span class="emphasis">_query_</span>time=0.1的参数，对于刚刚设置的参数不生效。</div><div class="line"></div><div class="line"><span class="bullet">4. </span>所以，long<span class="emphasis">_query_</span>time 对长连接无效。</div></pre></td></tr></table></figure>
+
+<p>目前总结下来：这里面有两个关键参数对长连接无效</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>long<span class="emphasis">_query_</span>time</div><div class="line"><span class="bullet">2. </span>sql<span class="emphasis">_safe_</span>updates</div></pre></td></tr></table></figure>
 
 <ul>
 <li>故障一</li>
