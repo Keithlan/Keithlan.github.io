@@ -1,0 +1,498 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维实战（一）之 系统变量潜规则 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="Agenda
+
+踩坑经历
+测试用例
+结论
+实战用途
+
+一、踩坑经历
+
+设置了slow log 的时间，但是抓不到正确的sql  
+设置了read_only ，为啥还有写入进来
+设置了sql_safe_update , 为啥还能全表删除  
+测试方法的不对，导致设置了read_only后，有的时候可以">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/08/07/mysql_system_variable/" title="MySQL运维实战（一）之 系统变量潜规则" itemprop="url">MySQL运维实战（一）之 系统变量潜规则</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-08-07T10:03:24.000Z" itemprop="datePublished">Aug 7 2017</time>
+    Updated:<time datetime="2017-08-07T10:08:36.000Z" itemprop="dateModified">Aug 7 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Agenda"><span class="toc-number">1.</span> <span class="toc-text">Agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、踩坑经历"><span class="toc-number">2.</span> <span class="toc-text">一、踩坑经历</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、测试用例"><span class="toc-number">3.</span> <span class="toc-text">二、测试用例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_官方文档说明"><span class="toc-number">3.1.</span> <span class="toc-text">2.1 官方文档说明</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_系统变量的Scope"><span class="toc-number">3.2.</span> <span class="toc-text">2.2 系统变量的Scope</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_Session_级别测试"><span class="toc-number">3.3.</span> <span class="toc-text">2.3 Session 级别测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4_Global_级别测试"><span class="toc-number">4.</span> <span class="toc-text">2.4 Global 级别测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5_如何查看当下所有session中的系统变量值呢？"><span class="toc-number">5.</span> <span class="toc-text">2.5 如何查看当下所有session中的系统变量值呢？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-6_Both_级别测试"><span class="toc-number">6.</span> <span class="toc-text">2.6 Both 级别测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、结论"><span class="toc-number">7.</span> <span class="toc-text">三、结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、实战意义"><span class="toc-number">8.</span> <span class="toc-text">四、实战意义</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_项目背景"><span class="toc-number">8.1.</span> <span class="toc-text">4.1 项目背景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_解决方案"><span class="toc-number">8.2.</span> <span class="toc-text">4.2 解决方案</span></a></li></ol></li></ol>
+		</div>
+		
+		<h2 id="Agenda">Agenda</h2>
+<ol>
+<li>踩坑经历</li>
+<li>测试用例</li>
+<li>结论</li>
+<li>实战用途</li>
+</ol>
+<h2 id="一、踩坑经历">一、踩坑经历</h2>
+<ol>
+<li>设置了slow log 的时间，但是抓不到正确的sql  </li>
+<li>设置了read_only ，为啥还有写入进来</li>
+<li>设置了sql_safe_update , 为啥还能全表删除  </li>
+<li>测试方法的不对，导致设置了read_only后，有的时候可以insert，有的时候不可以insert  </li>
+</ol>
+<p>太多这样的问题, 所以打算一窥究竟   </p>
+<h2 id="二、测试用例">二、测试用例</h2>
+<blockquote>
+<p>测试设置参数后，是否会生效  </p>
+</blockquote>
+<h3 id="2-1_官方文档说明">2.1 官方文档说明</h3>
+<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/5.7/en/set-variable.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/5.7/en/set-variable.html</a>  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* 重点说明</div><div class="line"></div><div class="line">If you change <span class="operator">a</span> session <span class="keyword">system</span> <span class="built_in">variable</span>, <span class="operator">the</span> <span class="built_in">value</span> remains <span class="operator">in</span> effect <span class="operator">within</span> your session <span class="keyword">until</span> you change <span class="operator">the</span> <span class="built_in">variable</span> <span class="built_in">to</span> <span class="operator">a</span> different <span class="built_in">value</span> <span class="operator">or</span> <span class="operator">the</span> session <span class="operator">ends</span>. The change has no effect <span class="command"><span class="keyword">on</span> <span class="title">other</span> <span class="title">sessions</span>.</span></div><div class="line"></div><div class="line">If you change <span class="operator">a</span> <span class="built_in">global</span> <span class="keyword">system</span> <span class="built_in">variable</span>, <span class="operator">the</span> <span class="built_in">value</span> is remembered <span class="operator">and</span> used <span class="keyword">for</span> <span class="built_in">new</span> sessions <span class="keyword">until</span> you change <span class="operator">the</span> <span class="built_in">variable</span> <span class="built_in">to</span> <span class="operator">a</span> different <span class="built_in">value</span> <span class="operator">or</span> <span class="operator">the</span> server exits. The change is visible <span class="built_in">to</span> <span class="keyword">any</span> client that accesses <span class="operator">the</span> <span class="built_in">global</span> <span class="built_in">variable</span>. However, <span class="operator">the</span> change affects <span class="operator">the</span> corresponding session <span class="built_in">variable</span> only <span class="keyword">for</span> clients that connect <span class="keyword">after</span> <span class="operator">the</span> change. The <span class="built_in">global</span> <span class="built_in">variable</span> change does <span class="operator">not</span> affect <span class="operator">the</span> session <span class="built_in">variable</span> <span class="keyword">for</span> <span class="keyword">any</span> current client sessions (<span class="operator">not</span> even <span class="operator">the</span> session <span class="operator">within</span> which <span class="operator">the</span> SET GLOBAL statement occurred).</div><div class="line"></div><div class="line">官方重点说明，设置<span class="built_in">global</span>变量的时候，只对后面连接进来的session生效，对当前session和之前的session不生效  </div><div class="line">接下来，我们好好测试下</div></pre></td></tr></table></figure>
+
+<h3 id="2-2_系统变量的Scope">2.2 系统变量的Scope</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">1. Global : 全局级别</div><div class="line">	<span class="operator"><span class="keyword">set</span> <span class="keyword">global</span> <span class="keyword">variables</span> = xx;</span>  <span class="comment">--正确</span></div><div class="line">	<span class="operator"><span class="keyword">set</span> <span class="keyword">variables</span> = xx;</span> <span class="comment">--报错 （因为是scope=Global，所以不能设置session变量 ）</span></div><div class="line"></div><div class="line">2. Session : 会话级别</div><div class="line">	<span class="operator"><span class="keyword">set</span> <span class="keyword">variables</span> = xx;</span> <span class="comment">--正确</span></div><div class="line">    <span class="operator"><span class="keyword">set</span> <span class="keyword">global</span> <span class="keyword">variables</span> = xx;</span>  <span class="comment">--报错 （因为是Scope=session，所以不能设置Global变量）</span></div><div class="line"></div><div class="line">3. Both : 两者皆可  </div><div class="line">	3.1 Global : <span class="operator"><span class="keyword">set</span> <span class="keyword">global</span> <span class="keyword">variables</span> = xx;</span> <span class="comment">--正确（因为是scope=both，他既可以设置全局变量，也可以设置session变量） </span></div><div class="line">	3.2 Session : <span class="operator"><span class="keyword">set</span> <span class="keyword">variables</span> = xx;</span>  <span class="comment">--正确（因为是scope=both，他既可以设置全局变量，也可以设置session变量）</span></div></pre></td></tr></table></figure>
+
+<h3 id="2-3_Session_级别测试">2.3 Session 级别测试</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>session 级别的变量代表：sql<span class="emphasis">_log_</span>bin  </div><div class="line"><span class="bullet">2. </span>该类型的变量，设置后，只会影响当前session，其他session不受影响</div></pre></td></tr></table></figure>
+
+<h2 id="2-4_Global_级别测试">2.4 Global 级别测试</h2>
+<ul>
+<li>变量代表 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. Global 级别的变量代表：<span class="built_in">read</span>_only , log_queries_not_using_indexes</div></pre></td></tr></table></figure>
+
+<ul>
+<li>测试一</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>processlist<span class="emphasis">_id = 100: </span></div><div class="line">	</div><div class="line">lc_rx:lc&gt; select @@global.log<span class="emphasis">_queries_</span>not<span class="emphasis">_using_</span>indexes;</div><div class="line"><span class="code">+----------------------------------------+</span></div><div class="line"><span class="header">| @@global.log_queries_not_using_indexes |</span></div><div class="line">+----------------------------------------+</div><div class="line"><span class="header">|                                      0 |</span></div><div class="line">+----------------------------------------+</div><div class="line">1 row in set (0.00 sec) </div><div class="line"></div><div class="line"></div><div class="line"><span class="header">lc_rx:lc&gt; select * from lc_1;</span></div><div class="line">+------+</div><div class="line"><span class="header">| id   |</span></div><div class="line">+------+</div><div class="line">|    1 |</div><div class="line">|    2 |</div><div class="line">|    3 |</div><div class="line">|    4 |</div><div class="line"><span class="header">|    5 |</span></div><div class="line">+------+</div><div class="line">5 rows in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">此时查看slow log，并未发现任何slow</div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>processlist<span class="emphasis">_id = 120:</span></div><div class="line">	</div><div class="line">dba:(none)&gt; set global log_queries<span class="emphasis">_not_</span>using<span class="emphasis">_indexes=on;</span></div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="bullet">* </span>processlist<span class="emphasis">_id = 100:</span></div><div class="line"></div><div class="line"><span class="header">lc_rx:lc&gt; select @@global.log_queries_not_using_indexes;</span></div><div class="line">+----------------------------------------+</div><div class="line"><span class="header">| @@global.log_queries_not_using_indexes |</span></div><div class="line">+----------------------------------------+</div><div class="line"><span class="header">|                                      1 |</span></div><div class="line">+----------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">lc_rx:lc&gt; select * from lc_1;</span></div><div class="line">+------+</div><div class="line"><span class="header">| id   |</span></div><div class="line">+------+</div><div class="line">|    1 |</div><div class="line">|    2 |</div><div class="line">|    3 |</div><div class="line">|    4 |</div><div class="line"><span class="header">|    5 |</span></div><div class="line">+------+</div><div class="line">5 rows in set (0.00 sec)</div><div class="line"></div><div class="line">此时，去发现slow log</div><div class="line"></div><div class="line"># Time: 2017-08-04T16:05:04.303005+08:00</div><div class="line"># User@Host: lc<span class="emphasis">_rx[lc_</span>rx] @ localhost []  Id:   296</div><div class="line"># Query<span class="emphasis">_time: 0.000149  Lock_</span>time: 0.000081 Rows<span class="emphasis">_sent: 5  Rows_</span>examined: 5</div><div class="line">SET timestamp=1501833904;</div><div class="line">select * from lc<span class="emphasis">_1;</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>结论</div><div class="line"><span class="code">	说明全局参数变量不管是在session前，还是session后设置，都是立马让所有session生效</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>测试二</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:(none)&gt; show processlist;</span></div><div class="line">+-----+-------+----------------------+------+------------------+---------+---------------------------------------------------------------+------------------+</div><div class="line"><span class="header">| Id  | User  | Host                 | db   | Command          | Time    | State                                                         | Info             |</span></div><div class="line">+-----+-------+----------------------+------+------------------+---------+---------------------------------------------------------------+------------------+</div><div class="line">| 303 | lc<span class="emphasis">_rx | localhost            | lc   | Sleep            |      83 |                                                               | NULL             |</span></div><div class="line">| 304 | dba   | localhost            | NULL | Query            |       0 | starting                                                      | show processlist |</div><div class="line">+-----+-------+----------------------+------+------------------+---------+---------------------------------------------------------------+------------------+</div><div class="line">3 rows in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="bullet">* </span>PROCESSLIST<span class="emphasis">_ID=303</span></div><div class="line"></div><div class="line"><span class="header">lc_rx:lc&gt; select @@global.read_only;</span></div><div class="line">+--------------------+</div><div class="line"><span class="header">| @@global.read_only |</span></div><div class="line">+--------------------+</div><div class="line"><span class="header">|                  0 |</span></div><div class="line">+--------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">lc<span class="emphasis">_rx:lc&gt; insert into lc_</span>1 select 2;</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Records: 1  Duplicates: 0  Warnings: 0</div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>PROCESSLIST<span class="emphasis">_ID=304</span></div><div class="line"></div><div class="line">dba:(none)&gt; set global read<span class="emphasis">_only=on;</span></div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>PROCESSLIST<span class="emphasis">_ID=303</span></div><div class="line"></div><div class="line"><span class="header">lc_rx:lc&gt; select @@global.read_only;</span></div><div class="line">+--------------------+</div><div class="line"><span class="header">| @@global.read_only |</span></div><div class="line">+--------------------+</div><div class="line"><span class="header">|                  1 |</span></div><div class="line">+--------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line">lc<span class="emphasis">_rx:lc&gt; insert into lc_</span>1 select 3;</div><div class="line">ERROR 1290 (HY000): The MySQL server is running with the --read-only option so it cannot execute this statement</div><div class="line"></div><div class="line"><span class="bullet">* </span>结论：</div><div class="line"><span class="code">    PROCESSLIST_ID=304 设置的参数，导致PROCESSLIST_ID=303 也生效了</span></div></pre></td></tr></table></figure>
+
+<h2 id="2-5_如何查看当下所有session中的系统变量值呢？">2.5 如何查看当下所有session中的系统变量值呢？</h2>
+<blockquote>
+<p>5.7 可以看到<br>遗憾的是：只能看到Both和session的变量，scope=global没法看(因为会立即生效)    </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">dba:(none)&gt; select * from performance<span class="emphasis">_schema.variables_</span>by<span class="emphasis">_thread as a,\</span></div><div class="line">    -&gt;     (select THREAD_ID,PROCESSLIST<span class="emphasis">_ID,PROCESSLIST_</span>USER,PROCESSLIST<span class="emphasis">_HOST,PROCESSLIST_</span>COMMAND,PROCESSLIST<span class="emphasis">_STATE from performance_</span>schema.threads where PROCESSLIST<span class="emphasis">_USER&lt;&gt;'NULL') as b\</span></div><div class="line">    -&gt;         where a.THREAD_ID = b.THREAD<span class="emphasis">_ID and a.VARIABLE_</span>NAME = <span class="emphasis">'sql_safe_updates'</span>;</div><div class="line"><span class="code">+-----------+</span>------------------<span class="code">+----------------+</span>-----------<span class="code">+----------------+</span>------------------<span class="code">+------------------+</span>---------------------<span class="code">+---------------------------------------------------------------+</span></div><div class="line"><span class="header">| THREAD_ID | VARIABLE_NAME    | VARIABLE_VALUE | THREAD_ID | PROCESSLIST_ID | PROCESSLIST_USER | PROCESSLIST_HOST | PROCESSLIST_COMMAND | PROCESSLIST_STATE                                             |</span></div><div class="line">+-----------+------------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">|       313 | sql<span class="emphasis">_safe_</span>updates | OFF            |       313 |            232 | repl             | xx.xxx.xxx.xxx   | Binlog Dump GTID    | Master has sent all binlog to slave; waiting for more updates |</div><div class="line"><span class="header">|       381 | sql_safe_updates | ON             |       381 |            300 | dba              | localhost        | Query               | Sending data                                                  |</span></div><div class="line">+-----------+------------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">2 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<h2 id="2-6_Both_级别测试">2.6 Both 级别测试</h2>
+<blockquote>
+<p>用我们刚刚学到的知识，来验证更加快速和靠谱  </p>
+</blockquote>
+<ul>
+<li>变量代表</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>Both 级别的变量代表：sql<span class="emphasis">_safe_</span>updates , long<span class="emphasis">_query_</span>time</div></pre></td></tr></table></figure>
+
+<ul>
+<li>测试</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>第一次查看long<span class="emphasis">_query_</span>time参数，PROCESSLIST<span class="emphasis">_ID=307，308，309 都是一样的，都是300s</span></div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; select * from performance_schema.variables_by_thread as a,     (select THREAD_ID,PROCESSLIST_ID,PROCESSLIST_USER,PROCESSLIST_HOST,PROCESSLIST_COMMAND,PROCESSLIST_STATE from performance_schema.threads where PROCESSLIST_USER&lt;&gt;'NULL') as b         where a.THREAD_ID = b.THREAD_ID and a.VARIABLE_NAME = 'long_query_time';</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line"><span class="header">| THREAD_ID | VARIABLE_NAME   | VARIABLE_VALUE | THREAD_ID | PROCESSLIST_ID | PROCESSLIST_USER | PROCESSLIST_HOST | PROCESSLIST_COMMAND | PROCESSLIST_STATE                                             |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">|       388 | long<span class="emphasis">_query_</span>time | 300.000000     |       388 |            307 | dba              | localhost        | Sleep               | NULL                                                          |</div><div class="line">|       389 | long<span class="emphasis">_query_</span>time | 300.000000     |       389 |            308 | dba              | localhost        | Query               | Sending data                                                  |</div><div class="line"><span class="header">|       390 | long_query_time | 300.000000     |       390 |            309 | dba              | localhost        | Sleep               | NULL                                                          |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">4 rows in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>我们再PROCESSLIST<span class="emphasis">_ID=308的session上进行设置long_</span>query<span class="emphasis">_time=100，我们能看到这个时候所有的session都还是300，没有生效  </span></div><div class="line"></div><div class="line">dba:(none)&gt; set global long<span class="emphasis">_query_</span>time=100;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; select * from performance_schema.variables_by_thread as a,     (select THREAD_ID,PROCESSLIST_ID,PROCESSLIST_USER,PROCESSLIST_HOST,PROCESSLIST_COMMAND,PROCESSLIST_STATE from performance_schema.threads where PROCESSLIST_USER&lt;&gt;'NULL') as b         where a.THREAD_ID = b.THREAD_ID and a.VARIABLE_NAME = 'long_query_time';</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line"><span class="header">| THREAD_ID | VARIABLE_NAME   | VARIABLE_VALUE | THREAD_ID | PROCESSLIST_ID | PROCESSLIST_USER | PROCESSLIST_HOST | PROCESSLIST_COMMAND | PROCESSLIST_STATE                                             |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">|       388 | long<span class="emphasis">_query_</span>time | 300.000000     |       388 |            307 | dba              | localhost        | Sleep               | NULL                                                          |</div><div class="line">|       389 | long<span class="emphasis">_query_</span>time | 300.000000     |       389 |            308 | dba              | localhost        | Query               | Sending data                                                  |</div><div class="line"><span class="header">|       390 | long_query_time | 300.000000     |       390 |            309 | dba              | localhost        | Sleep               | NULL                                                          |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">4 rows in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="bullet">* </span>接下来，我们再断开309，重连时，processlist id 应该是310，这时候的结果就是100s了。这一点说明，在执行set global参数后进来的session才会生效，对当前session和之前的session不生效  </div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; select * from performance_schema.variables_by_thread as a,     (select THREAD_ID,PROCESSLIST_ID,PROCESSLIST_USER,PROCESSLIST_HOST,PROCESSLIST_COMMAND,PROCESSLIST_STATE from performance_schema.threads where PROCESSLIST_USER&lt;&gt;'NULL') as b         where a.THREAD_ID = b.THREAD_ID and a.VARIABLE_NAME = 'long_query_time';</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line"><span class="header">| THREAD_ID | VARIABLE_NAME   | VARIABLE_VALUE | THREAD_ID | PROCESSLIST_ID | PROCESSLIST_USER | PROCESSLIST_HOST | PROCESSLIST_COMMAND | PROCESSLIST_STATE                                             |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">|       388 | long<span class="emphasis">_query_</span>time | 300.000000     |       388 |            307 | dba              | localhost        | Sleep               | NULL                                                          |</div><div class="line">|       389 | long<span class="emphasis">_query_</span>time | 300.000000     |       389 |            308 | dba              | localhost        | Query               | Sending data                                                  |</div><div class="line"><span class="header">|       391 | long_query_time | 100.000000     |       391 |            310 | dba              | localhost        | Sleep               | NULL                                                          |</span></div><div class="line">+-----------+-----------------+----------------+-----------+----------------+------------------+------------------+---------------------+---------------------------------------------------------------+</div><div class="line">4 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<h2 id="三、结论">三、结论</h2>
+<blockquote>
+<p>官方文档也不是很靠谱，也有很多差强人意的地方<br>自己动手，测试验证的时候做好测试方案和计划，以免遗漏导致测试失败，得出错误的结论  </p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/global.png" alt="global" title="global"></p>
+<p><img src="/image/mysql_innodb_arch/both.png" alt="both" title="both"></p>
+<h2 id="四、实战意义">四、实战意义</h2>
+<h3 id="4-1_项目背景">4.1 项目背景</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator">a</span>. 修改sql_safe_update=<span class="command"><span class="keyword">on</span>, 这里面有很多难点，其中的一个难点就是如何让所有<span class="title">session</span>生效</span></div></pre></td></tr></table></figure>
+
+<h3 id="4-2_解决方案">4.2 解决方案</h3>
+<ul>
+<li>MySQL5.7+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">结合今天的知识，通过performance_schema.variables_by_thread，performance_schema.threads表，可以知道哪些变量已经生效，哪些变量还没生效</div></pre></td></tr></table></figure>
+
+<ul>
+<li>MySQL5.7-</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">1. 如果对今天的Both变量知识理解了，不难发现，还有一个变通的办法</div><div class="line"></div><div class="line">2. 执行这条命令即可</div><div class="line">	2.1 <span class="operator"><span class="keyword">set</span> <span class="keyword">global</span> $both_scope_variables = <span class="keyword">on</span>|off</span></div><div class="line">	<span class="number">2.2</span> <span class="keyword">select</span> <span class="keyword">max</span>(ID) <span class="keyword">from</span> information_schema.<span class="keyword">PROCESSLIST</span>;</div><div class="line"></div><div class="line">3. <span class="operator"><span class="keyword">kill</span>掉所有小于<span class="keyword">processlist</span> &lt; <span class="keyword">max</span>(ID) 的<span class="keyword">session</span>即可</span></div><div class="line">	<span class="number">3.1</span> 当然，系统用户进程你不能<span class="keyword">kill</span>，read_only的用户你没必要<span class="keyword">kill</span></div><div class="line">	<span class="number">3.2</span> 其他的自行脑补</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/08/07/mysql_system_variable/" data-title="MySQL运维实战（一）之 系统变量潜规则 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/06/30/sql_safe_updates_practise/"  title="MySQL运维之神奇的参数(终结篇)">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维之神奇的参数(终结篇)
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/08/07/mysql_system_variable/" data-title="MySQL运维实战（一）之 系统变量潜规则" data-url="https://Keithlan.github.io/2017/08/07/mysql_system_variable/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Agenda"><span class="toc-number">1.</span> <span class="toc-text">Agenda</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、踩坑经历"><span class="toc-number">2.</span> <span class="toc-text">一、踩坑经历</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、测试用例"><span class="toc-number">3.</span> <span class="toc-text">二、测试用例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_官方文档说明"><span class="toc-number">3.1.</span> <span class="toc-text">2.1 官方文档说明</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_系统变量的Scope"><span class="toc-number">3.2.</span> <span class="toc-text">2.2 系统变量的Scope</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_Session_级别测试"><span class="toc-number">3.3.</span> <span class="toc-text">2.3 Session 级别测试</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-4_Global_级别测试"><span class="toc-number">4.</span> <span class="toc-text">2.4 Global 级别测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-5_如何查看当下所有session中的系统变量值呢？"><span class="toc-number">5.</span> <span class="toc-text">2.5 如何查看当下所有session中的系统变量值呢？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#2-6_Both_级别测试"><span class="toc-number">6.</span> <span class="toc-text">2.6 Both 级别测试</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、结论"><span class="toc-number">7.</span> <span class="toc-text">三、结论</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、实战意义"><span class="toc-number">8.</span> <span class="toc-text">四、实战意义</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_项目背景"><span class="toc-number">8.1.</span> <span class="toc-text">4.1 项目背景</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_解决方案"><span class="toc-number">8.2.</span> <span class="toc-text">4.2 解决方案</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>29</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>23</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>7</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>22</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
