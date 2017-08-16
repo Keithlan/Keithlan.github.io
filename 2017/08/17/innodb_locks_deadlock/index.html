@@ -1,0 +1,488 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL锁系列（八）之 死锁 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="能学到什么
+
+什么是死锁
+死锁有什么危害
+典型的死锁案例剖析
+如何避免死锁
+
+一、什么是死锁
+
+1.必须满足的条件
+
+121. 必须有两个或者两个以上的事务2. 不同事务之间都持有对方需要的锁资源。 A事务需要B的资源，B事务需要A的资源，这就是典型的AB-BA死锁
+
+
+2.死锁相关的参数
+
+123">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/08/17/innodb_locks_deadlock/" title="MySQL锁系列（八）之 死锁" itemprop="url">MySQL锁系列（八）之 死锁</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-08-16T22:32:24.000Z" itemprop="datePublished">Aug 17 2017</time>
+    Updated:<time datetime="2017-08-16T22:34:46.000Z" itemprop="dateModified">Aug 17 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#能学到什么"><span class="toc-number">1.</span> <span class="toc-text">能学到什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是死锁"><span class="toc-number">2.</span> <span class="toc-text">一、什么是死锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、死锁有什么危害"><span class="toc-number">3.</span> <span class="toc-text">二、死锁有什么危害</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、典型的死锁案例剖析"><span class="toc-number">4.</span> <span class="toc-text">三、典型的死锁案例剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_死锁案例一"><span class="toc-number">4.1.</span> <span class="toc-text">3.1 死锁案例一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_死锁案例二"><span class="toc-number">4.2.</span> <span class="toc-text">3.2 死锁案例二</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_死锁案例三"><span class="toc-number">4.3.</span> <span class="toc-text">3.3 死锁案例三</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_死锁案例四"><span class="toc-number">4.4.</span> <span class="toc-text">3.4 死锁案例四</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-5_死锁案例五"><span class="toc-number">5.</span> <span class="toc-text">3.5 死锁案例五</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-6_死锁案例六"><span class="toc-number">6.</span> <span class="toc-text">3.6 死锁案例六</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、如何避免死锁"><span class="toc-number">7.</span> <span class="toc-text">四、如何避免死锁</span></a></li></ol>
+		</div>
+		
+		<h2 id="能学到什么">能学到什么</h2>
+<ol>
+<li>什么是死锁</li>
+<li>死锁有什么危害</li>
+<li>典型的死锁案例剖析</li>
+<li>如何避免死锁</li>
+</ol>
+<h2 id="一、什么是死锁">一、什么是死锁</h2>
+<ul>
+<li>1.必须满足的条件</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>必须有两个或者两个以上的事务</div><div class="line"><span class="bullet">2. </span>不同事务之间都持有对方需要的锁资源。 A事务需要B的资源，B事务需要A的资源，这就是典型的AB-BA死锁</div></pre></td></tr></table></figure>
+
+<ul>
+<li>2.死锁相关的参数</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>innodb<span class="emphasis">_print_</span>all_deadlocks</div><div class="line"></div><div class="line"><span class="bullet">1. </span>如果这个参数打开，那么死锁相关的信息都会打印输出到error log</div><div class="line"></div><div class="line"><span class="bullet">* </span>innodb<span class="emphasis">_lock_</span>wait_timeout</div><div class="line"></div><div class="line"><span class="bullet">1. </span>当MySQL获取row lock的时候，如果wait了innodb<span class="emphasis">_lock_</span>wait_timeout=N的时间，会报以下错误</div><div class="line"></div><div class="line">ERROR 1205 (HY000): Lock wait timeout exceeded; try restarting transaction</div><div class="line"></div><div class="line"><span class="bullet">* </span>innodb<span class="emphasis">_deadlock_</span>detect</div><div class="line"></div><div class="line"><span class="bullet">1. </span>innodb<span class="emphasis">_deadlock_</span>detect = off  可以关闭掉死锁检测，那么就发生死锁的时候，用锁超时来处理。</div><div class="line"><span class="bullet">2. </span>innodb<span class="emphasis">_deadlock_</span>detect = on  （默认选项）开启死锁检测，数据库自动回滚</div><div class="line"></div><div class="line"><span class="bullet">* </span>innodb<span class="emphasis">_status_</span>lock_output = on</div><div class="line"></div><div class="line"><span class="bullet">1. </span>可以看到更加详细的锁信息</div></pre></td></tr></table></figure>
+
+<h2 id="二、死锁有什么危害">二、死锁有什么危害</h2>
+<ol>
+<li>死锁，即表明有多个事务之间需要互相争夺资源而互相等待。</li>
+<li>如果没有死锁检测，那么就会互相卡死，一直hang死</li>
+<li>如果有死锁检测机制，那么数据库会自动根据代价来评估出哪些事务可以被回滚掉，用来打破这个僵局</li>
+<li>所以说：死锁并没有啥坏处，反而可以保护数据库和应用</li>
+<li>那么出现死锁，而且非常频繁，我们应该调整业务逻辑，让其避免产生死锁方为上策</li>
+</ol>
+<h2 id="三、典型的死锁案例剖析">三、典型的死锁案例剖析</h2>
+<h3 id="3-1_死锁案例一">3.1 死锁案例一</h3>
+<blockquote>
+<p>典型的 AB-BA 死锁</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line">session <span class="number">1</span>:</div><div class="line">    select * <span class="keyword">from</span> tb_b <span class="keyword">where</span> id_2 = <span class="number">1</span> <span class="keyword">for</span> update (A)</div><div class="line"></div><div class="line">session <span class="number">2</span>:</div><div class="line">    select * <span class="keyword">from</span> tb_a <span class="keyword">where</span> <span class="property">id</span> = <span class="number">2</span> <span class="keyword">for</span> update (B)</div><div class="line"></div><div class="line">session <span class="number">1</span>:</div><div class="line">    select * <span class="keyword">from</span> tb_a <span class="keyword">where</span> <span class="property">id</span> = <span class="number">2</span> <span class="keyword">for</span> update (B)</div><div class="line"></div><div class="line">session <span class="number">2</span>:</div><div class="line">    select * <span class="keyword">from</span> tb_b <span class="keyword">where</span> id_2 = <span class="number">1</span> <span class="keyword">for</span> update (A)</div><div class="line">    ERROR <span class="number">1213</span> (<span class="number">40001</span>): Deadlock found when trying <span class="keyword">to</span> <span class="keyword">get</span> lock; <span class="keyword">try</span> restarting <span class="keyword">transaction</span></div><div class="line"></div><div class="line"><span class="number">1213</span>的死锁错误，mysql会自动回滚</div><div class="line">哪个回滚代价最小，回滚哪个（根据undo判断）</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">------------------------</span></div><div class="line">LATEST DETECTED DEADLOCK</div><div class="line"><span class="comment">------------------------</span></div><div class="line"><span class="number">2017</span>-<span class="number">06</span>-<span class="number">22</span> <span class="number">16</span>:<span class="number">39</span>:<span class="number">50</span> <span class="number">0x7f547dd02700</span></div><div class="line">*** (<span class="number">1</span>) TRANSACTION:</div><div class="line">TRANSACTION <span class="number">133601982</span>, ACTIVE <span class="number">48</span> sec starting index <span class="command">read</span></div><div class="line">mysql tables <span class="keyword">in</span> use <span class="number">1</span>, locked <span class="number">1</span></div><div class="line">LOCK WAIT <span class="number">4</span> lock struct(s), heap size <span class="number">1136</span>, <span class="number">2</span> row lock(s)</div><div class="line">MySQL thread <span class="property">id</span> <span class="number">11900</span>, OS thread handle <span class="number">140000866637568</span>, query <span class="property">id</span> <span class="number">25108</span> localhost dba statistics</div><div class="line">select * <span class="keyword">from</span> tb_a <span class="keyword">where</span> <span class="property">id</span> = <span class="number">2</span> <span class="keyword">for</span> update    <span class="comment">-----session1 持有tb_a中记录为2的锁</span></div><div class="line">*** (<span class="number">1</span>) WAITING FOR THIS LOCK TO BE GRANTED:</div><div class="line">RECORD LOCKS <span class="constant">space</span> <span class="property">id</span> <span class="number">303</span> page no <span class="number">3</span> n bits <span class="number">72</span> index PRIMARY <span class="keyword">of</span> table `lc_5`.`tb_a` trx <span class="property">id</span> <span class="number">133601982</span> lock_mode X locks rec <span class="keyword">but</span> <span class="keyword">not</span> gap waiting</div><div class="line">Record lock, heap no <span class="number">3</span> PHYSICAL RECORD: n_fields <span class="number">3</span>; compact format; info bits <span class="number">0</span></div><div class="line"> <span class="number">0</span>: len <span class="number">4</span>; hex <span class="number">80000002</span>; asc     ;;   <span class="comment">--session 1 需要tb_a中记录为2的锁( session1 -&gt; session2   )</span></div><div class="line"> <span class="number">1</span>: len <span class="number">6</span>; hex <span class="number">000007</span>f69ab2; asc       ;;</div><div class="line"> <span class="number">2</span>: len <span class="number">7</span>; hex dc000027100110; asc    '   ;;</div><div class="line"></div><div class="line">*** (<span class="number">2</span>) TRANSACTION:</div><div class="line">TRANSACTION <span class="number">133601983</span>, ACTIVE <span class="number">28</span> sec starting index <span class="command">read</span>, thread declared inside InnoDB <span class="number">5000</span></div><div class="line">mysql tables <span class="keyword">in</span> use <span class="number">1</span>, locked <span class="number">1</span></div><div class="line"><span class="number">4</span> lock struct(s), heap size <span class="number">1136</span>, <span class="number">2</span> row lock(s)</div><div class="line">MySQL thread <span class="property">id</span> <span class="number">11901</span>, OS thread handle <span class="number">140000864773888</span>, query <span class="property">id</span> <span class="number">25109</span> localhost dba statistics</div><div class="line">select * <span class="keyword">from</span> tb_b <span class="keyword">where</span> id_2 = <span class="number">1</span> <span class="keyword">for</span> update</div><div class="line">*** (<span class="number">2</span>) HOLDS THE LOCK(S):</div><div class="line">RECORD LOCKS <span class="constant">space</span> <span class="property">id</span> <span class="number">303</span> page no <span class="number">3</span> n bits <span class="number">72</span> index PRIMARY <span class="keyword">of</span> table `lc_5`.`tb_a` trx <span class="property">id</span> <span class="number">133601983</span> lock_mode X locks rec <span class="keyword">but</span> <span class="keyword">not</span> gap</div><div class="line">Record lock, heap no <span class="number">3</span> PHYSICAL RECORD: n_fields <span class="number">3</span>; compact format; info bits <span class="number">0</span></div><div class="line"> <span class="number">0</span>: len <span class="number">4</span>; hex <span class="number">80000002</span>; asc     ;;              <span class="comment">--session 2 持有tb_a中记录等于2的锁</span></div><div class="line"> <span class="number">1</span>: len <span class="number">6</span>; hex <span class="number">000007</span>f69ab2; asc       ;;</div><div class="line"> <span class="number">2</span>: len <span class="number">7</span>; hex dc000027100110; asc    '   ;;</div><div class="line"></div><div class="line">*** (<span class="number">2</span>) WAITING FOR THIS LOCK TO BE GRANTED:</div><div class="line">RECORD LOCKS <span class="constant">space</span> <span class="property">id</span> <span class="number">304</span> page no <span class="number">3</span> n bits <span class="number">72</span> index PRIMARY <span class="keyword">of</span> table `lc_5`.`tb_b` trx <span class="property">id</span> <span class="number">133601983</span> lock_mode X locks rec <span class="keyword">but</span> <span class="keyword">not</span> gap waiting</div><div class="line">Record lock, heap no <span class="number">2</span> PHYSICAL RECORD: n_fields <span class="number">3</span>; compact format; info bits <span class="number">0</span></div><div class="line"> <span class="number">0</span>: len <span class="number">4</span>; hex <span class="number">80000001</span>; asc     ;;             <span class="comment">--session 2 需要tb_b中记录为1的锁 ( session2 -&gt; session1 )</span></div><div class="line"> <span class="number">1</span>: len <span class="number">6</span>; hex <span class="number">000007</span>f69ab8; asc       ;;</div><div class="line"> <span class="number">2</span>: len <span class="number">7</span>; hex e0000027120110; asc    '   ;;</div><div class="line"></div><div class="line">最终的结果：</div><div class="line">	死锁路径：[session1 -&gt; session2 , session2 -&gt; session1]</div><div class="line">	ABBA死锁产生</div></pre></td></tr></table></figure>
+
+<h3 id="3-2_死锁案例二">3.2 死锁案例二</h3>
+<blockquote>
+<p>同一个事务中，S-lock 升级为 X-lock 不能直接继承</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>session 1:</div><div class="line"></div><div class="line">mysql&gt; CREATE TABLE t (i INT) ENGINE = InnoDB;</div><div class="line">Query OK, 0 rows affected (1.07 sec)</div><div class="line"></div><div class="line">mysql&gt; INSERT INTO t (i) VALUES(1);</div><div class="line">Query OK, 1 row affected (0.09 sec)</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SELECT * FROM t WHERE i = 1 LOCK IN SHARE MODE;   --获取S-lock</span></div><div class="line">+------+</div><div class="line"><span class="header">| i    |</span></div><div class="line">+------+</div><div class="line"><span class="header">|    1 |</span></div><div class="line">+------+</div><div class="line"></div><div class="line"><span class="bullet">* </span>session 2:</div><div class="line"></div><div class="line">mysql&gt; START TRANSACTION;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">mysql&gt; DELETE FROM t WHERE i = 1;   --想要获取X-lock，但是被session1的S-lock 卡住，目前处于waiting lock阶段</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>session 1:</div><div class="line"></div><div class="line">mysql&gt; DELETE FROM t WHERE i = 1;   --想要获取X-lock，session1本身拥有S-lock，但是由于session 2 获取X-lock再前，所以session1不能够从S-lock 提升到 X-lock，需要等待session2 释放才可以获取，所以造成死锁</div><div class="line">ERROR 1213 (40001): Deadlock found when trying to get lock;</div><div class="line">try restarting transaction</div><div class="line"></div><div class="line"></div><div class="line">死锁路径：</div><div class="line"><span class="code">	session2 -&gt; session1 , session1 -&gt; session2</span></div></pre></td></tr></table></figure>
+
+<h3 id="3-3_死锁案例三">3.3 死锁案例三</h3>
+<blockquote>
+<p>唯一键死锁 （delete + insert）<br>关键点在于：S-lock</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:lc_3&gt; show create table uk;</span></div><div class="line">+-------+--------------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table | Create Table                                                                                                 |</span></div><div class="line">+-------+--------------------------------------------------------------------------------------------------------------+</div><div class="line">| uk    | CREATE TABLE <span class="code">`uk`</span> (</div><div class="line"><span class="code">  `a` int(11) NOT NULL,</span></div><div class="line"><span class="code">  UNIQUE KEY `uniq_a` (`a`)</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+-------+--------------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dba:lc_3&gt; select * from uk;</span></div><div class="line">+---+</div><div class="line"><span class="header">| a |</span></div><div class="line">+---+</div><div class="line"><span class="header">| 1 |</span></div><div class="line">+---+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line">session 1:</div><div class="line"></div><div class="line">dba:lc<span class="emphasis">_3&gt; begin;</span></div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">dba:lc<span class="emphasis">_3&gt; delete from uk where a=1;</span></div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line"></div><div class="line">session 2:</div><div class="line"></div><div class="line">dba:(none)&gt; use lc<span class="emphasis">_3;</span></div><div class="line">Database changed</div><div class="line">dba:lc_3&gt; insert into uk values(1);  --wait lock(想要加S-lock，却被sesson1的X-lock卡住)</div><div class="line"></div><div class="line"></div><div class="line">sesson 3:</div><div class="line"></div><div class="line">dba:(none)&gt; use lc<span class="emphasis">_3;</span></div><div class="line">Database changed</div><div class="line">dba:lc_3&gt; insert into uk values(1); --wait lock（想要加S-lock，却被sesson1的X-lock卡住）</div><div class="line"></div><div class="line"></div><div class="line">session 1:</div><div class="line"></div><div class="line">commit;    --session2和session3 都获得了S-lock，然后都想要去给记录1 加上X-lock，却互相被对方的S-lock卡住，死锁产生</div><div class="line"></div><div class="line"></div><div class="line">再来看session 2 和 session 3 的结果：</div><div class="line"></div><div class="line">session2：</div><div class="line">Query OK, 1 row affected (7.36 sec)</div><div class="line"></div><div class="line">session3：</div><div class="line">ERROR 1213 (40001): Deadlock found when trying to get lock; try restarting transaction</div><div class="line"></div><div class="line"></div><div class="line">总结： 试想想，如果session 1 不是commit，而是rollback会是怎么样呢？ 大家去测测就会发现，结果肯定是唯一键冲突啊</div></pre></td></tr></table></figure>
+
+<h3 id="3-4_死锁案例四">3.4 死锁案例四</h3>
+<blockquote>
+<p>主键和二级索引的死锁</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line">* primary key</div><div class="line"></div><div class="line">1   2   3   4   <span class="comment">--primary key col1</span></div><div class="line"></div><div class="line">10  30  20  40  <span class="comment">--idx_key2 col2</span></div><div class="line"></div><div class="line">100 200 300 400  <span class="comment">--idx_key3 col3</span></div><div class="line"></div><div class="line"></div><div class="line">* idx_key2      <span class="operator"><span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">where</span> col2 &gt; <span class="number">10</span>: 锁二级索引顺序为：<span class="number">20</span> =》<span class="number">30</span> ， 对应锁主键的顺序为：<span class="number">3</span> =》<span class="number">2</span></span></div><div class="line"></div><div class="line"><span class="number">10</span> <span class="number">20</span> <span class="number">30</span> <span class="number">40</span></div><div class="line"></div><div class="line"><span class="number">1</span>  <span class="number">3</span>  <span class="number">2</span>  <span class="number">4</span></div><div class="line"></div><div class="line"></div><div class="line">* idx_key3    <span class="keyword">select</span> * <span class="keyword">from</span> t <span class="keyword">where</span> col3 &gt; <span class="number">100</span>：锁二级索引顺序为：<span class="number">200</span> =》<span class="number">300</span> ， 对应锁主键的顺序为：<span class="number">2</span> =》<span class="number">3</span></div><div class="line"></div><div class="line"><span class="number">100</span> <span class="number">200</span> <span class="number">300</span> <span class="number">400</span></div><div class="line"></div><div class="line"><span class="number">1</span>   <span class="number">2</span>   <span class="number">3</span>   <span class="number">4</span></div><div class="line"></div><div class="line"></div><div class="line">死锁路径：</div><div class="line">	由于二级索引引起的主键加锁顺序： <span class="number">3</span> =》<span class="number">2</span></div><div class="line">	由于二级索引引起的主键加锁顺序： <span class="number">2</span> =》<span class="number">3</span></div><div class="line"></div><div class="line">这个要求并发，且刚好</div><div class="line"></div><div class="line"><span class="keyword">session</span> <span class="number">1</span> 加锁<span class="number">3</span>的时候 <span class="keyword">session</span> <span class="number">2</span> 要加锁<span class="number">2.</span></div><div class="line"><span class="keyword">session</span> <span class="number">1</span> 加锁<span class="number">2</span>的时候 <span class="keyword">session</span> <span class="number">3</span> 要加锁<span class="number">3.</span></div><div class="line"></div><div class="line">这样就产生了 AB-BA 死锁</div></pre></td></tr></table></figure>
+
+<h2 id="3-5_死锁案例五">3.5 死锁案例五</h2>
+<blockquote>
+<p>purge + unique key 引发的死锁</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">A表的记录： id =  1    10   40   100    200   500  800  900</div><div class="line"></div><div class="line">session 1 :</div><div class="line">	<span class="operator"><span class="keyword">delete</span> <span class="keyword">from</span> a <span class="keyword">where</span> id = <span class="number">10</span>;</span>   ???</div><div class="line"></div><div class="line">session 2 :</div><div class="line">	<span class="operator"><span class="keyword">delete</span> <span class="keyword">from</span> a <span class="keyword">where</span> id = <span class="number">800</span>;</span>  ???</div><div class="line"></div><div class="line">session 1 :</div><div class="line">	<span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> a <span class="keyword">select</span> <span class="number">800</span>;</span> ???</div><div class="line"></div><div class="line">session 2 :</div><div class="line">	<span class="operator"><span class="keyword">insert</span> <span class="keyword">into</span> a <span class="keyword">select</span> <span class="number">10</span>;</span> ???</div><div class="line"></div><div class="line">* 如果大家去跑这两钟SQL语句的并发测试，是可以导致死锁的。</div><div class="line"></div><div class="line">* 如何验证是由于<span class="operator"><span class="keyword">purge</span>导致的问题呢？这个本想用mysqld-debug模式去关闭<span class="keyword">purge</span>线程，但是很遗憾我没能模拟出来。。。</span></div></pre></td></tr></table></figure>
+
+<h2 id="3-6_死锁案例六">3.6 死锁案例六</h2>
+<blockquote>
+<p>REPLACE INTO问题</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">* 这个问题模拟起来非常简单，原理非常复杂，这里不过多解释</div><div class="line">	* 详情请看姜老师的文章,据说看懂了年薪都100w了：  http://www.innomysql.com/<span class="number">26186</span>-<span class="number">2</span>/</div><div class="line"></div><div class="line">* 解决方案：</div><div class="line">	* 用insert into <span class="keyword">...</span> on duplicate key update 代替 replace into</div><div class="line">	* 此方案亲测有效</div></pre></td></tr></table></figure>
+
+<h2 id="四、如何避免死锁">四、如何避免死锁</h2>
+<ul>
+<li>产生死锁的原因</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>事务之间互相占用资源</div></pre></td></tr></table></figure>
+
+<ul>
+<li>方法和总结</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 降低隔离级别，修改 RR -&gt; RC , 如果这个调整了，可以避免掉<span class="number">60</span>%的死锁场景和奇怪的锁等待</div><div class="line"></div><div class="line"><span class="number">2.</span> 调整业务逻辑和SQL，让其都按照顺序执行操作</div><div class="line"></div><div class="line"><span class="number">3.</span> 减少unique索引，大部分死锁的场景都是由于unique索引导致</div><div class="line"></div><div class="line"><span class="number">4.</span> 尽量不用replace into，用insert into <span class="keyword">...</span> on duplicate key update 代替</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/InnoDB-Lock/">InnoDB Lock</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/08/17/innodb_locks_deadlock/" data-title="MySQL锁系列（八）之 死锁 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/08/07/mysql_system_variable/"  title="MySQL运维实战（一）之 系统变量潜规则">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维实战（一）之 系统变量潜规则
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/08/17/innodb_locks_deadlock/" data-title="MySQL锁系列（八）之 死锁" data-url="https://Keithlan.github.io/2017/08/17/innodb_locks_deadlock/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#能学到什么"><span class="toc-number">1.</span> <span class="toc-text">能学到什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是死锁"><span class="toc-number">2.</span> <span class="toc-text">一、什么是死锁</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、死锁有什么危害"><span class="toc-number">3.</span> <span class="toc-text">二、死锁有什么危害</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、典型的死锁案例剖析"><span class="toc-number">4.</span> <span class="toc-text">三、典型的死锁案例剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_死锁案例一"><span class="toc-number">4.1.</span> <span class="toc-text">3.1 死锁案例一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_死锁案例二"><span class="toc-number">4.2.</span> <span class="toc-text">3.2 死锁案例二</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_死锁案例三"><span class="toc-number">4.3.</span> <span class="toc-text">3.3 死锁案例三</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-4_死锁案例四"><span class="toc-number">4.4.</span> <span class="toc-text">3.4 死锁案例四</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-5_死锁案例五"><span class="toc-number">5.</span> <span class="toc-text">3.5 死锁案例五</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#3-6_死锁案例六"><span class="toc-number">6.</span> <span class="toc-text">3.6 死锁案例六</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、如何避免死锁"><span class="toc-number">7.</span> <span class="toc-text">四、如何避免死锁</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>30</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>23</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>8</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>22</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
