@@ -1,0 +1,547 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL锁系列（九）之 long transaction | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、背景
+最近凌晨05:00总是接到来自SQL防火墙的告警：
+
+
+
+group_name
+id
+user
+host
+db
+command
+time
+info
+state
+
+
+
+
+BASE
+1059712468
+xx
+xx.xx.xx.xx
+aea
+Query
+34
+UPDATE approve SE">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/08/29/innodb_locks_long_trx/" title="MySQL锁系列（九）之 long transaction" itemprop="url">MySQL锁系列（九）之 long transaction</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-08-29T07:32:24.000Z" itemprop="datePublished">Aug 29 2017</time>
+    Updated:<time datetime="2017-08-29T10:43:29.000Z" itemprop="dateModified">Aug 29 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、环境"><span class="toc-number">2.</span> <span class="toc-text">二、环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、分析过程"><span class="toc-number">3.</span> <span class="toc-text">三、分析过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、总结"><span class="toc-number">4.</span> <span class="toc-text">四、总结</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、背景">一、背景</h2>
+<p>最近凌晨05:00总是接到来自SQL防火墙的告警：</p>
+<table>
+<thead>
+<tr>
+<th>group_name</th>
+<th>id</th>
+<th>user</th>
+<th>host</th>
+<th>db</th>
+<th>command</th>
+<th>time</th>
+<th>info</th>
+<th>state</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BASE</td>
+<td>1059712468</td>
+<td>xx</td>
+<td>xx.xx.xx.xx</td>
+<td>aea</td>
+<td>Query</td>
+<td>34</td>
+<td>UPDATE approve SET <code>operator</code> = ‘0’,<code>operator_name</code> = ‘system’,<code>comment</code> = ‘离职’,<code>status</code> = ‘1’ WHERE (<code>id</code> = ‘48311’)</td>
+<td>updating</td>
+</tr>
+</tbody>
+</table>
+<p>当第一次看到这个数据的时候，第一反应是可能是被受影响的SQL，没话时间关注，但是后面好几次的凌晨告警，就不得不对他进行深入分析  </p>
+<ul>
+<li>症状特点</li>
+</ul>
+<ol>
+<li>主键更新</li>
+<li>状态为updating</li>
+<li>执行时间30多秒</li>
+<li>command为query</li>
+</ol>
+<p>这一切看上去都特别正常  </p>
+<h2 id="二、环境">二、环境</h2>
+<ul>
+<li>MySQL版本</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mysql  Ver <span class="number">14.14</span> Distrib <span class="number">5.6</span><span class="number">.16</span>, <span class="keyword">for</span> linux-glibc2<span class="number">.5</span> (x86_64) <span class="keyword">using</span>  EditLine wrapper</div></pre></td></tr></table></figure>
+
+<ul>
+<li>表结构</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`approve`</span> (</span></div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`reim_id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`user_name`</span> <span class="built_in">varchar</span>(<span class="number">20</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="string">`user_ids`</span> <span class="built_in">varchar</span>(<span class="number">100</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="string">`user_email`</span> <span class="built_in">text</span> COMMENT <span class="string">'用于mail'</span>,</div><div class="line">  <span class="string">`status`</span> tinyint(<span class="number">1</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`stagesub`</span> <span class="built_in">smallint</span>(<span class="number">3</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`stage`</span> <span class="built_in">smallint</span>(<span class="number">3</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`flag`</span> tinyint(<span class="number">1</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`operator`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`operator_name`</span> <span class="built_in">varchar</span>(<span class="number">20</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">''</span>,</div><div class="line">  <span class="string">`comment`</span> <span class="built_in">text</span>,</div><div class="line">  <span class="string">`update_time`</span> <span class="keyword">timestamp</span> <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="keyword">CURRENT_TIMESTAMP</span> <span class="keyword">ON</span> <span class="keyword">UPDATE</span> <span class="keyword">CURRENT_TIMESTAMP</span>,</div><div class="line">  <span class="string">`cs_userid`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`cs_status`</span> tinyint(<span class="number">4</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> ,</div><div class="line">  <span class="string">`is_deficit`</span> tinyint(<span class="number">1</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'1'</span> ,</div><div class="line">  <span class="string">`approve_type`</span> tinyint(<span class="number">4</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'1'</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`list`</span> (<span class="string">`user_ids`</span>,<span class="string">`status`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`next`</span> (<span class="string">`flag`</span>,<span class="string">`status`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`detail`</span> (<span class="string">`reim_id`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`ix_userid`</span> (<span class="string">`cs_userid`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">464885</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<h2 id="三、分析过程">三、分析过程</h2>
+<ul>
+<li>SQL语句本身的分析</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1. 这条语句在正常不过了，而且还是主键更新，执行计划一切都很正常。</div><div class="line">2. <span class="operator"><span class="keyword">show</span> <span class="keyword">processlist</span>中的状态， command=<span class="keyword">Query</span>，state=updating</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>手动执行</li>
+</ul>
+<blockquote>
+<p>没有任何问题，瞬间执行完毕  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">dba&gt; UPDATE approve SET <span class="smartquote">`operator` = '</span>0',<span class="smartquote">`operator_name` = '</span>system',<span class="smartquote">`comment` = '</span>离职<span class="emphasis">',`status` = '</span>1' WHERE (<span class="smartquote">`id` = '</span>49384');</div><div class="line">Query OK, 1 row affected (0.00 sec)</div><div class="line">Rows matched: 1  Changed: 1  Warnings: 0</div></pre></td></tr></table></figure>
+
+<ul>
+<li>可能的问题原因</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>SQL语句的拼接问题，会不会凌晨的时候SQL有特殊字符导致的全表扫描更新呢？</div><div class="line"><span class="code">	1.1 为了这个问题，模拟了N遍，且将所有特殊字符都打印出来，这个问题排除。  </span></div><div class="line"></div><div class="line"><span class="bullet">2. </span>服务器压力问题，有没有可能是在凌晨的时候io，cpu压力特别大，造成的updating慢呢？</div><div class="line"><span class="code">	2.1 查看当时的监控，一切指标都正常，故也排除  </span></div><div class="line"></div><div class="line"><span class="bullet">3. </span>数据库本身的问题，MySQL出现bug了？</div><div class="line"><span class="code">	3.1 这个目前也没有搜到关于这方面的bug 信息</span></div><div class="line"></div><div class="line"><span class="bullet">4. </span>锁的问题，SQL语句当时被锁住了？</div><div class="line"><span class="code">	4.1 show processlist中没有看到任何lock的字样啊</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>锁相关排除</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 一开始，所有的故障排除全部来自监控系统和show processlist，然后查看锁的神器没有使用，就是show engine innodb status \G</div><div class="line"></div><div class="line">---TRANSACTION <span class="number">51055827249</span>, ACTIVE <span class="number">20</span> sec starting index read</div><div class="line">mysql tables <span class="keyword">in</span> use <span class="number">1</span>, locked <span class="number">1</span></div><div class="line">LOCK WAIT <span class="number">2</span> lock struct(s), heap size <span class="number">360</span>, <span class="number">1</span> row lock(s)</div><div class="line">MySQL thread id <span class="number">1060068541</span>, OS thread handle <span class="number">0x7fba06c6c700</span>, query id <span class="number">55990809665</span> xx aea updating</div><div class="line">UPDATE approve <span class="keyword">SET</span> `operator` = <span class="comment">'0',`operator_name` = 'system',`comment` = '离职',`status` = '1' WHERE (`id` = '49384')</span></div><div class="line">------- TRX HAS BEEN WAITING <span class="number">20</span> SEC <span class="keyword">FOR</span> THIS LOCK <span class="keyword">TO</span> BE GRANTED:</div><div class="line">RECORD LOCKS <span class="built_in">space</span> id <span class="number">746</span> page no <span class="number">624</span> n bits <span class="number">216</span> index `PRIMARY` of table `aea`.`approve` trx id <span class="number">51055827249</span> lock_mode X locks rec but <span class="keyword">not</span> gap waiting</div><div class="line">Record lock, heap no <span class="number">148</span> PHYSICAL RECORD: n_fields <span class="number">19</span>; compact format; info bits <span class="number">0</span></div><div class="line"> <span class="number">0</span>: <span class="built_in">len</span> <span class="number">4</span>; <span class="built_in">hex</span> <span class="number">8000</span>c0e8; <span class="built_in">asc</span>     ;;</div><div class="line"> <span class="number">1</span>: <span class="built_in">len</span> <span class="number">6</span>; <span class="built_in">hex</span> <span class="number">000</span>be32a10cb; <span class="built_in">asc</span>    *  ;;</div><div class="line"> <span class="number">2</span>: <span class="built_in">len</span> <span class="number">7</span>; <span class="built_in">hex</span> <span class="number">7</span>a000004540557; <span class="built_in">asc</span> z   T W;;</div><div class="line"> <span class="number">3</span>: <span class="built_in">len</span> <span class="number">4</span>; <span class="built_in">hex</span> <span class="number">80002884</span>; <span class="built_in">asc</span>   ( ;;</div><div class="line"> <span class="number">4</span>: <span class="built_in">len</span> <span class="number">6</span>; <span class="built_in">hex</span> e69da8e58b87; <span class="built_in">asc</span>       ;;</div><div class="line"> <span class="number">5</span>: <span class="built_in">len</span> <span class="number">6</span>; <span class="built_in">hex</span> <span class="number">3</span>b363430353b; <span class="built_in">asc</span> ;<span class="number">6405</span>;;;</div><div class="line"> <span class="number">6</span>: <span class="built_in">len</span> <span class="number">19</span>; <span class="built_in">hex</span> <span class="number">7979616e6740616</span>e6a756b65696e632e636f6d; <span class="built_in">asc</span> yy.com;;</div><div class="line"> <span class="number">7</span>: <span class="built_in">len</span> <span class="number">1</span>; <span class="built_in">hex</span> <span class="number">81</span>; <span class="built_in">asc</span>  ;;</div><div class="line"> <span class="number">8</span>: <span class="built_in">len</span> <span class="number">2</span>; <span class="built_in">hex</span> <span class="number">8015</span>; <span class="built_in">asc</span>   ;;</div><div class="line"> <span class="number">9</span>: <span class="built_in">len</span> <span class="number">2</span>; <span class="built_in">hex</span> <span class="number">8001</span>; <span class="built_in">asc</span>   ;;</div><div class="line"> <span class="number">10</span>: <span class="built_in">len</span> <span class="number">1</span>; <span class="built_in">hex</span> <span class="number">80</span>; <span class="built_in">asc</span>  ;;</div><div class="line"> <span class="number">11</span>: <span class="built_in">len</span> <span class="number">4</span>; <span class="built_in">hex</span> <span class="number">80000001</span>; <span class="built_in">asc</span>     ;;</div><div class="line"> <span class="number">12</span>: <span class="built_in">len</span> <span class="number">6</span>; <span class="built_in">hex</span> <span class="number">73797374656</span>d; <span class="built_in">asc</span> system;;</div><div class="line"> <span class="number">13</span>: <span class="built_in">len</span> <span class="number">6</span>; <span class="built_in">hex</span> e7a6bbe8818c; <span class="built_in">asc</span>       ;;</div><div class="line"> <span class="number">14</span>: <span class="built_in">len</span> <span class="number">4</span>; <span class="built_in">hex</span> <span class="number">59</span>a4c993; <span class="built_in">asc</span> Y   ;;</div><div class="line"> <span class="number">15</span>: <span class="built_in">len</span> <span class="number">4</span>; <span class="built_in">hex</span> <span class="number">80000000</span>; <span class="built_in">asc</span>     ;;</div><div class="line"> <span class="number">16</span>: <span class="built_in">len</span> <span class="number">1</span>; <span class="built_in">hex</span> <span class="number">80</span>; <span class="built_in">asc</span>  ;;</div><div class="line"> <span class="number">17</span>: <span class="built_in">len</span> <span class="number">1</span>; <span class="built_in">hex</span> <span class="number">81</span>; <span class="built_in">asc</span>  ;;</div><div class="line"> <span class="number">18</span>: <span class="built_in">len</span> <span class="number">1</span>; <span class="built_in">hex</span> <span class="number">81</span>; <span class="built_in">asc</span>  ;;</div><div class="line"></div><div class="line">------------------</div><div class="line">---TRANSACTION <span class="number">51055825099</span>, ACTIVE <span class="number">21</span> sec</div><div class="line"><span class="number">2</span> lock struct(s), heap size <span class="number">360</span>, <span class="number">1</span> row lock(s), undo <span class="built_in">log</span> entries <span class="number">1</span></div><div class="line">MySQL thread id <span class="number">1060025172</span>, OS thread handle <span class="number">0x7fba05ad0700</span>, query id <span class="number">55990809629</span> xx aea cleaning up</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">2.</span> 通过以上片段信息可以得知如下结论</div><div class="line"></div><div class="line">	<span class="number">2.1</span> UPDATE approve 语句等待主键索引的record lock，lock_mode X locks rec but <span class="keyword">not</span> gap ， <span class="built_in">space</span> id <span class="number">746</span> page no <span class="number">624</span>， 记录为主键<span class="number">49384</span>的row  </div><div class="line">	<span class="number">2.2</span> TRANSACTION <span class="number">51055827249</span>, ACTIVE <span class="number">20</span> sec , 这个事务持续<span class="number">20</span>秒</div><div class="line">	<span class="number">2.3</span> TRANSACTION <span class="number">51055825099</span>, ACTIVE <span class="number">21</span> sec , 这个事务持续<span class="number">21</span>秒，根据这个信息，很有可能由于这个事务持有UPDATE approve需要的record lock  </div><div class="line">	<span class="number">2.4</span> TRANSACTION <span class="number">51055825099</span>, <span class="number">1</span> row lock(s) , 根据这个信息，可以更进一步推论出该事务，该thread id <span class="number">1060025172</span> 持有该记录锁。</div><div class="line"></div><div class="line"><span class="number">3.</span> 很可惜，并不知道是什么SQL语句，说明已经执行完毕</div></pre></td></tr></table></figure>
+
+<ul>
+<li>验证</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>如何验证上面的推论呢？</div><div class="line"></div><div class="line"><span class="bullet">2. </span>如何找到是哪条SQL持有锁呢？</div><div class="line"></div><div class="line"><span class="bullet">3. </span>首先我们从表入手，查找该表有哪些写入SQL?</div><div class="line"><span class="code">	通过Performance Schema ，发现了两种形迹可疑的SQL</span></div></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>digest</th>
+<th>sql</th>
+<th>count</th>
+<th>db</th>
+<th>dbgroup</th>
+<th>date</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0c95e7f2105d7a3e655b8b4462251bf2</td>
+<td>UPDATE <code>approve</code> SET <code>operator</code> = ? , <code>operator_name</code> = ? , <code>comment</code> = ? , <code>status</code> = ? WHERE ( <code>id</code> = ? )</td>
+<td>15</td>
+<td>xx</td>
+<td>BASE</td>
+<td>20170829</td>
+</tr>
+<tr>
+<td>591226ca0ece89fe74bc6894ad193d71</td>
+<td>UPDATE <code>approve</code> SET STATUS = ? , <code>operator</code> = ? , <code>operator_name</code> = ? , COMMENT = ? WHERE <code>approve</code> . <code>id</code> = ?</td>
+<td>15</td>
+<td>xx</td>
+<td>BASE</td>
+<td>20170829</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>进一步验证</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">1. 通过上述SQL，如果他们更新的是同一个id，那么很有可能就会导致锁等待。</div><div class="line"></div><div class="line">2. 要满足上面的推测，还必须满足一个必要条件就是：下面那个语句必须在上面语句之前执行，且没有commit  </div><div class="line"></div><div class="line">3. 我们去服务器上进行tcpdump抓包发现如下：</div><div class="line"></div><div class="line">Capturing on Pseudo-device that captures on all interfaces</div><div class="line">Aug 29, 2017 10:20:23.560491000	xx.xx.xx.xx	UPDATE approve SET status=1, operator=1, operator<span class="emphasis">_name='system', comment='\xe7\xa6\xbb\xe8\x81\x8c' WHERE approve.id = 49384</span></div><div class="line">Aug 29, 2017 10:20:23.589586000	xx.xx.xx.xx	UPDATE approve SET `operator` = '0',`operator_name<span class="smartquote">` = '</span>system',<span class="smartquote">`comment` = '</span>\xe7\xa6\xbb\xe8\x81\x8c',<span class="smartquote">`status` = '</span>1' WHERE (<span class="smartquote">`id` = '</span>49384')</div><div class="line"></div><div class="line">正好验证我们的推论</div><div class="line"></div><div class="line"></div><div class="line">4. 手动模拟了这种情况，得到的现象和我们的故障一致，即问题原因以及找到</div></pre></td></tr></table></figure>
+
+<ul>
+<li>问题解决</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>拿到开发的代码，发现是python的代码，并没有auto_commit的选项</div><div class="line"></div><div class="line"><span class="bullet">2. </span>第一个事务并没有结束，没有commit，导致下一个事务在等待锁的资源  </div><div class="line"></div><div class="line"><span class="bullet">3. </span>为什么需要对同一个记录进行两次更新，这个还需要进一步了解代码和业务</div></pre></td></tr></table></figure>
+
+<h2 id="四、总结">四、总结</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">1. 下次遇到类似问题，可以不用被processlist表面现象所迷惑，善于了解锁机制和锁信息的排查  </div><div class="line"></div><div class="line">2. 写代码的时候，尽量做到小事务，一般用auto_commit就好，如果需要显示开启事务，也应该尽量做到用完尽量<span class="operator"><span class="keyword">commit</span>  </span></div><div class="line"></div><div class="line"><span class="number">3.</span> MySQL如果能够再<span class="keyword">show</span> <span class="keyword">processlist</span>中直接打印出<span class="keyword">lock</span>，waiting <span class="keyword">lock</span>状态会更加的人性化  </div><div class="line"></div><div class="line"><span class="number">4.</span> 在<span class="keyword">show</span> <span class="keyword">engine</span> <span class="keyword">innodb</span> <span class="keyword">status</span>的时候，为什么看不到是哪个<span class="keyword">SQL</span>语句持有的锁呢？MySQL如果能够提供这样的信息，可以更加好的帮助DBA诊断问题</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/InnoDB-Lock/">InnoDB Lock</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/08/29/innodb_locks_long_trx/" data-title="MySQL锁系列（九）之 long transaction | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/08/17/innodb_locks_deadlock/"  title="MySQL锁系列（八）之 死锁">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL锁系列（八）之 死锁
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/08/29/innodb_locks_long_trx/" data-title="MySQL锁系列（九）之 long transaction" data-url="https://Keithlan.github.io/2017/08/29/innodb_locks_long_trx/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、环境"><span class="toc-number">2.</span> <span class="toc-text">二、环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、分析过程"><span class="toc-number">3.</span> <span class="toc-text">三、分析过程</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、总结"><span class="toc-number">4.</span> <span class="toc-text">四、总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>31</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>23</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>22</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
