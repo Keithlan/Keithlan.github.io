@@ -4,26 +4,29 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>MySQL 备份与恢复 | Focus on MySQL,Focus on Focus</title>
+    <title>MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。接下来，我们聊聊备份恢复的那些事儿   
+    <meta name="description" content="背景
 
-备份和恢复业界指标
+一个MySQL实例中，如何验证一个账号上面是否还有访问？
 
-常用备份方式
+一个MySQL实例中，如何验证某个业务ip是否还有访问？
 
-备份&amp;amp;恢复速度
- 
-恢复架构图
-  
-恢复的原理和实践
 
-mysqlbinlog + script
+倔强青铜级别
 
-11) 这种方法，我想用过的人都知道，不仅">
+打开general log
+
+12优点： 全量缺点： 性能差
+
+秩序白银级别
+
+打开slow log,设置long_query_time = 0
+
+12优">
     
     
     
@@ -83,15 +86,15 @@ mysqlbinlog + script
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2015/08/18/how_to_backup_recovery/" title="MySQL 备份与恢复" itemprop="url">MySQL 备份与恢复</a>
+      <a href="/2017/09/12/P_S_user_host/" title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路" itemprop="url">MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2015-08-18T07:32:24.000Z" itemprop="datePublished">Aug 18 2015</time>
-    Updated:<time datetime="2015-08-18T08:28:31.000Z" itemprop="dateModified">Aug 18 2015</time>
+    <time datetime="2017-09-12T08:50:24.000Z" itemprop="datePublished">Sep 12 2017</time>
+    Updated:<time datetime="2017-09-13T01:48:38.000Z" itemprop="dateModified">Sep 13 2017</time>
     
   </p>
 </header>
@@ -100,60 +103,77 @@ mysqlbinlog + script
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#备份和恢复业界指标"><span class="toc-number">1.</span> <span class="toc-text">备份和恢复业界指标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常用备份方式"><span class="toc-number">2.</span> <span class="toc-text">常用备份方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#备份&恢复速度"><span class="toc-number">3.</span> <span class="toc-text">备份&恢复速度</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复架构图"><span class="toc-number">4.</span> <span class="toc-text">恢复架构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复的原理和实践"><span class="toc-number">5.</span> <span class="toc-text">恢复的原理和实践</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#倔强青铜级别"><span class="toc-number">2.</span> <span class="toc-text">倔强青铜级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#秩序白银级别"><span class="toc-number">3.</span> <span class="toc-text">秩序白银级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#荣耀黄金级别"><span class="toc-number">4.</span> <span class="toc-text">荣耀黄金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#尊贵铂金级别"><span class="toc-number">5.</span> <span class="toc-text">尊贵铂金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#永恒钻石级别"><span class="toc-number">6.</span> <span class="toc-text">永恒钻石级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最强王者"><span class="toc-number">7.</span> <span class="toc-text">最强王者</span></a></li></ol>
 		</div>
 		
-		<blockquote>
-<p>大家都知道，备份的目的是用于恢复，恢复必须保证两点：速度，正确性。<br>接下来，我们聊聊备份恢复的那些事儿   </p>
-</blockquote>
-<h2 id="备份和恢复业界指标">备份和恢复业界指标</h2>
-<p><img src="/image/mysql_standard/rpo.png" alt="rpo" title="rpo"></p>
-<h2 id="常用备份方式">常用备份方式</h2>
-<p><img src="/image/mysql_standard/back_type.png" alt="back_type" title="back_type"></p>
-<h2 id="备份&amp;恢复速度">备份&amp;恢复速度</h2>
-<p><img src="/image/mysql_standard/back_time.png" alt="back_time" title="back_time"> </p>
-<h2 id="恢复架构图">恢复架构图</h2>
-<p><img src="/image/mysql_standard/recover.png" alt="recover" title="recover">  </p>
-<h2 id="恢复的原理和实践">恢复的原理和实践</h2>
+		<h2 id="背景">背景</h2>
 <ul>
-<li><strong>mysqlbinlog + script</strong></li>
+<li><p>一个MySQL实例中，如何验证一个账号上面是否还有访问？</p>
+</li>
+<li><p>一个MySQL实例中，如何验证某个业务ip是否还有访问？</p>
+</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">1) 这种方法，我想用过的人都知道，不仅麻烦，还很有可能出错</div></pre></td></tr></table></figure>
+<h2 id="倔强青铜级别">倔强青铜级别</h2>
+<ul>
+<li>打开general log</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点： 全量</div><div class="line">缺点： 性能差</div></pre></td></tr></table></figure>
+
+<h2 id="秩序白银级别">秩序白银级别</h2>
+<ul>
+<li>打开slow log,设置long_query_time = 0</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点： 全量</div><div class="line">缺点： 性能比较差</div></pre></td></tr></table></figure>
+
+<h2 id="荣耀黄金级别">荣耀黄金级别</h2>
+<ul>
+<li>tshark | tcpdump | tcpcopy</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql -T fields <span class="operator">-e</span> frame.time <span class="operator">-e</span> <span class="string">'ip.src'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span> <span class="operator">-e</span> <span class="string">'mysql.user'</span> <span class="operator">-e</span> <span class="string">'mysql.schema'</span></div><div class="line"></div><div class="line">优点：全量*<span class="number">95</span>%</div><div class="line">缺点：性能比较差，使用不方便</div></pre></td></tr></table></figure>
+
+<h2 id="尊贵铂金级别">尊贵铂金级别</h2>
+<ul>
+<li>使用P_S</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>使用案例</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dba:performance_schema&gt; select USER,EVENT_NAME,COUNT_STAR,now() as time from events_statements_summary_by_user_by_event_name where EVENT_NAME in ('statement/sql/select','statement/sql/update','statement/sql/delete','statement/sql/insert','statement/sql/replace') and COUNT_STAR &gt; 0;</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| USER | EVENT_NAME           | COUNT_STAR | time                |</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line">| dba  | statement/sql/select |        143 | 2017-09-04 18:02:33 |</div><div class="line"><span class="header">| repl | statement/sql/select |         10 | 2017-09-04 18:02:33 |</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line">2 rows in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:performance_schema&gt; select HOST,EVENT_NAME,COUNT_STAR,now() as time from events_statements_summary_by_host_by_event_name where EVENT_NAME in ('statement/sql/select','statement/sql/update','statement/sql/delete','statement/sql/insert','statement/sql/replace') and COUNT_STAR &gt; 0;</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| HOST      | EVENT_NAME           | COUNT_STAR | time                |</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| localhost | statement/sql/select |         22 | 2017-09-04 18:02:35 |</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
 
 <ul>
-<li><strong>利用IO-thread 恢复</strong></li>
+<li>对比</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div></pre></td><td class="code"><pre><div class="line">0) 必须关闭binlog server的MySQL实例</div><div class="line"></div><div class="line">1) 修改binlog server的部分信息</div><div class="line"></div><div class="line"></div><div class="line">	a) vi /etc/my.cnf</div><div class="line">		log-bin=/data/mysql.bin/binserver</div><div class="line">		</div><div class="line">	b）vi binserver.index</div><div class="line">		 /data/mysql.bin/binserver.000001</div><div class="line">		 /data/mysql.bin/binserver.000002</div><div class="line">		 ... 以此类推（需要恢复的binlog日志）</div><div class="line">		</div><div class="line">	c）<span class="operator"><span class="keyword">show</span> <span class="keyword">master</span> <span class="keyword">status</span> 检查一下是否修改有效。</span></div><div class="line">	</div><div class="line">	d) 注意点：</div><div class="line">		binserver.<span class="keyword">index</span> 里面写的内容 一定要和外面一致。</div><div class="line">		</div><div class="line">		比如： cat  binserver.<span class="keyword">index</span></div><div class="line">				/<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/binserver<span class="number">.000001</span></div><div class="line">				/<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/binserver<span class="number">.000002</span></div><div class="line">		那么:  /<span class="keyword">data</span>/mysql.<span class="keyword">bin</span>/ 里面一定要有 binserver<span class="number">.000001</span>，binserver<span class="number">.000002</span> 文件</div><div class="line">		</div><div class="line"><span class="number">2</span>）<span class="keyword">full</span> <span class="keyword">backup</span> <span class="keyword">server</span> 导入全备的数据，记录要同步的文件，postion，以及只同步那些表，都设置好。</div><div class="line">	a ) 从全备中拉出需要还原的表，放在对应的DB里面。</div><div class="line">	b ) 设置过滤规则，需要在my.cnf文件中设置，需要重启mysql才能生效</div><div class="line">		比如：我只恢复某几张表</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=newhome_db.ugc_dianping</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=newhome_db.ugc_dianping_content</div><div class="line">			<span class="keyword">replicate</span>-wild-<span class="keyword">do</span>-<span class="keyword">table</span>=heartbeat_db.heartbeat</div><div class="line">	c）关于复制过滤规则的详细说明，请看http://keithlan.github.io/<span class="number">2015</span>/<span class="number">07</span>/<span class="number">14</span>/mysql_replicate_rule/</div><div class="line">	</div><div class="line"><span class="number">3</span>）<span class="keyword">change</span> <span class="keyword">master</span> 到 <span class="keyword">binlog</span> <span class="keyword">server</span></div><div class="line"></div><div class="line">	a）<span class="keyword">full</span> back <span class="keyword">server</span> &gt;  <span class="keyword">change</span> <span class="keyword">master</span> <span class="keyword">to</span> master_host=<span class="string">'$binserver.host'</span>, master_user=<span class="string">'xxx'</span>, master_password=<span class="string">'xxx'</span>, MASTER_LOG_FILE=<span class="string">'$binserver.file'</span>,master_log_pos=$binserver.pos</div><div class="line"></div><div class="line">	b) $binserver.host : <span class="keyword">binlog</span> <span class="keyword">server</span>的ip</div><div class="line">	c）$MASTER_LOG_FILE ：从全部拉出来的文件的file ， relay-<span class="keyword">log</span>.info里面有</div><div class="line">	d）$master_log_pos： 从全部拉出来的文件的positon ，relay-<span class="keyword">log</span>.info里面有</div><div class="line"></div><div class="line"><span class="number">4</span>）同步到指定位置（一般是误操作的<span class="keyword">position</span>）结束</div><div class="line"></div><div class="line">	a）<span class="keyword">full</span> back <span class="keyword">server</span> &gt; <span class="keyword">START</span> <span class="keyword">SLAVE</span> UNTIL MASTER_LOG_FILE = <span class="string">'$log_name'</span>, MASTER_LOG_POS = $log_pos</div><div class="line">	</div><div class="line">	b) $log_name : 就是最后恢复截止的<span class="keyword">binlog</span> 文件名，即误操作的<span class="keyword">binlog</span>文件名</div><div class="line">	c）$log_pos：就是最后恢复截止的<span class="keyword">binlog</span>的<span class="keyword">position</span>，即误操作的<span class="keyword">binlog</span> <span class="keyword">position</span></div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点：全量，性能基本无影响</div><div class="line">缺点：无法抓到对应的SQL</div></pre></td></tr></table></figure>
 
+<h2 id="永恒钻石级别">永恒钻石级别</h2>
 <ul>
-<li><strong>利用SQL-Thread</strong></li>
+<li>巧用P_S</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">原理同上</div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">将每<span class="number">1</span>分钟，<span class="number">5</span>分钟，<span class="number">10</span>分钟的P_S快照映射到对应的<span class="built_in">table</span>，永久存下来，进行统计分析</div><div class="line"></div><div class="line">优点：全量，性能基本无影响，且时间更加细粒度化</div><div class="line">缺点：无法抓到对应的SQL，需要额外开发成本</div></pre></td></tr></table></figure>
 
-<h2 id="总结">总结</h2>
-<blockquote>
-<p>以上，我用的比较多的就是利用IO-thread来做基于position和time的恢复。<br>如果大家还有什么好的方法，互相交流学习下，Thanks</p>
-</blockquote>
+<h2 id="最强王者">最强王者</h2>
+<ul>
+<li>巧用P_S + tshark</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. P_S分段，找到具体有访问的时间段 <span class="variable">$time</span></div><div class="line"><span class="number">2</span>. 在<span class="variable">$time</span>时间段内，去用tshark 抓取SQL相关info</div></pre></td></tr></table></figure>
+
   
 	</div>
 		<footer class="article-footer clearfix">
 
   <div class="article-tags">
   
-  <span></span> <a href="/tags/MySQL-feature/">MySQL feature</a>
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
   </div>
 
 
 <div class="article-categories">
   <span></span>
-  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
 </div>
 
 
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2015/08/18/how_to_backup_recovery/" data-title="MySQL 备份与恢复 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2017/09/12/P_S_user_host/" data-title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -162,19 +182,11 @@ mysqlbinlog + script
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2015/10/11/DBA_think_1/" title="我们的分享：上海站1">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  我们的分享：上海站1</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2015/07/17/22_performance_schema/"  title="Mysql5.6 Performance_schema 深入浅出">
+<a href="/2017/08/29/innodb_locks_long_trx/"  title="MySQL锁系列（九）之 long transaction">
  <strong>NEXT:</strong><br/> 
- <span>Mysql5.6 Performance_schema 深入浅出
+ <span>MySQL锁系列（九）之 long transaction
 </span>
 </a>
 </div>
@@ -184,7 +196,7 @@ mysqlbinlog + script
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2015/08/18/how_to_backup_recovery/" data-title="MySQL 备份与恢复" data-url="https://Keithlan.github.io/2015/08/18/how_to_backup_recovery/"></div>
+<div class="ds-thread" data-thread-key="/2017/09/12/P_S_user_host/" data-title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路" data-url="https://Keithlan.github.io/2017/09/12/P_S_user_host/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -205,7 +217,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#备份和恢复业界指标"><span class="toc-number">1.</span> <span class="toc-text">备份和恢复业界指标</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#常用备份方式"><span class="toc-number">2.</span> <span class="toc-text">常用备份方式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#备份&恢复速度"><span class="toc-number">3.</span> <span class="toc-text">备份&恢复速度</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复架构图"><span class="toc-number">4.</span> <span class="toc-text">恢复架构图</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#恢复的原理和实践"><span class="toc-number">5.</span> <span class="toc-text">恢复的原理和实践</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">6.</span> <span class="toc-text">总结</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#倔强青铜级别"><span class="toc-number">2.</span> <span class="toc-text">倔强青铜级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#秩序白银级别"><span class="toc-number">3.</span> <span class="toc-text">秩序白银级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#荣耀黄金级别"><span class="toc-number">4.</span> <span class="toc-text">荣耀黄金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#尊贵铂金级别"><span class="toc-number">5.</span> <span class="toc-text">尊贵铂金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#永恒钻石级别"><span class="toc-number">6.</span> <span class="toc-text">永恒钻石级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最强王者"><span class="toc-number">7.</span> <span class="toc-text">最强王者</span></a></li></ol>
   </div>
 
 <div id="asidepart">
