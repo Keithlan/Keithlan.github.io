@@ -1,0 +1,479 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维实战（三）之 too many connection | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="too many connection 我们简称：TMC
+
+一、什么是too many connection
+
+重要参数
+
+1234567891011121314max_connections : The maximum permitted number of simultaneous client">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2017/10/25/too_many_connection_1/" title="MySQL运维实战（三）之 too many connection" itemprop="url">MySQL运维实战（三）之 too many connection</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2017-10-25T07:32:24.000Z" itemprop="datePublished">Oct 25 2017</time>
+    Updated:<time datetime="2017-10-25T10:49:41.000Z" itemprop="dateModified">Oct 25 2017</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是too_many_connection"><span class="toc-number">1.</span> <span class="toc-text">一、什么是too many connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、什么情况下会发生too_many_connection"><span class="toc-number">2.</span> <span class="toc-text">二、什么情况下会发生too many connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、实战案例"><span class="toc-number">3.</span> <span class="toc-text">三、实战案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_sleep_空链接引起的TMC"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 sleep 空链接引起的TMC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_slow_query_引起的TMC"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 slow query 引起的TMC</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-1_先来说说真正的slow_query吧"><span class="toc-number">3.2.1.</span> <span class="toc-text">3.2.1 先来说说真正的slow query吧</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-2_伪装的slow_query"><span class="toc-number">3.2.2.</span> <span class="toc-text">3.2.2 伪装的slow query</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-1_故障症状"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">3.2.2.1 故障症状</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-2_故障分析"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">3.2.2.2 故障分析</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-3_重要参数详解"><span class="toc-number">3.2.2.3.</span> <span class="toc-text">3.2.2.3 重要参数详解</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-4_测试故障重现"><span class="toc-number">3.2.2.4.</span> <span class="toc-text">3.2.2.4 测试故障重现</span></a></li></ol></li></ol></li></ol></li></ol>
+		</div>
+		
+		<blockquote>
+<p>too many connection 我们简称：TMC</p>
+</blockquote>
+<h2 id="一、什么是too_many_connection">一、什么是too many connection</h2>
+<ul>
+<li>重要参数</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">max_connections : The maximum permitted <span class="built_in">number</span> <span class="operator">of</span> simultaneous client connections </div><div class="line"></div><div class="line">允许的最大的链接数，如果超过这个数值，则会报：ERROR <span class="number">1040</span> (HY000): Too many connections</div><div class="line"></div><div class="line">max_user_connections: The maximum <span class="built_in">number</span> <span class="operator">of</span> simultaneous connections permitted <span class="built_in">to</span> <span class="keyword">any</span> given MySQL user account</div><div class="line"></div><div class="line">允许的每个用户最大链接数，如果超过这个数值，则会报： ERROR <span class="number">1203</span> (<span class="number">42000</span>): User dba already has more than <span class="string">'max_user_connections'</span> active connections  </div><div class="line"></div><div class="line">一般这样的报错只会出现在业务机器上，并不会在DB server层报错，这样的话DBA就无法真正感知到错误，</div><div class="line">MySQL也非常贴心的推出了一个status供DBA查看：Connection_errors_max_connections  </div><div class="line"></div><div class="line">Connection_errors_max_connections : The <span class="built_in">number</span> <span class="operator">of</span> connections refused because <span class="operator">the</span> server max_connections limit was reached.  </div><div class="line"></div><div class="line">细心的同学就会发现：那如果出现<span class="string">'max_user_connections'</span> 的报错，就无法发现啦，这块目前我还没找到对应status</div></pre></td></tr></table></figure>
+
+<h2 id="二、什么情况下会发生too_many_connection">二、什么情况下会发生too many connection</h2>
+<ul>
+<li>slow query 引起</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 真正的slow: 该<span class="keyword">query</span>的确非常慢</div><div class="line"><span class="number">2</span>. 伪装的slow: 该<span class="keyword">query</span>本身并不慢，是受其它因素的影响导致</div></pre></td></tr></table></figure>
+
+<ul>
+<li>sleep 空连接 引起</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 没有任何<span class="keyword">query</span>，只是sleep, 这种情况一般是代码里面没有主动及时释放链接导致。</div></pre></td></tr></table></figure>
+
+<h2 id="三、实战案例">三、实战案例</h2>
+<h3 id="3-1_sleep_空链接引起的TMC">3.1 sleep 空链接引起的TMC</h3>
+<ul>
+<li>原因</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">由于代码没有主动及时的释放链接，那么在db server中存在大量的<span class="keyword">sleep</span>链接，一旦超过max_connections则报错。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>解决方案</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">1. 遇到这样的报错，如果没有及时解决，则会导致后面的业务都一直连不上数据库，影响面很大。</div><div class="line"></div><div class="line">2. 所以，我们第一件事情必须是保护数据库，<span class="operator"><span class="keyword">kill</span>掉这些<span class="keyword">sleep</span>链接。关于<span class="keyword">kill</span>这件事，又有很多技巧可以谈</span></div><div class="line">	<span class="number">2.1</span> 如果是人工<span class="keyword">kill</span>，这简直无法完成这样艰巨的任务，因为业务会时刻产生这样的<span class="keyword">sleep</span>链接，有无尽头</div><div class="line">    <span class="number">2.2</span> 如果自己写脚本，没秒去<span class="keyword">kill</span>，当然可行。但是我们却碰到过非常极端的情况，那就是MySQL无法响应你的<span class="keyword">kill</span>请求。  </div><div class="line">	<span class="number">2.3</span> 所以，这里还有一个更加靠谱的方案就是：设置wait_timeout, 它会自动帮你完成这项庞大且艰巨的任务，且一定可以<span class="keyword">kill</span>掉  </div><div class="line"></div><div class="line"><span class="number">3.</span> 完成上面几个步骤之后，只能保证你的数据库不会被压到，且你有机会登陆进去做一些管理事情，但是要彻底解决还必须让业务方处理这些<span class="keyword">sleep</span>链接。</div><div class="line">	<span class="number">3.1</span> 业务团队排查没有释放链接的原因。</div><div class="line">	<span class="number">3.2</span> 通常，如果可以，DBA协助业务方提供TMC期间top ip，让业务方排查服务哪里异常。  </div><div class="line"></div><div class="line"><span class="number">4.</span> 启用thread_pool功能可能可以解决这个问题，但是由于种种原因没有使用  </div><div class="line">	<span class="number">4.1</span> MySQL官方社区版不支持</div><div class="line">	<span class="number">4.2</span> 无法解决slow <span class="keyword">query</span>引起的TMC</div><div class="line">	<span class="number">4.3</span> 可能因为该组件导致其本身的问题</div></pre></td></tr></table></figure>
+
+<h3 id="3-2_slow_query_引起的TMC">3.2 slow query 引起的TMC</h3>
+<h4 id="3-2-1_先来说说真正的slow_query吧">3.2.1 先来说说真正的slow query吧</h4>
+<p>一般这种情况，也非常清晰明了，找到它，优化它，当然前提是你的数据库还活着。</p>
+<p>我们通常有SQL防火墙保护，大大降低了这样的风险。预知SQL防火墙为何物，且听下回分享。  </p>
+<h4 id="3-2-2_伪装的slow_query">3.2.2 伪装的slow query</h4>
+<p>好了，终于开始介绍这种最难的故障场景。<br>难点就是：因为它不是真正的slow，优化点难以寻找，所谓对症下药，就是要找到对应的症状是难点。<br>废话不多说，这里介绍下前一段时间遇到的一次真实的案例，一直想写没时间来着。  </p>
+<h5 id="3-2-2-1_故障症状">3.2.2.1 故障症状</h5>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>too many connection error</div><div class="line"><span class="bullet">2. </span>threads_runnig 非常多</div><div class="line"><span class="bullet">3. </span>几乎找不到有问题的query，没有明显慢的query</div><div class="line"><span class="bullet">4. </span>几乎任何语句都变得非常慢</div><div class="line"><span class="bullet">5. </span>服务器io压力并不大</div></pre></td></tr></table></figure>
+
+<h5 id="3-2-2-2_故障分析">3.2.2.2 故障分析</h5>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line">* <span class="operator"><span class="keyword">show</span> <span class="keyword">engine</span> <span class="keyword">innodb</span> <span class="keyword">status</span>\G 统计的结果</span></div><div class="line"></div><div class="line">    <span class="number">427</span>  <span class="keyword">not</span> started sleeping <span class="keyword">before</span> entering <span class="keyword">InnoDB</span></div><div class="line">     <span class="number">63</span>  <span class="keyword">not</span> started <span class="keyword">starting</span> <span class="keyword">index</span> <span class="keyword">read</span></div><div class="line">     <span class="number">27</span>  <span class="keyword">not</span> started committing</div><div class="line">     <span class="number">21</span>  ACTIVE (PREPARED) <span class="number">1</span> sec</div><div class="line">     <span class="number">14</span>  ACTIVE <span class="number">1</span> sec preparing</div><div class="line">     <span class="number">10</span>  <span class="keyword">not</span> started inserting</div><div class="line">      <span class="number">9</span>  ACTIVE <span class="number">1</span> sec inserting</div><div class="line">      <span class="number">5</span>  <span class="keyword">not</span> started estimating records <span class="keyword">in</span> <span class="keyword">index</span> range</div><div class="line">      <span class="number">4</span>  ACTIVE <span class="number">0</span> sec inserting</div><div class="line">      <span class="number">3</span>  COMMITTED <span class="keyword">IN</span> MEMORY committing</div><div class="line">      <span class="number">3</span>  ACTIVE <span class="number">0</span> sec committing</div><div class="line">      <span class="number">2</span>  ACTIVE (PREPARED) <span class="number">1</span> sec committing</div><div class="line">      <span class="number">2</span>  ACTIVE <span class="number">1</span> sec fetching <span class="keyword">rows</span></div><div class="line">      <span class="number">2</span>  ACTIVE <span class="number">1</span> sec committing</div><div class="line">      <span class="number">1</span>  ACTIVE <span class="number">1</span> sec updating <span class="keyword">or</span> deleting</div><div class="line">      <span class="number">1</span>  ACTIVE <span class="number">1</span> sec <span class="keyword">starting</span> <span class="keyword">index</span> <span class="keyword">read</span></div><div class="line">      <span class="number">1</span>  ACTIVE <span class="number">0</span> sec <span class="keyword">starting</span> <span class="keyword">index</span> <span class="keyword">read</span></div><div class="line">      <span class="number">1</span>   <span class="number">0</span> sec committing</div></pre></td></tr></table></figure>
+
+<h5 id="3-2-2-3_重要参数详解">3.2.2.3 重要参数详解</h5>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">官方文档的解释我不多说，这里简单介绍下自己的理解</div><div class="line"></div><div class="line">innodb_thread_concurrency : 进入innodb存储引擎的线程数量，如果数量满了，就要排队</div><div class="line"></div><div class="line">innodb_thread_sleep_delay : 排队等候进入innoDB的时候需要睡眠多长时间</div><div class="line"></div><div class="line">innodb_adaptive_max_sleep_delay : 设置一个自适应的最大睡眠时间  </div><div class="line"></div><div class="line"><span class="label">innodb_concurrency_tickets:</span> 一旦进入innoDB，就会获取一个票据tickets，在票据期间可以随意进入innoDB不需要排队，如果用完了，理论上则要排队（实测后发现并不是严格这套机制）</div></pre></td></tr></table></figure>
+
+<h5 id="3-2-2-4_测试故障重现">3.2.2.4 测试故障重现</h5>
+<ul>
+<li>表结构</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:lc&gt; show create table t_short;</span></div><div class="line">+---------+----------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table   | Create Table                                                                                             |</span></div><div class="line">+---------+----------------------------------------------------------------------------------------------------------+</div><div class="line">| t<span class="emphasis">_short | CREATE TABLE `t_</span>short` (</div><div class="line"><span class="code">  `id` int(11) DEFAULT NULL,</span></div><div class="line"><span class="code">  `name` text</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+---------+----------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.01 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; show create table t_short_tmp;</span></div><div class="line">+-------------+--------------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table       | Create Table                                                                                                 |</span></div><div class="line">+-------------+--------------------------------------------------------------------------------------------------------------+</div><div class="line">| t<span class="emphasis">_short_</span>tmp | CREATE TABLE <span class="code">`t_short_tmp`</span> (</div><div class="line"><span class="code">  `id` int(11) DEFAULT NULL,</span></div><div class="line"><span class="code">  `name` text</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+-------------+--------------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; show create table t_long_tmp;</span></div><div class="line">+------------+-------------------------------------------------------------------------------------------------------------+</div><div class="line"><span class="header">| Table      | Create Table                                                                                                |</span></div><div class="line">+------------+-------------------------------------------------------------------------------------------------------------+</div><div class="line">| t<span class="emphasis">_long_</span>tmp | CREATE TABLE <span class="code">`t_long_tmp`</span> (</div><div class="line"><span class="code">  `id` int(11) DEFAULT NULL,</span></div><div class="line"><span class="code">  `name` text</span></div><div class="line"><span class="header">) ENGINE=InnoDB DEFAULT CHARSET=utf8 |</span></div><div class="line">+------------+-------------------------------------------------------------------------------------------------------------+</div><div class="line">1 row in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; select count(*) from t_short;</span></div><div class="line">+----------+</div><div class="line"><span class="header">| count(*) |</span></div><div class="line">+----------+</div><div class="line"><span class="header">|   223133 |</span></div><div class="line">+----------+</div><div class="line">1 row in set (0.16 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; select count(*) from t_short_tmp;</span></div><div class="line">+----------+</div><div class="line"><span class="header">| count(*) |</span></div><div class="line">+----------+</div><div class="line"><span class="header">|  4462660 |</span></div><div class="line">+----------+</div><div class="line">1 row in set (3.06 sec)</div><div class="line"></div><div class="line"><span class="header">dba:lc&gt; select count(*) from t_long_tmp;</span></div><div class="line">+----------+</div><div class="line"><span class="header">| count(*) |</span></div><div class="line">+----------+</div><div class="line"><span class="header">|  4462660 |</span></div><div class="line">+----------+</div><div class="line">1 row in set (1.98 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>关键参数设置</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">set</span> <span class="keyword">global</span> innodb_thread_concurrency = <span class="number">1</span>;</span> <span class="comment">--方便模拟</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>测试用例, 三个语句开始执行时间不差1秒。</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div><div class="line"><span class="sql">[session 1]</span></div><div class="line">	<span class="operator"><span class="keyword">select</span> * <span class="keyword">from</span> t_long_tmp <span class="keyword">group</span> <span class="keyword">by</span> name</span></div><div class="line"></div><div class="line">[<span class="keyword">session</span> <span class="number">2</span>]</div><div class="line">	<span class="keyword">select</span> * <span class="keyword">from</span> t_short_tmp <span class="keyword">group</span> <span class="keyword">by</span> name</div><div class="line"></div><div class="line">[<span class="keyword">session</span> <span class="number">3</span>]</div><div class="line">	<span class="keyword">insert</span> <span class="keyword">into</span> t_short_tmp <span class="keyword">select</span> * <span class="keyword">from</span> t_short</div></pre></td></tr></table></figure>
+
+<ul>
+<li>跟踪结果</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; select trx_id,trx_mysql_thread_id,trx_state,trx_operation_state,trx_query,trx_concurrency_tickets,trx_weight,trx_started,now() from information_schema.innodb_trx;</span></div><div class="line">+-----------------+---------------------+-----------+---------------------------------+-----------------------------------------------+-------------------------+------------+---------------------+---------------------+</div><div class="line"><span class="header">| trx_id          | trx_mysql_thread_id | trx_state | trx_operation_state             | trx_query                                     | trx_concurrency_tickets | trx_weight | trx_started         | now()               |</span></div><div class="line">+-----------------+---------------------+-----------+---------------------------------+-----------------------------------------------+-------------------------+------------+---------------------+---------------------+</div><div class="line">| 142200009       |                  34 | RUNNING   | inserting                       | insert into t<span class="emphasis">_short_</span>tmp select * from t<span class="emphasis">_short |                    3258 |       8374 | 2017-10-24 17:24:16 | 2017-10-24 17:24:17 |</span></div><div class="line">| 421876372057712 |                  18 | RUNNING   | sleeping before entering InnoDB | select * from t_long<span class="emphasis">_tmp group by name        |                       0 |          0 | 2017-10-24 17:22:20 | 2017-10-24 17:24:17 |</span></div><div class="line">| 421876372056800 |                  20 | RUNNING   | sleeping before entering InnoDB | select * from t_short<span class="emphasis">_tmp group by name       |                       0 |          0 | 2017-10-24 17:23:29 | 2017-10-24 17:24:17 |</span></div><div class="line">+-----------------+---------------------+-----------+---------------------------------+-----------------------------------------------+-------------------------+------------+---------------------+---------------------+</div><div class="line">3 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>总结</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 通过以上测试和结果分析得出：当<span class="keyword">query</span>超过innodb_thread_concurrency时，其余<span class="keyword">query</span>会等待，及时这样的<span class="keyword">query</span>非常快，也还是会等待，这就是所谓的伪装的slow <span class="keyword">query</span></div><div class="line"><span class="number">2</span>. 通过trx_started，now（）分析得出：这些<span class="keyword">query</span>直接的切换轮询并不是真正意义上的平均公平分配，里面有一套自己的自适应算法，这里面我没有深究下去，有兴趣的同学可以继续了解源码。  </div><div class="line"><span class="number">3</span>. 既然真正的原因找到，那么解决方案也就很快出来，那就是让并发线程少一点，通过我们的omega平台可以很方便的得出这段时间哪些<span class="keyword">query</span>和connect最多，那么协助业务一起沟通业务场景和优化方案，问题得到解决。</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-实战/">MySQL 实战</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2017/10/25/too_many_connection_1/" data-title="MySQL运维实战（三）之 too many connection | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2017/09/12/P_S_user_host/"  title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2017/10/25/too_many_connection_1/" data-title="MySQL运维实战（三）之 too many connection" data-url="https://Keithlan.github.io/2017/10/25/too_many_connection_1/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、什么是too_many_connection"><span class="toc-number">1.</span> <span class="toc-text">一、什么是too many connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、什么情况下会发生too_many_connection"><span class="toc-number">2.</span> <span class="toc-text">二、什么情况下会发生too many connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、实战案例"><span class="toc-number">3.</span> <span class="toc-text">三、实战案例</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_sleep_空链接引起的TMC"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 sleep 空链接引起的TMC</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_slow_query_引起的TMC"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 slow query 引起的TMC</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-1_先来说说真正的slow_query吧"><span class="toc-number">3.2.1.</span> <span class="toc-text">3.2.1 先来说说真正的slow query吧</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#3-2-2_伪装的slow_query"><span class="toc-number">3.2.2.</span> <span class="toc-text">3.2.2 伪装的slow query</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-1_故障症状"><span class="toc-number">3.2.2.1.</span> <span class="toc-text">3.2.2.1 故障症状</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-2_故障分析"><span class="toc-number">3.2.2.2.</span> <span class="toc-text">3.2.2.2 故障分析</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-3_重要参数详解"><span class="toc-number">3.2.2.3.</span> <span class="toc-text">3.2.2.3 重要参数详解</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#3-2-2-4_测试故障重现"><span class="toc-number">3.2.2.4.</span> <span class="toc-text">3.2.2.4 测试故障重现</span></a></li></ol></li></ol></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>32</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>24</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>1</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>23</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
