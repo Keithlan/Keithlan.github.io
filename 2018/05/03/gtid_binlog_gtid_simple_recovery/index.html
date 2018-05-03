@@ -1,0 +1,468 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维之 binlog_gtid_simple_recovery(GTID) | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="binlog_gtid_simple_recovery 是什么
+
+官方解释
+
+12345678910111213141516171819202122This variable controls how binary log files are iterated during the search f">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/05/03/gtid_binlog_gtid_simple_recovery/" title="MySQL运维之 binlog_gtid_simple_recovery(GTID)" itemprop="url">MySQL运维之 binlog_gtid_simple_recovery(GTID)</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-05-03T07:32:24.000Z" itemprop="datePublished">May 3 2018</time>
+    Updated:<time datetime="2018-05-03T12:31:45.000Z" itemprop="dateModified">May 3 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#binlog_gtid_simple_recovery_是什么"><span class="toc-number">1.</span> <span class="toc-text">binlog_gtid_simple_recovery 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试案例"><span class="toc-number">2.</span> <span class="toc-text">测试案例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试二"><span class="toc-number">3.</span> <span class="toc-text">测试二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#算法总结"><span class="toc-number">4.</span> <span class="toc-text">算法总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#需要注意的点"><span class="toc-number">5.</span> <span class="toc-text">需要注意的点</span></a></li></ol>
+		</div>
+		
+		<h2 id="binlog_gtid_simple_recovery_是什么">binlog_gtid_simple_recovery 是什么</h2>
+<ul>
+<li>官方解释</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">This <span class="built_in">variable</span> controls how binary <span class="built_in">log</span> <span class="built_in">files</span> are iterated during <span class="operator">the</span> search <span class="keyword">for</span> GTIDs when MySQL starts <span class="operator">or</span> restarts.   </div><div class="line">In MySQL <span class="built_in">version</span> <span class="number">5.7</span><span class="number">.5</span>, this <span class="built_in">variable</span> was added <span class="keyword">as</span> simplified_binlog_gtid_recovery <span class="operator">and</span> <span class="operator">in</span> MySQL <span class="built_in">version</span> <span class="number">5.7</span><span class="number">.6</span> <span class="keyword">it</span> was renamed <span class="built_in">to</span> binlog_gtid_simple_recovery.    </div><div class="line"></div><div class="line">When binlog_gtid_simple_recovery=<span class="constant">FALSE</span>, <span class="operator">the</span> method <span class="operator">of</span> iterating <span class="operator">the</span> binary <span class="built_in">log</span> <span class="built_in">files</span> is:         </div><div class="line"></div><div class="line">To initialize gtid_executed, binary <span class="built_in">log</span> <span class="built_in">files</span> are iterated <span class="built_in">from</span> <span class="operator">the</span> newest <span class="built_in">file</span>, stopping <span class="keyword">at</span> <span class="operator">the</span> <span class="keyword">first</span> binary <span class="built_in">log</span> that has <span class="keyword">any</span> Previous_gtids_log_event.     </div><div class="line">All GTIDs <span class="built_in">from</span> Previous_gtids_log_event <span class="operator">and</span> Gtid_log_events are <span class="built_in">read</span> <span class="built_in">from</span> this binary <span class="built_in">log</span> <span class="built_in">file</span>.    </div><div class="line">This GTID <span class="built_in">set</span> is stored internally <span class="operator">and</span> called gtids_in_binlog.    </div><div class="line">The <span class="built_in">value</span> <span class="operator">of</span> gtid_executed is computed <span class="keyword">as</span> <span class="operator">the</span> <span class="built_in">union</span> <span class="operator">of</span> this <span class="built_in">set</span> <span class="operator">and</span> <span class="operator">the</span> GTIDs stored <span class="operator">in</span> <span class="operator">the</span> mysql.gtid_executed table.    </div><div class="line"></div><div class="line">This <span class="built_in">process</span> could take <span class="operator">a</span> <span class="keyword">long</span> <span class="built_in">time</span> <span class="keyword">if</span> you had <span class="operator">a</span> large <span class="built_in">number</span> <span class="operator">of</span> binary <span class="built_in">log</span> <span class="built_in">files</span> <span class="keyword">without</span> GTID events, <span class="keyword">for</span> example created when gtid_mode=OFF.    </div><div class="line"></div><div class="line">To initialize gtid_purged, binary <span class="built_in">log</span> <span class="built_in">files</span> are iterated <span class="built_in">from</span> <span class="operator">the</span> oldest <span class="built_in">to</span> <span class="operator">the</span> newest,   </div><div class="line">stopping <span class="keyword">at</span> <span class="operator">the</span> <span class="keyword">first</span> binary <span class="built_in">log</span> that <span class="operator">contains</span> either <span class="operator">a</span> Previous_gtids_log_event that is nonempty (that has <span class="keyword">at</span> least <span class="constant">one</span> GTID)   </div><div class="line"><span class="operator">or</span> that has <span class="keyword">at</span> least <span class="constant">one</span> Gtid_log_event. From this binary <span class="built_in">log</span> <span class="keyword">it</span> reads Previous_gtids_log_event.   </div><div class="line">This GTID <span class="built_in">set</span> is subtracted <span class="built_in">from</span> gtids_in_binlog <span class="operator">and</span> <span class="operator">the</span> <span class="built_in">result</span> stored <span class="operator">in</span> <span class="operator">the</span> internal <span class="built_in">variable</span> gtids_in_binlog_not_purged.   </div><div class="line">The <span class="built_in">value</span> <span class="operator">of</span> gtid_purged is initialized <span class="built_in">to</span> <span class="operator">the</span> <span class="built_in">value</span> <span class="operator">of</span> gtid_executed, minus gtids_in_binlog_not_purged.  </div><div class="line"></div><div class="line">When binlog_gtid_simple_recovery=<span class="constant">TRUE</span>, which is <span class="operator">the</span> default <span class="operator">in</span> MySQL <span class="number">5.7</span><span class="number">.7</span> <span class="operator">and</span> later,   </div><div class="line"><span class="operator">the</span> server iterates only <span class="operator">the</span> oldest <span class="operator">and</span> <span class="operator">the</span> newest binary <span class="built_in">log</span> <span class="built_in">files</span>   </div><div class="line"><span class="operator">and</span> <span class="operator">the</span> values <span class="operator">of</span> gtid_purged <span class="operator">and</span> gtid_executed are computed based only <span class="command"><span class="keyword">on</span> <span class="title">Previous_gtids_log_event</span> <span class="title">or</span> <span class="title">Gtid_log_event</span> <span class="title">found</span> <span class="title">in</span> <span class="title">these</span> <span class="title">files</span>.  </span></div><div class="line">This ensures only <span class="constant">two</span> binary <span class="built_in">log</span> <span class="built_in">files</span> are iterated during server restart <span class="operator">or</span> when binary logs are being purged.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>官方注意点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">Note</div><div class="line"></div><div class="line"><span class="keyword">If</span> this <span class="keyword">option</span> <span class="keyword">is</span> enabled, gtid_executed <span class="keyword">and</span> gtid_purged may be initialized incorrectly <span class="keyword">in</span> the following situations:  </div><div class="line"></div><div class="line">The newest <span class="keyword">binary</span> log was generated <span class="keyword">by</span> MySQL <span class="number">5.7</span><span class="number">.5</span> <span class="keyword">or</span> older, <span class="keyword">and</span> gtid_mode was <span class="keyword">ON</span> <span class="keyword">for</span> some <span class="keyword">binary</span> logs but <span class="keyword">OFF</span> <span class="keyword">for</span> the newest <span class="keyword">binary</span> log.  </div><div class="line"></div><div class="line">A <span class="keyword">SET</span> GTID_PURGED statement was issued <span class="keyword">on</span> a MySQL version prior <span class="keyword">to</span> <span class="number">5.7</span><span class="number">.7</span>, <span class="keyword">and</span> the <span class="keyword">binary</span> log that was active at the time <span class="keyword">of</span> the <span class="keyword">SET</span> GTID_PURGED has <span class="keyword">not</span> yet been purged.  </div><div class="line"></div><div class="line"><span class="keyword">If</span> an incorrect GTID <span class="keyword">set</span> <span class="keyword">is</span> computed <span class="keyword">in</span> either situation, it will remain incorrect even <span class="keyword">if</span> the server <span class="keyword">is</span> later restarted, regardless <span class="keyword">of</span> the value <span class="keyword">of</span> this <span class="keyword">option</span>.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>个人理解与总结</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 这个变量用于在<span class="constant">MySQL</span>重启或启动的时候寻找<span class="constant">GTIDs</span>过程中，控制binlog 如何遍历的算法？  </div><div class="line"><span class="number">2</span>. 当binlog_gtid_simple_recovery=<span class="constant">FALSE</span> 时：  </div><div class="line"><span class="input"><span class="prompt">	为了初始化 gtid_executed，算法是： 从newest_binlog -&gt;</span> oldest_binlog 方向遍历读取，如果发现有<span class="constant">Previous_gtids_log_event</span> ， 那么就停止遍历  </span></div><div class="line"><span class="input"><span class="prompt">	为了初始化 gtid_purged，算法是：   从oldest_binlog -&gt;</span> newest_binlog 方向遍历读取, 如果发现有<span class="constant">Previous_gtids_log_event</span>（not empty）或者 至少有一个<span class="constant">Gtid_log_event</span>的文件，那么就停止遍历  </span></div><div class="line"><span class="number">3</span>. 当binlog_gtid_simple_recovery=<span class="constant">TRUE</span> 时：</div><div class="line">	为了初始化 gtid_executed ， 算法是： 只需要读取newest_binlog</div><div class="line">	为了初始化 gtid_purged， 算法是： 只需要读取oldest_binlog</div><div class="line"><span class="number">4</span>. 当设置binlog_gtid_simple_recovery=<span class="constant">TRUE</span> ， 如果<span class="constant">MySQL</span>版本低于<span class="number">5.7</span>.<span class="number">7</span> ， 可能会有gitd计算出错的可能，具体参考官方文档详细描述</div></pre></td></tr></table></figure>
+
+<p>根据以上解读，那么如果存在非gtid的binlog比较多的时候，会非常影响性能的。<br>接下来，我们就来好好测试这种场景  </p>
+<h2 id="测试案例">测试案例</h2>
+<blockquote>
+<p>重点测试non-gtid和gtid混合的情况： This process could take a long time if you had a large number of binary log files without GTID events, for example created when gtid_mode=OFF.<br>测试当删除binlog的时候，是如何重置gtid_purged值的  </p>
+</blockquote>
+<ul>
+<li>环境</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="constant">MySQL5</span>.<span class="number">7.13</span></div><div class="line">binlog_gtid_simple_recovery = <span class="keyword">false</span>   =&gt; 这是重点</div><div class="line"><span class="input"><span class="prompt">GTID升级：non-GTID -&gt;</span> <span class="constant">GTID</span> 后，purge binary logs  =&gt; 这也是重点</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>binlog</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql        <span class="number">177</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">23</span> tjtx-<span class="number">126</span>-<span class="number">164.000001</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589597</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">29</span> tjtx-<span class="number">126</span>-<span class="number">164.000002</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589060</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">30</span> tjtx-<span class="number">126</span>-<span class="number">164.000003</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589063</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">31</span> tjtx-<span class="number">126</span>-<span class="number">164.000004</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589065</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">32</span> tjtx-<span class="number">126</span>-<span class="number">164.000005</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589051</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">33</span> tjtx-<span class="number">126</span>-<span class="number">164.000006</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589045</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">33</span> tjtx-<span class="number">126</span>-<span class="number">164.000007</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589047</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">34</span> tjtx-<span class="number">126</span>-<span class="number">164.000008</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589050</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">35</span> tjtx-<span class="number">126</span>-<span class="number">164.000009</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589052</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">36</span> tjtx-<span class="number">126</span>-<span class="number">164.000010</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589062</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">37</span> tjtx-<span class="number">126</span>-<span class="number">164.000011</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589068</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">37</span> tjtx-<span class="number">126</span>-<span class="number">164.000012</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589045</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">38</span> tjtx-<span class="number">126</span>-<span class="number">164.000013</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589038</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">39</span> tjtx-<span class="number">126</span>-<span class="number">164.000014</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589055</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">40</span> tjtx-<span class="number">126</span>-<span class="number">164.000015</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589050</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">41</span> tjtx-<span class="number">126</span>-<span class="number">164.000016</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589063</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">41</span> tjtx-<span class="number">126</span>-<span class="number">164.000017</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589055</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">42</span> tjtx-<span class="number">126</span>-<span class="number">164.000018</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589048</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">43</span> tjtx-<span class="number">126</span>-<span class="number">164.000019</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074515950</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">45</span> tjtx-<span class="number">126</span>-<span class="number">164.000020</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589069</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">46</span> tjtx-<span class="number">126</span>-<span class="number">164.000021</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589051</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">47</span> tjtx-<span class="number">126</span>-<span class="number">164.000022</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589063</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">47</span> tjtx-<span class="number">126</span>-<span class="number">164.000023</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql <span class="number">1074589051</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">11</span><span class="symbol">:</span><span class="number">48</span> tjtx-<span class="number">126</span>-<span class="number">164.000024</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql  <span class="number">321034919</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">13</span><span class="symbol">:</span><span class="number">53</span> tjtx-<span class="number">126</span>-<span class="number">164.000025</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql        <span class="number">204</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">13</span><span class="symbol">:</span><span class="number">53</span> tjtx-<span class="number">126</span>-<span class="number">164.000026</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql        <span class="number">204</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">13</span><span class="symbol">:</span><span class="number">53</span> tjtx-<span class="number">126</span>-<span class="number">164.000027</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql       <span class="number">1092</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">13</span><span class="symbol">:</span><span class="number">55</span> tjtx-<span class="number">126</span>-<span class="number">164.000028</span></span></div><div class="line">-<span class="ruby">rw-r-----  <span class="number">1</span> mysql mysql        <span class="number">194</span> <span class="constant">May</span>  <span class="number">3</span> <span class="number">13</span><span class="symbol">:</span><span class="number">55</span> tjtx-<span class="number">126</span>-<span class="number">164.000029</span></span></div><div class="line"></div><div class="line">tjtx-126-164.000001 ~ tjtx-126-164.000028</div><div class="line"></div><div class="line">	Previous-GTIDs</div><div class="line">	# [empty]</div><div class="line"></div><div class="line"></div><div class="line">tjtx-126-164.000029</div><div class="line"></div><div class="line">	#180503 13:55:05 server id 1261261646  end_log_pos 194 CRC32 0xb77b80b7 	Previous-GTIDs</div><div class="line">	# 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3</div></pre></td></tr></table></figure>
+
+<ul>
+<li>测试开始</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">&lt;master&gt;</div><div class="line"></div><div class="line">db<span class="variable">a:lc</span>&gt; purge binary logs <span class="keyword">to</span> <span class="string">'tjtx-126-164.000005'</span>;</div><div class="line">Query OK, <span class="number">0</span> rows affected (<span class="number">1</span> <span class="built_in">min</span> <span class="number">14.41</span> sec)   --执行时间竟然长达一分钟  </div><div class="line"></div><div class="line">db<span class="variable">a:lc</span>&gt; <span class="built_in">insert</span> into <span class="keyword">t</span> select <span class="number">300</span>;  --master的事务卡住</div><div class="line">Query OK, <span class="number">1</span> row affected (<span class="number">1</span> <span class="built_in">min</span> <span class="number">9.42</span> sec)</div><div class="line">Record<span class="variable">s:</span> <span class="number">1</span>  Duplicate<span class="variable">s:</span> <span class="number">0</span>  Warning<span class="variable">s:</span> <span class="number">0</span></div></pre></td></tr></table></figure>
+
+
+
+<ul>
+<li>strace跟踪</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div></pre></td><td class="code"><pre><div class="line">在从头到尾遍历binlog  ，从而再次验证了我们之前的算法理论。</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.394945</span> read(<span class="number">55</span>, <span class="string">"05488963387-39206410793-66801786"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000011</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395005</span> read(<span class="number">55</span>, <span class="string">"-66498258471-55447794725-7620591"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395065</span> read(<span class="number">55</span>, <span class="string">"7;10709822844-35491948145-283531"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000012</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395129</span> read(<span class="number">55</span>, <span class="string">"17-05336385032;74931753923-32217"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000011</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395191</span> read(<span class="number">55</span>, <span class="string">"053-81565945575-96536403914;8342"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000011</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395250</span> read(<span class="number">55</span>, <span class="string">"7139-77543559499-90858749831-907"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395310</span> read(<span class="number">55</span>, <span class="string">"07981-10898305107-65423962210-93"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000011</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395371</span> read(<span class="number">55</span>, <span class="string">"009985-68038808770-60998915978-7"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395430</span> read(<span class="number">55</span>, <span class="string">"3665266-98504623794-11513728759-"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000011</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395491</span> read(<span class="number">55</span>, <span class="string">"54495717-21332716078-74081433759"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395550</span> read(<span class="number">55</span>, <span class="string">"873221923-40252274459-8633934300"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.395610</span> read(<span class="number">55</span>, <span class="string">"2609904861-91693621073-471178324"</span><span class="keyword">...</span>, <span class="number">8192</span>) = <span class="number">8192</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.125372</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.~rec~"</span>, O_RDWR|O_CREAT, <span class="number">0640</span>) = <span class="number">53</span> &lt;<span class="number">0.000039</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.125769</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.index_crash_safe"</span>, O_RDWR|O_CREAT, <span class="number">0640</span>) = <span class="number">55</span> &lt;<span class="number">0.000031</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.126150</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.index"</span>, O_RDWR|O_CREAT, <span class="number">0640</span>) = <span class="number">3</span> &lt;<span class="number">0.000013</span>&gt;</div><div class="line"></div><div class="line">。。。。。。。。。。。。。。。。。</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">50.126554</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000005"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000012</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">53.857069</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000006"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000018</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">07</span>:<span class="number">57.516826</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000007"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000016</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">01.169413</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000008"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000018</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">04.815608</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000009"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">08.473808</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000010"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">12.449964</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000011"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000018</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">16.251054</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000012"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000019</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">19.686003</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000013"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">23.341291</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000014"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000017</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">27.014210</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000015"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000016</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">30.625242</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000016"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000016</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">34.192385</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000017"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">37.862750</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000018"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000016</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">41.533869</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000019"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000016</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">45.202949</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000020"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000017</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">48.792088</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000021"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000017</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">52.266700</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000022"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000017</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">55.932879</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000023"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000017</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">08</span>:<span class="number">59.594761</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000024"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">09</span>:<span class="number">03.256451</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000025"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000015</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">09</span>:<span class="number">04.349108</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000026"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000014</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">09</span>:<span class="number">04.349280</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000027"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"><span class="number">63639</span> <span class="number">14</span>:<span class="number">09</span>:<span class="number">04.349434</span> open(<span class="string">"/data/mysql.bin/tjtx-126-164.000028"</span>, O_RDONLY) = <span class="number">55</span> &lt;<span class="number">0.000010</span>&gt;</div><div class="line"></div><div class="line"></div><div class="line">查看fd=<span class="number">55</span>的句柄:</div><div class="line"></div><div class="line">[root@tjtx-<span class="number">126</span>-<span class="number">164</span> tmp]<span class="comment"># ll /proc/62382/fd | grep 55</span></div><div class="line">lr-x------ <span class="number">1</span> root root <span class="number">64</span> May  <span class="number">3</span> <span class="number">14</span>:<span class="number">17</span> <span class="number">55</span> -&gt; /data/mysql.bin/tjtx-<span class="number">126</span>-<span class="number">164.000009</span></div><div class="line">[root@tjtx-<span class="number">126</span>-<span class="number">164</span> tmp]<span class="comment"># ll /proc/62382/fd | grep 55</span></div><div class="line">lr-x------ <span class="number">1</span> root root <span class="number">64</span> May  <span class="number">3</span> <span class="number">14</span>:<span class="number">17</span> <span class="number">55</span> -&gt; /data/mysql.bin/tjtx-<span class="number">126</span>-<span class="number">164.000010</span></div><div class="line">[root@tjtx-<span class="number">126</span>-<span class="number">164</span> tmp]<span class="comment"># ll /proc/62382/fd | grep 55</span></div><div class="line">lr-x------ <span class="number">1</span> root root <span class="number">64</span> May  <span class="number">3</span> <span class="number">14</span>:<span class="number">17</span> <span class="number">55</span> -&gt; /data/mysql.bin/tjtx-<span class="number">126</span>-<span class="number">164.000010</span></div><div class="line">[root@tjtx-<span class="number">126</span>-<span class="number">164</span> tmp]<span class="comment"># ll /proc/62382/fd | grep 55</span></div><div class="line">lr-x------ <span class="number">1</span> root root <span class="number">64</span> May  <span class="number">3</span> <span class="number">14</span>:<span class="number">17</span> <span class="number">55</span> -&gt; /data/mysql.bin/tjtx-<span class="number">126</span>-<span class="number">164.000010</span></div></pre></td></tr></table></figure>
+
+<h2 id="测试二">测试二</h2>
+<ul>
+<li>环境</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="constant">MySQL5</span>.<span class="number">7.13</span></div><div class="line">binlog_gtid_simple_recovery = <span class="keyword">true</span></div><div class="line"><span class="input"><span class="prompt">non-GTID -&gt;</span> <span class="constant">GTID</span> 后，purge binary logs</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>模拟开始</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">dba:(none)&gt; purge binary logs to <span class="emphasis">'tjtx-126-164.000007'</span>;</div><div class="line">Query OK, 0 rows affected (4.06 sec)  --非常快</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; show global variables like '%gtid%';</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line"><span class="header">| Variable_name                    | Value                                    |</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line">| binlog<span class="emphasis">_gtid_</span>simple<span class="emphasis">_recovery      | ON                                       |</span></div><div class="line">| enforce_gtid<span class="emphasis">_consistency         | ON                                       |</span></div><div class="line">| gtid_executed                    | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-7 |</div><div class="line">| gtid<span class="emphasis">_executed_</span>compression<span class="emphasis">_period | 1000                                     |</span></div><div class="line">| gtid_mode                        | ON                                       |</div><div class="line">| gtid<span class="emphasis">_owned                       |                                          |</span></div><div class="line">| gtid_purged                      |                                          |</div><div class="line"><span class="header">| session_track_gtids              | OFF                                      |</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line">8 rows in set (0.00 sec)</div><div class="line"></div><div class="line">strace分析：只读取了oldest的binlog 文件  </div><div class="line"></div><div class="line">115529 14:31:31.096480 open("/data/mysql.bin/tjtx-126-164.~rec~", O<span class="emphasis">_RDWR|O_</span>CREAT, 0640) = 51 &lt;0.000031&gt;</div><div class="line">115529 14:31:31.096777 open("/data/mysql.bin/tjtx-126-164.index<span class="emphasis">_crash_</span>safe", O<span class="emphasis">_RDWR|O_</span>CREAT, 0640) = 52 &lt;0.000029&gt;</div><div class="line">115529 14:31:31.097111 open("/data/mysql.bin/tjtx-126-164.index", O<span class="emphasis">_RDWR|O_</span>CREAT, 0640) = 3 &lt;0.000023&gt;</div><div class="line">115529 14:31:31.097502 open("/data/mysql.bin/tjtx-126-164.000007", O<span class="emphasis">_RDONLY) = 52 &lt;0.000012&gt;</span></div><div class="line"></div><div class="line"></div><div class="line">dba:(none)&gt; purge binary logs to <span class="emphasis">'tjtx-126-164.000029'</span>;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:(none)&gt; show global variables like '%gtid%';</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line"><span class="header">| Variable_name                    | Value                                    |</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line">| binlog<span class="emphasis">_gtid_</span>simple<span class="emphasis">_recovery      | ON                                       |</span></div><div class="line">| enforce_gtid<span class="emphasis">_consistency         | ON                                       |</span></div><div class="line">| gtid_executed                    | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-7 |</div><div class="line">| gtid<span class="emphasis">_executed_</span>compression<span class="emphasis">_period | 1000                                     |</span></div><div class="line">| gtid_mode                        | ON                                       |</div><div class="line">| gtid<span class="emphasis">_owned                       |                                          |</span></div><div class="line">| gtid_purged                      | 0923e916-3c36-11e6-82a5-ecf4bbf1f518:1-3 |  --直到000029这个binlog文件读取，才能初始化gitid<span class="emphasis">_purged值，否则为空</span></div><div class="line">| session_track<span class="emphasis">_gtids              | OFF                                      |</span></div><div class="line">+----------------------------------+------------------------------------------+</div><div class="line">8 rows in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<h2 id="算法总结">算法总结</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> MySQL重启</div><div class="line">	当binlog_gtid_simple_recovery<span class="subst">=</span><span class="literal">FALSE</span> 时：</div><div class="line">    	为了初始化 gtid_executed，算法是： 从newest_binlog <span class="subst">-&gt; </span>oldest_binlog 方向遍历读取，如果发现有Previous_gtids_log_event ， 那么就停止遍历。</div><div class="line">    	为了初始化 gtid_purged，算法是：   从oldest_binlog <span class="subst">-&gt; </span>newest_binlog 方向遍历读取, 如果发现有Previous_gtids_log_event（<span class="literal">not</span> empty）或者 至少有一个Gtid_log_event的文件，那么就停止遍历</div><div class="line">	当binlog_gtid_simple_recovery<span class="subst">=</span><span class="literal">TRUE</span> 时：</div><div class="line">   		为了初始化 gtid_executed ， 算法是： 只需要读取newest_binlog。 如果没有，则为空  </div><div class="line">    	为了初始化 gtid_purged， 算法是： 只需要读取oldest_binlog。如果没有，则为空  </div><div class="line"></div><div class="line"><span class="number">2.</span> binlog rotate(expire_logs_day , purge binary logs <span class="keyword">to</span> <span class="string">''</span> 等)</div><div class="line">	当binlog_gtid_simple_recovery<span class="subst">=</span><span class="literal">FALSE</span> 时:</div><div class="line">		为了初始化 gtid_purged , 从oldest_binlog <span class="subst">-&gt; </span>newest_binlog 方向遍历读取, 如果发现有Previous_gtids_log_event（<span class="literal">not</span> empty）或者 至少有一个Gtid_log_event的文件，那么就停止遍历</div><div class="line">	当binlog_gtid_simple_recovery<span class="subst">=</span><span class="literal">TRUE</span> 时：</div><div class="line">		为了初始化 gtid_purged， 算法是： 只需要读取oldest_binlog。 如果没有，则为空</div></pre></td></tr></table></figure>
+
+<h2 id="需要注意的点">需要注意的点</h2>
+<ul>
+<li>在线GTID升级的时候，binlog_gtid_simple_recovery = TRUE 必须打开，否则在binlog 删除的时候，会发生阻塞状况  </li>
+<li>在线GTID升级的时候，尽量将非GTID的binlog备份好，然后删除掉，以免出现莫名其妙的错误  </li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/05/03/gtid_binlog_gtid_simple_recovery/" data-title="MySQL运维之 binlog_gtid_simple_recovery(GTID) | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/03/27/truncate_drop/"  title="truncate table 和 drop table 的一点坑">
+ <strong>NEXT:</strong><br/> 
+ <span>truncate table 和 drop table 的一点坑
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/05/03/gtid_binlog_gtid_simple_recovery/" data-title="MySQL运维之 binlog_gtid_simple_recovery(GTID)" data-url="https://Keithlan.github.io/2018/05/03/gtid_binlog_gtid_simple_recovery/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#binlog_gtid_simple_recovery_是什么"><span class="toc-number">1.</span> <span class="toc-text">binlog_gtid_simple_recovery 是什么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试案例"><span class="toc-number">2.</span> <span class="toc-text">测试案例</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#测试二"><span class="toc-number">3.</span> <span class="toc-text">测试二</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#算法总结"><span class="toc-number">4.</span> <span class="toc-text">算法总结</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#需要注意的点"><span class="toc-number">5.</span> <span class="toc-text">需要注意的点</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>25</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>24</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
