@@ -84,7 +84,7 @@ CPU出问题的情况比较少，最近就遇到过一次比较大的故障，�
     </p>
   <p class="article-time">
     <time datetime="2018-06-26T08:32:24.000Z" itemprop="datePublished">Jun 26 2018</time>
-    Updated:<time datetime="2018-06-26T09:10:47.000Z" itemprop="dateModified">Jun 26 2018</time>
+    Updated:<time datetime="2018-06-26T09:19:27.000Z" itemprop="dateModified">Jun 26 2018</time>
     
   </p>
 </header>
@@ -114,7 +114,7 @@ CPU出问题的情况比较少，最近就遇到过一次比较大的故障，�
 </ol>
 <p>没错，以上都是神器，可以直接用iotop找到占用资源最多的进程</p>
 <p>先上一张图</p>
-<p><img src="image/iotop.png" alt="mysql_iotop_1" title="iotop"></p>
+<p><img src="/image/mysql_innodb_arch/iotop.png" alt="io" title="io"></p>
 <p>是的，根据这张图，你能发现的就是MySQL的某个io线程占用了比较多的disk资源，然后呢？  </p>
 <p>然后，就是去MySQL里面去找，有经验的DBA会去看slow log，或者processlist中去查找相关的sql语句  </p>
 <p>通常情况下，DBA只会一脸茫然的看到一堆MySQL的query语句，一堆slow log里面去分析，有如大海捞针，定位问题繁琐而低效  </p>
