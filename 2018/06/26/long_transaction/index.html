@@ -1,0 +1,463 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维系列 之 如何监控大事务 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="long transaction  
+
+背景
+大家有没有遇到这样的情况
+
+某个SQL执行特别慢，导致整个transaction一直处于running阶段  
+某个Session的SQL已经执行完了，但是迟迟没有commit，一直处于sleep阶段  
+某个Session处于lock wait阶段，迟">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/06/26/long_transaction/" title="MySQL运维系列 之 如何监控大事务" itemprop="url">MySQL运维系列 之 如何监控大事务</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-06-26T02:32:24.000Z" itemprop="datePublished">Jun 26 2018</time>
+    Updated:<time datetime="2018-06-26T07:55:51.000Z" itemprop="dateModified">Jun 26 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键字"><span class="toc-number">2.</span> <span class="toc-text">关键字</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">3.</span> <span class="toc-text">实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p>long transaction  </p>
+</blockquote>
+<h2 id="背景">背景</h2>
+<p>大家有没有遇到这样的情况</p>
+<ol>
+<li>某个SQL执行特别慢，导致整个transaction一直处于running阶段  </li>
+<li>某个Session的SQL已经执行完了，但是迟迟没有commit，一直处于sleep阶段  </li>
+<li>某个Session处于lock wait阶段，迟迟没有结束  </li>
+</ol>
+<p>以上，大部分原因都是大事务导致的，接下来我们好好聊聊相关话题  </p>
+<h2 id="关键字">关键字</h2>
+<ul>
+<li>环境</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>MySQL5.7.22 </div><div class="line"></div><div class="line"><span class="code">	低版本MySQL这边不再考虑，就像还有使用SAS盘的公司一样，费时费力，MySQL5.7+ 标配</span></div><div class="line"></div><div class="line"><span class="bullet">2. </span>InnoDB存储引擎</div><div class="line"></div><div class="line"><span class="bullet">3. </span>CentOS 6</div></pre></td></tr></table></figure>
+
+<ul>
+<li>大事务的相关特征  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>transaction开启到结束的时间非常长，我们这边举例为10s</div><div class="line"><span class="bullet">2. </span>正在执行的事务</div><div class="line"><span class="bullet">3. </span>未提交的事务</div></pre></td></tr></table></figure>
+
+<h2 id="实战">实战</h2>
+<ul>
+<li>如何监控那些正在执行的事务</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">select</span> * <span class="keyword">from</span> sys.<span class="keyword">processlist</span></span></div><div class="line"><span class="number">2.</span> <span class="keyword">show</span> <span class="keyword">processlist</span></div><div class="line"><span class="number">3.</span> <span class="keyword">select</span> * <span class="keyword">from</span> information_schema.<span class="keyword">processlist</span></div><div class="line"><span class="number">4.</span> <span class="keyword">select</span> * <span class="keyword">from</span> sys.<span class="keyword">session</span></div><div class="line"><span class="number">5.</span> <span class="keyword">select</span> * <span class="keyword">from</span> information_schema.innodb_trx;</div><div class="line">6. <span class="operator"><span class="keyword">select</span> * <span class="keyword">from</span> performance_schema.events_statements_current</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>如何监控那些未提交的事务</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">select</span> * <span class="keyword">from</span> information_schema.innodb_trx</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如何两者结合</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> trx_id,INNODB_TRX.trx_state,INNODB_TRX.trx_started,se.conn_id <span class="keyword">as</span> processlist_id,trx_lock_memory_bytes,se.<span class="keyword">user</span>,se.command,se.state,se.current_statement,se.last_statement <span class="keyword">from</span> information_schema.INNODB_TRX,sys.<span class="keyword">session</span> <span class="keyword">as</span> se <span class="keyword">where</span> trx_mysql_thread_id=conn_id;</span></div><div class="line"></div><div class="line"></div><div class="line">+<span class="comment">---------+-----------+---------------------+----------------+-----------------------+------+---------+----------+-----------------------------------+-----------------------------------+</span></div><div class="line">| trx_id  | trx_state | trx_started         | processlist_id | trx_lock_memory_bytes | user | command | state    | current_statement                 | last_statement                    |</div><div class="line">+<span class="comment">---------+-----------+---------------------+----------------+-----------------------+------+---------+----------+-----------------------------------+-----------------------------------+</span></div><div class="line">| 1592104 | <span class="operator"><span class="keyword">LOCK</span> WAIT | <span class="number">2018</span>-<span class="number">06</span>-<span class="number">26</span> <span class="number">11</span>:<span class="number">51</span>:<span class="number">17</span> |              <span class="number">3</span> |                  <span class="number">1136</span> | <span class="literal">NULL</span> | <span class="keyword">Query</span>   | updating | <span class="keyword">update</span> lc_1 <span class="keyword">set</span> id=<span class="number">4</span> <span class="keyword">where</span> id = <span class="number">1</span> | <span class="literal">NULL</span>                              |</span></div><div class="line">| <span class="number">1592100</span> | RUNNING   | <span class="number">2018</span>-<span class="number">06</span>-<span class="number">26</span> <span class="number">11</span>:<span class="number">49</span>:<span class="number">08</span> |              <span class="number">2</span> |                  <span class="number">1136</span> | <span class="literal">NULL</span> | <span class="keyword">Sleep</span>   | <span class="literal">NULL</span>     | <span class="literal">NULL</span>                              | <span class="keyword">update</span> lc_1 <span class="keyword">set</span> id=<span class="number">3</span> <span class="keyword">where</span> id = <span class="number">1</span> |</div><div class="line">+<span class="comment">---------+-----------+---------------------+----------------+-----------------------+------+---------+----------+-----------------------------------+-----------------------------------+</span></div></pre></td></tr></table></figure>
+
+<p>大家可以看到，通过这个可以立马发现事务语句处于running阶段  ， 哪些事务处于lock wait阶段 ， 如果遇到这种情况，我们应该如何处理呢？<br>聪明的你，一定会去根据trx_started去寻找蛛丝马迹，可是如果再生产环境中，这是一件非常复杂和繁忙的事情<br>不过没关系，我们还有神器可以使用  </p>
+<ul>
+<li>如何快速解决锁等待问题</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line">dba:sys&gt; select <span class="keyword">*</span> from sys.innodb_lock_waits\G</div><div class="line"><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span> 1. row <span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span></div><div class="line">                wait_started: 2018-06-26 11:49:58</div><div class="line">                    wait_age: 00:00:03</div><div class="line">               wait_age_secs: 3</div><div class="line">                locked_table: `lc`.`lc_1`</div><div class="line">                locked_index: GEN_CLUST_INDEX</div><div class="line">                 locked_type: RECORD</div><div class="line">              waiting_trx_id: 1592102</div><div class="line">         waiting_trx_started: 2018-06-26 11:49:58</div><div class="line">             waiting_trx_age: 00:00:03</div><div class="line">     waiting_trx_rows_locked: 2</div><div class="line">   waiting_trx_rows_modified: 0</div><div class="line">                 waiting_pid: 3</div><div class="line">               waiting_query: update lc_1 set id=4 where id = 1</div><div class="line">             waiting_lock_id: 1592102:32:3:4</div><div class="line">           waiting_lock_mode: X</div><div class="line">             blocking_trx_id: 1592100</div><div class="line">                blocking_pid: 2</div><div class="line">              blocking_query: NULL</div><div class="line">            blocking_lock_id: 1592100:32:3:4</div><div class="line">          blocking_lock_mode: X</div><div class="line">        blocking_trx_started: 2018-06-26 11:49:08</div><div class="line">            blocking_trx_age: 00:00:53</div><div class="line">    blocking_trx_rows_locked: 1</div><div class="line">  blocking_trx_rows_modified: 1</div><div class="line">     sql_kill_blocking_query: KILL QUERY 2</div><div class="line">sql_kill_blocking_connection: KILL 2</div></pre></td></tr></table></figure>
+
+<p>MySQL最终非常贴心都连kill SQL 语句都生产了，你只需要复制、粘贴即可  </p>
+<p>细心的你会发现，通过innodb_lock_waits你只能看到被lock的语句，但是看不到是哪个query语句拥有的锁，这又是为什么呢？  </p>
+<p>不卖关子，因为拥有锁的事务中可能拥有多条query语句，也可能已经执行完，但是没有commit，所以无法给出所有query语句。  </p>
+<p>那怎么办呢？哈哈，如果幸运的话，你可以根据我上述的案例 current_statement，last_statement 得到答案。  </p>
+<p>再换句话说，即便没有找到那条query，也不妨碍你解决当前的问题哈  </p>
+<h2 id="总结">总结</h2>
+<ol>
+<li>MySQL5.7 默默的提供了非常多的实用工具和新特性，需要DBA们去挖掘和探索。将看似平淡无奇的特性挖掘成黑武器，你才能成为那闪着光芒的Top5 MySQLer  </li>
+<li>工欲善其事必先利其器  </li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/06/26/long_transaction/" data-title="MySQL运维系列 之 如何监控大事务 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/05/03/gtid_binlog_gtid_simple_recovery/"  title="MySQL运维之 binlog_gtid_simple_recovery(GTID)">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维之 binlog_gtid_simple_recovery(GTID)
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/06/26/long_transaction/" data-title="MySQL运维系列 之 如何监控大事务" data-url="https://Keithlan.github.io/2018/06/26/long_transaction/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#关键字"><span class="toc-number">2.</span> <span class="toc-text">关键字</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">3.</span> <span class="toc-text">实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">4.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>26</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>25</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
