@@ -4,29 +4,19 @@
 <head>
   <meta charset="UTF-8">
   
-    <title>MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路 | Focus on MySQL,Focus on Focus</title>
+    <title>MySQL运维系列 之 如何快速定位IO瓶颈 | Focus on MySQL,Focus on Focus</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
     
     <meta name="author" content="兰春">
     
-    <meta name="description" content="背景
+    <meta name="description" content="MySQL的瓶颈，一般分为IO密集型和CPU密集型  
+CPU出问题的情况比较少，最近就遇到过一次比较大的故障，这个话题后面会有一篇专题介绍   
+今天主要聊聊IO密集型的应用中，我们应该如何快速定位到是谁占用了IO资源比较多  
+背景
 
-一个MySQL实例中，如何验证一个账号上面是否还有访问？
+环境
 
-一个MySQL实例中，如何验证某个业务ip是否还有访问？
-
-
-倔强青铜级别
-
-打开general log
-
-12优点： 全量缺点： 性能差
-
-秩序白银级别
-
-打开slow log,设置long_query_time = 0
-
-12优">
+12341. MySQL 5.7 +	低版本MySQ">
     
     
     
@@ -86,15 +76,15 @@
 		<header class="article-info clearfix">
   <h1 itemprop="name">
     
-      <a href="/2017/09/12/P_S_user_host/" title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路" itemprop="url">MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路</a>
+      <a href="/2018/06/26/mysql_iotop/" title="MySQL运维系列 之 如何快速定位IO瓶颈" itemprop="url">MySQL运维系列 之 如何快速定位IO瓶颈</a>
   </h1>
   <p class="article-author">By
     
       <a href="https://Keithlan.github.io" title="兰春">兰春</a>
     </p>
   <p class="article-time">
-    <time datetime="2017-09-12T08:50:24.000Z" itemprop="datePublished">Sep 12 2017</time>
-    Updated:<time datetime="2017-09-13T01:48:38.000Z" itemprop="dateModified">Sep 13 2017</time>
+    <time datetime="2018-06-26T08:32:24.000Z" itemprop="datePublished">Jun 26 2018</time>
+    Updated:<time datetime="2018-06-26T09:10:47.000Z" itemprop="dateModified">Jun 26 2018</time>
     
   </p>
 </header>
@@ -103,57 +93,50 @@
 		
 		<div id="toc" class="toc-article">
 			<strong class="toc-title">Contents</strong>
-		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#倔强青铜级别"><span class="toc-number">2.</span> <span class="toc-text">倔强青铜级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#秩序白银级别"><span class="toc-number">3.</span> <span class="toc-text">秩序白银级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#荣耀黄金级别"><span class="toc-number">4.</span> <span class="toc-text">荣耀黄金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#尊贵铂金级别"><span class="toc-number">5.</span> <span class="toc-text">尊贵铂金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#永恒钻石级别"><span class="toc-number">6.</span> <span class="toc-text">永恒钻石级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最强王者"><span class="toc-number">7.</span> <span class="toc-text">最强王者</span></a></li></ol>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">2.</span> <span class="toc-text">实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
 		</div>
 		
-		<h2 id="背景">背景</h2>
+		<p>MySQL的瓶颈，一般分为IO密集型和CPU密集型  </p>
+<p>CPU出问题的情况比较少，最近就遇到过一次比较大的故障，这个话题后面会有一篇专题介绍   </p>
+<p>今天主要聊聊IO密集型的应用中，我们应该如何快速定位到是谁占用了IO资源比较多  </p>
+<h2 id="背景">背景</h2>
 <ul>
-<li><p>一个MySQL实例中，如何验证一个账号上面是否还有访问？</p>
+<li>环境</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>MySQL 5.7 +</div><div class="line"><span class="code">	低版本MySQL这边不再考虑，就像还有使用SAS盘的公司一样，费时费力，MySQL5.7+ 标配</span></div><div class="line"><span class="bullet">2. </span>InnoDB 存储引擎  </div><div class="line"><span class="bullet">3. </span>Centos 6</div></pre></td></tr></table></figure>
+
+<h2 id="实战">实战</h2>
+<p>关于IO的问题，大家能想到的监控工具有哪些  </p>
+<ol>
+<li>iostat</li>
+<li>dstat</li>
+<li>iotop</li>
+</ol>
+<p>没错，以上都是神器，可以直接用iotop找到占用资源最多的进程</p>
+<p>先上一张图</p>
+<p><img src="image/iotop.png" alt="mysql_iotop_1" title="iotop"></p>
+<p>是的，根据这张图，你能发现的就是MySQL的某个io线程占用了比较多的disk资源，然后呢？  </p>
+<p>然后，就是去MySQL里面去找，有经验的DBA会去看slow log，或者processlist中去查找相关的sql语句  </p>
+<p>通常情况下，DBA只会一脸茫然的看到一堆MySQL的query语句，一堆slow log里面去分析，有如大海捞针，定位问题繁琐而低效  </p>
+<p>如果，你使用的是MySQL5.7+ 版本，那么你就会拥有一件神器（说了好多遍了），可以快速而精准的定位问题  </p>
+<ul>
+<li>如何快速定位到IO瓶颈消耗在哪里  </li>
+</ul>
+<blockquote>
+<p>iotop + threads </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">dba:lc&gt; select <span class="keyword">*</span> from performance_schema.threads where thread_os_id=37012\G</div><div class="line"><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span> 1. row <span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span></div><div class="line">          THREAD_ID: 96</div><div class="line">               NAME: thread/sql/one_connection</div><div class="line">               TYPE: FOREGROUND</div><div class="line">     PROCESSLIST_ID: 15</div><div class="line">   PROCESSLIST_USER: dba</div><div class="line">   PROCESSLIST_HOST: NULL</div><div class="line">     PROCESSLIST_DB: sbtest</div><div class="line">PROCESSLIST_COMMAND: Query</div><div class="line">   PROCESSLIST_TIME: 0</div><div class="line">  PROCESSLIST_STATE: query end</div><div class="line">   PROCESSLIST_INFO: INSERT INTO sbtest1(k, c, pad) VALUES(25079106, '33858784348-81663287461-16031064329-06006952037-79426243027-69964324491-90950423034-40185804987-62166137368-06259615216', '47186118229-42754</div><div class="line">696460-81034599900-41836403072-66805611739'),(24907169, '77074724245-16833049423-38868029911-54850236074-63700733526-39699866447-52646750572-85552352492-59476301007-32196580154', '79013412600-99031855741-696987</div><div class="line">96712-65630963686-19653514942'),(24896311, '28403978193-66350947863-03931166713-97714847962-65299790981-39948912629-14070597101-63277652140-34421148430-61801121402', '05239379274-22840441238-37771744512-9234774</div><div class="line">1972-52847679847'),(18489383, '89292717216-01584483614-67433536730-45584233994-29817613740-77179131661-10692787267-83942773303-14971155500-36206705010', '55201342831-85536327239-84383935287-06948377235-96437333</div><div class="line">726'),(24790463, '99362943588-41160434740-62783664419-16002619743-04761662097-94273988379-52564232648-19738707042-79143532768-89687113917', '09717575620-89781830996-88443720661-19001024583-14971953687'),(2</div><div class="line">   PARENT_THREAD_ID: NULL</div><div class="line">               ROLE: NULL</div><div class="line">       INSTRUMENTED: YES</div><div class="line">            HISTORY: YES</div><div class="line">    CONNECTION_TYPE: Socket</div><div class="line">       THREAD_OS_ID: 37012</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>你看，消耗资源的SQL语句立刻就呈现在你眼前，就是如此高效  </p>
+<p>好了，以上列出的，还只是全部功能的冰山一角，更多的玩法等待你去解锁。  </p>
+<p>以上定位的问题也比较的简单，还有一些复杂的IO问题，比如：binlog写入过大、binlog扫描过多、同步线程阻塞、临时表造成的IO过大，等等问题，都可以用此神器一窥究竟  </p>
+<h2 id="总结">总结</h2>
+<ol>
+<li><p>MySQL5.7 默默的提供了非常多的实用工具和新特性，需要DBA们去挖掘和探索。将看似平淡无奇的特性挖掘成黑武器，你才能成为那闪着光芒的Top5 MySQLer   </p>
 </li>
-<li><p>一个MySQL实例中，如何验证某个业务ip是否还有访问？</p>
+<li><p>工欲善其事必先利其器   </p>
 </li>
-</ul>
-<h2 id="倔强青铜级别">倔强青铜级别</h2>
-<ul>
-<li>打开general log</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点： 全量</div><div class="line">缺点： 性能差</div></pre></td></tr></table></figure>
-
-<h2 id="秩序白银级别">秩序白银级别</h2>
-<ul>
-<li>打开slow log,设置long_query_time = 0</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点： 全量</div><div class="line">缺点： 性能比较差</div></pre></td></tr></table></figure>
-
-<h2 id="荣耀黄金级别">荣耀黄金级别</h2>
-<ul>
-<li>tshark | tcpdump | tcpcopy</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql -T fields <span class="operator">-e</span> frame.time <span class="operator">-e</span> <span class="string">'ip.src'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span> <span class="operator">-e</span> <span class="string">'mysql.user'</span> <span class="operator">-e</span> <span class="string">'mysql.schema'</span></div><div class="line"></div><div class="line">优点：全量*<span class="number">95</span>%</div><div class="line">缺点：性能比较差，使用不方便</div></pre></td></tr></table></figure>
-
-<h2 id="尊贵铂金级别">尊贵铂金级别</h2>
-<ul>
-<li>使用P_S</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>使用案例</div><div class="line"></div><div class="line"></div><div class="line"><span class="header">dba:performance_schema&gt; select USER,EVENT_NAME,COUNT_STAR,now() as time from events_statements_summary_by_user_by_event_name where EVENT_NAME in ('statement/sql/select','statement/sql/update','statement/sql/delete','statement/sql/insert','statement/sql/replace') and COUNT_STAR &gt; 0;</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| USER | EVENT_NAME           | COUNT_STAR | time                |</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line">| dba  | statement/sql/select |        143 | 2017-09-04 18:02:33 |</div><div class="line"><span class="header">| repl | statement/sql/select |         10 | 2017-09-04 18:02:33 |</span></div><div class="line">+------+----------------------+------------+---------------------+</div><div class="line">2 rows in set (0.00 sec)</div><div class="line"></div><div class="line"><span class="header">dba:performance_schema&gt; select HOST,EVENT_NAME,COUNT_STAR,now() as time from events_statements_summary_by_host_by_event_name where EVENT_NAME in ('statement/sql/select','statement/sql/update','statement/sql/delete','statement/sql/insert','statement/sql/replace') and COUNT_STAR &gt; 0;</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| HOST      | EVENT_NAME           | COUNT_STAR | time                |</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line"><span class="header">| localhost | statement/sql/select |         22 | 2017-09-04 18:02:35 |</span></div><div class="line">+-----------+----------------------+------------+---------------------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
-
-<ul>
-<li>对比</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">优点：全量，性能基本无影响</div><div class="line">缺点：无法抓到对应的SQL</div></pre></td></tr></table></figure>
-
-<h2 id="永恒钻石级别">永恒钻石级别</h2>
-<ul>
-<li>巧用P_S</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">将每<span class="number">1</span>分钟，<span class="number">5</span>分钟，<span class="number">10</span>分钟的P_S快照映射到对应的<span class="built_in">table</span>，永久存下来，进行统计分析</div><div class="line"></div><div class="line">优点：全量，性能基本无影响，且时间更加细粒度化</div><div class="line">缺点：无法抓到对应的SQL，需要额外开发成本</div></pre></td></tr></table></figure>
-
-<h2 id="最强王者">最强王者</h2>
-<ul>
-<li>巧用P_S + tshark</li>
-</ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. P_S分段，找到具体有访问的时间段 <span class="variable">$time</span></div><div class="line"><span class="number">2</span>. 在<span class="variable">$time</span>时间段内，去用tshark 抓取SQL相关info</div></pre></td></tr></table></figure>
-
+</ol>
   
 	</div>
 		<footer class="article-footer clearfix">
@@ -173,7 +156,7 @@
 
 <div class="article-share" id="share">
 
-  <div data-url="https://Keithlan.github.io/2017/09/12/P_S_user_host/" data-title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  <div data-url="https://Keithlan.github.io/2018/06/26/mysql_iotop/" data-title="MySQL运维系列 之 如何快速定位IO瓶颈 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
   </div>
 
 </div>
@@ -182,19 +165,11 @@
 	
 <nav class="article-nav clearfix">
  
- <div class="prev" >
- <a href="/2017/10/25/too_many_connection_1/" title="MySQL运维实战（三）之 too many connection">
-  <strong>PREVIOUS:</strong><br/>
-  <span>
-  MySQL运维实战（三）之 too many connection</span>
-</a>
-</div>
-
 
 <div class="next">
-<a href="/2017/08/29/innodb_locks_long_trx/"  title="MySQL锁系列（九）之 long transaction">
+<a href="/2018/06/26/long_transaction/"  title="MySQL运维系列 之 如何监控大事务">
  <strong>NEXT:</strong><br/> 
- <span>MySQL锁系列（九）之 long transaction
+ <span>MySQL运维系列 之 如何监控大事务
 </span>
 </a>
 </div>
@@ -204,7 +179,7 @@
 	
 
 <!-- 多说评论框 start -->
-<div class="ds-thread" data-thread-key="/2017/09/12/P_S_user_host/" data-title="MySQL运维实战（二）之 巧用P_S解决账号host访问的荣耀王者之路" data-url="https://Keithlan.github.io/2017/09/12/P_S_user_host/"></div>
+<div class="ds-thread" data-thread-key="/2018/06/26/mysql_iotop/" data-title="MySQL运维系列 之 如何快速定位IO瓶颈" data-url="https://Keithlan.github.io/2018/06/26/mysql_iotop/"></div>
 <!-- 多说评论框 end -->
 <!-- 多说公共JS代码 start (一个网页只需插入一次) -->
 <script type="text/javascript">
@@ -225,7 +200,7 @@ var duoshuoQuery = {short_name:keithlan};
       
   <div id="toc" class="toc-aside">
   <strong class="toc-title">Contents</strong>
-  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#倔强青铜级别"><span class="toc-number">2.</span> <span class="toc-text">倔强青铜级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#秩序白银级别"><span class="toc-number">3.</span> <span class="toc-text">秩序白银级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#荣耀黄金级别"><span class="toc-number">4.</span> <span class="toc-text">荣耀黄金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#尊贵铂金级别"><span class="toc-number">5.</span> <span class="toc-text">尊贵铂金级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#永恒钻石级别"><span class="toc-number">6.</span> <span class="toc-text">永恒钻石级别</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#最强王者"><span class="toc-number">7.</span> <span class="toc-text">最强王者</span></a></li></ol>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#背景"><span class="toc-number">1.</span> <span class="toc-text">背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#实战"><span class="toc-number">2.</span> <span class="toc-text">实战</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">3.</span> <span class="toc-text">总结</span></a></li></ol>
   </div>
 
 <div id="asidepart">
