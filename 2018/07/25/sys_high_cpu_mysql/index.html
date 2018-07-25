@@ -1,0 +1,657 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维系列 之 CPU瓶颈故障案例分析 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="很久没发布文章了，并不是春哥不爱学习了，而是最近我们碰到了一些瓶颈没有解决，心有不甘的苦苦探索着  
+现在容我给大家分析一起新鲜出炉热乎乎滚烫烫的故障案例   
+在分析案例前，据我们故障报告得到的数据分析显示，最近2年出现的故障  
+
+80%来自硬件，20%来自压力瓶颈（因为瓶颈分析和解除瓶颈做的及">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/07/25/sys_high_cpu_mysql/" title="MySQL运维系列 之 CPU瓶颈故障案例分析" itemprop="url">MySQL运维系列 之 CPU瓶颈故障案例分析</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-07-25T00:03:24.000Z" itemprop="datePublished">Jul 25 2018</time>
+    Updated:<time datetime="2018-07-25T01:26:08.000Z" itemprop="dateModified">Jul 25 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、故障降级"><span class="toc-number">2.</span> <span class="toc-text">二、故障降级</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、寻找真相"><span class="toc-number">3.</span> <span class="toc-text">三、寻找真相</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、测试"><span class="toc-number">4.</span> <span class="toc-text">四、测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_测试用例一"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 测试用例一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_线下场景还原：_保留了案发当时的slow_sql_，_使用mysqlslap模拟并发sql，将压力打在测试库上"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 线下场景还原： 保留了案发当时的slow sql ， 使用mysqlslap模拟并发sql，将压力打在测试库上</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3_线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4_tcmalloc_安装和部署"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 tcmalloc 安装和部署</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4_malloc_vs_tcmalloc"><span class="toc-number">4.5.</span> <span class="toc-text">4.4 malloc vs tcmalloc</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#总结"><span class="toc-number"></span> <span class="toc-text">总结</span></a>
+		</div>
+		
+		<p>很久没发布文章了，并不是春哥不爱学习了，而是最近我们碰到了一些瓶颈没有解决，心有不甘的苦苦探索着  </p>
+<p>现在容我给大家分析一起新鲜出炉热乎乎滚烫烫的故障案例   </p>
+<p>在分析案例前，据我们故障报告得到的数据分析显示，最近2年出现的故障  </p>
+<ul>
+<li><p>80%来自硬件，20%来自压力瓶颈（因为瓶颈分析和解除瓶颈做的及时）</p>
+</li>
+<li><p>压力瓶颈中：80%来自disk（IO压力、磁盘空间）、20%来自CPU</p>
+</li>
+</ul>
+<p>今天主要聊聊cpu相关的问题</p>
+<h2 id="一、背景">一、背景</h2>
+<ul>
+<li>环境</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>系统：Centos 6</div><div class="line"><span class="bullet">2. </span>内核：2.6.32-504.23.4.el6.x86_64</div><div class="line"><span class="bullet">3. </span>MySQL： 5.7.22</div></pre></td></tr></table></figure>
+
+<ul>
+<li>案发经过</li>
+</ul>
+<p>凌晨做了一次数据库升级，读写从old master 切到了 new master，一切顺利  </p>
+<p>然后，到早高峰的时候，接到告警，紧张刺激的一天开始了           </p>
+<p>告警内容如下：</p>
+<ol>
+<li>slow query 上涨至 10000/s , 平时 5/s  </li>
+<li>thread running 上涨至 169/s , 平时 10/s  </li>
+<li>too many connection 频繁  </li>
+<li>cpu 使用率上涨至 99% ， 平时 20-30%</li>
+<li>服务器响应变慢  </li>
+</ol>
+<p><img src="/image/mysql_innodb_arch/cpu_1.png" alt="sys_cpu_1" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/thread_run_2.png" alt="sys_cpu_2" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/sys_cpu_3.png" alt="sys_cpu_3" title="sys"></p>
+<h2 id="二、故障降级">二、故障降级</h2>
+<p>根据以上报警信息，第一时间查看slow query</p>
+<ol>
+<li>没有发现特殊的慢查询（扫描行数多、执行特别慢等），其余基本都是在100ms ~ 500ms  </li>
+<li>java每次读写的时候，有带有大量的 select @@session.tx_read_only。   </li>
+<li>正常情况下，这样的查询是不会慢的，但是为了先解决链接数多的问题，我们让业务调整了链接参数：useLocalSessionState=true</li>
+</ol>
+<p>可是剧情并没有像我们想的那样发展，虽然有所好转（TMC从持续告警降低到间歇性告警），也就是问题并没有彻底解决    </p>
+<p>接下来，我们能做的就是用DCT（数据库配置管理系统）将master上的查询分流一部分（60%）到slave上来  </p>
+<p>好消息是： Master 压力降低，slow 降低，各种指标恢复正常<br>坏消息是： Slave 压力瞬间就起来了，然后表现的症状跟之前的Master一模一样  </p>
+<p>再接下来，我们就继续分流，再分60%的量到另外一台slave<br>最终，Master和slave 系统各指标稳定了下来  </p>
+<p>好了，现在我们可以有时间来回顾和分析下刚刚发生的一连串事件  </p>
+<ul>
+<li>案件名称：cpu暴走事件  </li>
+</ul>
+<blockquote>
+<p>cpu的sys 使用率非常高  </p>
+</blockquote>
+<ol>
+<li>线索1： 数据库升级    </li>
+<li>线索2： 高峰期流量大   </li>
+<li>线索3： 数据没有预热  </li>
+</ol>
+<ul>
+<li><p>临时控制：流量迁移  </p>
+</li>
+<li><p>后续方案：</p>
+</li>
+</ul>
+<ol>
+<li><p>继续追踪，找到根本原因<br> 1.1 保留现场，寻找蛛丝马迹<br> 1.2 模拟案发，重现问题     </p>
+</li>
+<li><p>回退版本<br> 数据库降级方案：并不太好做，可能存在的问题更多，不到万不得已，我们不愿意这样尝试。  </p>
+</li>
+</ol>
+<h2 id="三、寻找真相">三、寻找真相</h2>
+<ul>
+<li>当cpu飙高的时候，究竟发生了什么  </li>
+</ul>
+<p>使用perf top 去看看哪些函数调用非常多，结果又遇到了另外一个坑，机器直接hang住，不久就挂了    </p>
+<p>直接上图  </p>
+<p><img src="/image/mysql_innodb_arch/4_perf.png" alt="sys_cpu_4" title="sys"> </p>
+<p>对呀，正所谓祸不单行就是这么个道理哈  </p>
+<p>所以，接下来，我们的解题思路变成了这样  </p>
+<ol>
+<li>解决perf 导致linux挂掉的情况  </li>
+<li>解决cpu高的瓶颈<br> 2.1 线下场景还原： 保留了案发当时的slow sql ， 使用mysqlslap模拟并发sql，将压力打在测试库上<br> 2.2 线上场景还原： 使用tcpcopy，在线引流将真实压力打在测试库上  </li>
+</ol>
+<h2 id="四、测试">四、测试</h2>
+<h3 id="4-1_测试用例一">4.1 测试用例一</h3>
+<blockquote>
+<p>先解决perf的问题，因为有了它，才可能知道坑在哪里  </p>
+</blockquote>
+<ul>
+<li>模拟问题，跑perf的时候让linux挂掉的场景复现  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>没有mysql进程，perf没问题</div><div class="line"><span class="bullet">2. </span>有mysql进程，只有查询，perf没问题</div><div class="line"><span class="bullet">3. </span>有mysql进程，模拟写入，perf没问题</div><div class="line"><span class="bullet">4. </span>有mysql进程，复制同步，有查询，但是master模拟单一sql写入，perf没问题</div><div class="line"><span class="bullet">5. </span>有mysql进程，复制同步，有查询，复制的sql来自生产环境，perf每次执行，必定crash</div><div class="line"></div><div class="line"></div><div class="line">结论：perf + MySQL replicate  = crash  ， 此场景每次必定复现</div></pre></td></tr></table></figure>
+
+<ul>
+<li>perf为什么会挂</li>
+</ul>
+<p>google了一圈后，发现一丢丢可操作的点，大致的意思是说： perf在centos 2.6.32的内核中有bug  </p>
+<p>链接如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. http<span class="variable">s:</span>//access.redhat.<span class="keyword">com</span>/solutions/<span class="number">1310693</span></div><div class="line"></div><div class="line"><span class="number">2</span>. http<span class="variable">s:</span>//access.redhat.<span class="keyword">com</span>/solutions/<span class="number">1992703</span></div><div class="line"></div><div class="line">内核版本跟我们的版本一样</div></pre></td></tr></table></figure>
+
+<p>于是，我们也没想要去看是什么因素导致perf在linux 2.6.32 中触发了bug，我们所幸直接将系统升级到 centos 7来看看问题是否可以重现  </p>
+<p>再次经过上述的测试发现：perf + MySQL replicate 没问题了，现在基本断定是perf + kernel 2.6.32 遇到相关bug了<br>不过，既然centos 7上的perf可以用，那么我们所幸在centos 7上复现 cpu高的问题  </p>
+<h3 id="4-2_线下场景还原：_保留了案发当时的slow_sql_，_使用mysqlslap模拟并发sql，将压力打在测试库上">4.2 线下场景还原： 保留了案发当时的slow sql ， 使用mysqlslap模拟并发sql，将压力打在测试库上</h3>
+<ul>
+<li>单一 slow sql 测试  + 多条 slow sql 混合测试  </li>
+</ul>
+<p>SQL语句：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> id=<span class="number">233598838</span></span></div><div class="line"><span class="number">2.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'431819'</span>,<span class="string">'417907'</span>,<span class="string">'431337'</span>,<span class="string">'413800'</span>,<span class="string">'431650'</span>,<span class="string">'215981'</span>,<span class="string">'435463'</span>,<span class="string">'429181'</span>,<span class="string">'240518'</span>,<span class="string">'411871'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">3.</span> <span class="keyword">SELECT</span> loupan_id,last_update_time <span class="keyword">FROM</span> grade <span class="keyword">WHERE</span> loupan_id = <span class="string">'257809'</span> <span class="keyword">AND</span> <span class="keyword">status</span> = <span class="string">'2'</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> last_update_time <span class="keyword">DESC</span></div><div class="line"><span class="number">4.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'263126'</span>,<span class="string">'426580'</span>,<span class="string">'263275'</span>,<span class="string">'263298'</span>,<span class="string">'411670'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">5.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'215981'</span>,<span class="string">'411875'</span>,<span class="string">'418474'</span>,<span class="string">'416128'</span>,<span class="string">'298380'</span>,<span class="string">'411083'</span>,<span class="string">'418262'</span>,<span class="string">'412631'</span>,<span class="string">'237083'</span>,<span class="string">'415427'</span>,<span class="string">'411644'</span>,<span class="string">'437897'</span>,<span class="string">'415833'</span>,<span class="string">'434643'</span>,<span class="string">'400752'</span>,<span class="string">'432261'</span>,<span class="string">'416437'</span>,<span class="string">'438013'</span>,<span class="string">'436612'</span>,<span class="string">'400947'</span>,<span class="string">'431337'</span>,<span class="string">'418277'</span>,<span class="string">'413800'</span>,<span class="string">'435463'</span>,<span class="string">'250211'</span>,<span class="string">'240518'</span>,<span class="string">'417907'</span>,<span class="string">'439605'</span>,<span class="string">'435269'</span>,<span class="string">'430827'</span>,<span class="string">'430420'</span>,<span class="string">'418785'</span>,<span class="string">'417828'</span>,<span class="string">'416877'</span>,<span class="string">'416624'</span>,<span class="string">'416376'</span>,<span class="string">'416241'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">6.</span> <span class="keyword">SELECT</span> house_type_id,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> ((loupan_id=<span class="number">261547</span>) <span class="keyword">AND</span> (house_type_id=<span class="string">"161236"</span>) <span class="keyword">AND</span> (category=<span class="number">10</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,category <span class="keyword">ASC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">100</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">7.</span> <span class="keyword">SELECT</span> loupan_id,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> category = <span class="string">'7'</span> <span class="keyword">AND</span> loupan_id = <span class="string">'260933'</span> <span class="keyword">AND</span> ((flag <span class="keyword">in</span> (<span class="number">0</span>,<span class="number">1</span>) <span class="keyword">and</span> <span class="number">1</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">200</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">8.</span> <span class="keyword">SELECT</span> loupan_id,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> ((loupan_id=<span class="number">425002</span>) <span class="keyword">AND</span> (category=<span class="number">8</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,category <span class="keyword">ASC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">9.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'431994'</span>,<span class="string">'251016'</span>,<span class="string">'425992'</span>,<span class="string">'383237'</span>,<span class="string">'252069'</span>,<span class="string">'435523'</span>,<span class="string">'414367'</span>,<span class="string">'438602'</span>,<span class="string">'418001'</span>,<span class="string">'411606'</span>,<span class="string">'242004'</span>,<span class="string">'435999'</span>,<span class="string">'414054'</span>,<span class="string">'437995'</span>,<span class="string">'415811'</span>,<span class="string">'414771'</span>,<span class="string">'439970'</span>,<span class="string">'251996'</span>,<span class="string">'411782'</span>,<span class="string">'416632'</span>,<span class="string">'417611'</span>,<span class="string">'247610'</span>,<span class="string">'298398'</span>,<span class="string">'251870'</span>,<span class="string">'436767'</span>,<span class="string">'417374'</span>,<span class="string">'241933'</span>,<span class="string">'241801'</span>,<span class="string">'250763'</span>,<span class="string">'432331'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span> </div><div class="line"><span class="number">10.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'414321'</span>,<span class="string">'401273'</span>,<span class="string">'414409'</span>,<span class="string">'256987'</span>,<span class="string">'239486'</span>,<span class="string">'399951'</span>,<span class="string">'411857'</span>,<span class="string">'431038'</span>,<span class="string">'418800'</span>,<span class="string">'409145'</span>,<span class="string">'419135'</span>,<span class="string">'418756'</span>,<span class="string">'438468'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">11.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'413112'</span>,<span class="string">'413151'</span>,<span class="string">'410298'</span>,<span class="string">'410283'</span>,<span class="string">'439916'</span>,<span class="string">'245708'</span>,<span class="string">'241716'</span>,<span class="string">'241812'</span>,<span class="string">'242072'</span>,<span class="string">'241877'</span>,<span class="string">'241890'</span>,<span class="string">'241797'</span>,<span class="string">'245710'</span>,<span class="string">'242082'</span>,<span class="string">'418996'</span>,<span class="string">'413118'</span>,<span class="string">'257403'</span>,<span class="string">'413216'</span>,<span class="string">'401112'</span>,<span class="string">'412289'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">12.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'439605'</span>,<span class="string">'429377'</span>,<span class="string">'252408'</span>,<span class="string">'400752'</span>,<span class="string">'248666'</span>,<span class="string">'401202'</span>,<span class="string">'401143'</span>,<span class="string">'249507'</span>,<span class="string">'250236'</span>,<span class="string">'415528'</span>,<span class="string">'247559'</span>,<span class="string">'244521'</span>,<span class="string">'394528'</span>,<span class="string">'435679'</span>,<span class="string">'264022'</span>,<span class="string">'383196'</span>,<span class="string">'246045'</span>,<span class="string">'241059'</span>,<span class="string">'414997'</span>,<span class="string">'250767'</span>,<span class="string">'251984'</span>,<span class="string">'411968'</span>,<span class="string">'247811'</span>,<span class="string">'414493'</span>,<span class="string">'409271'</span>,<span class="string">'240435'</span>,<span class="string">'401207'</span>,<span class="string">'417573'</span>,<span class="string">'411913'</span>,<span class="string">'400886'</span>,<span class="string">'251003'</span>,<span class="string">'240528'</span>,<span class="string">'249072'</span>,<span class="string">'253033'</span>,<span class="string">'249420'</span>,<span class="string">'240837'</span>,<span class="string">'249433'</span>,<span class="string">'428320'</span>,<span class="string">'389816'</span>,<span class="string">'416080'</span>,<span class="string">'249171'</span>,<span class="string">'414844'</span>,<span class="string">'410203'</span>,<span class="string">'240028'</span>,<span class="string">'416743'</span>,<span class="string">'416048'</span>,<span class="string">'417677'</span>,<span class="string">'416666'</span>,<span class="string">'249162'</span>,<span class="string">'264101'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">13.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'415666'</span>,<span class="string">'416121'</span>,<span class="string">'417661'</span>,<span class="string">'431364'</span>,<span class="string">'419055'</span>,<span class="string">'257898'</span>,<span class="string">'417384'</span>,<span class="string">'424463'</span>,<span class="string">'417831'</span>,<span class="string">'429187'</span>,<span class="string">'416745'</span>,<span class="string">'417962'</span>,<span class="string">'257940'</span>,<span class="string">'258046'</span>,<span class="string">'414746'</span>,<span class="string">'416471'</span>,<span class="string">'435536'</span>,<span class="string">'431355'</span>,<span class="string">'257873'</span>,<span class="string">'414545'</span>,<span class="string">'417836'</span>,<span class="string">'257845'</span>,<span class="string">'438835'</span>,<span class="string">'417947'</span>,<span class="string">'437315'</span>,<span class="string">'433201'</span>,<span class="string">'432220'</span>,<span class="string">'432046'</span>,<span class="string">'432027'</span>,<span class="string">'427731'</span>,<span class="string">'423631'</span>,<span class="string">'423298'</span>,<span class="string">'420072'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">14.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'437148'</span>,<span class="string">'258865'</span>,<span class="string">'417140'</span>,<span class="string">'416114'</span>,<span class="string">'432010'</span>,<span class="string">'258825'</span>,<span class="string">'258829'</span>,<span class="string">'426077'</span>,<span class="string">'258805'</span>,<span class="string">'258813'</span>,<span class="string">'405587'</span>,<span class="string">'405958'</span>,<span class="string">'258774'</span>,<span class="string">'426808'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">15.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'438956'</span>,<span class="string">'436725'</span>,<span class="string">'409405'</span>,<span class="string">'428214'</span>,<span class="string">'438718'</span>,<span class="string">'439063'</span>,<span class="string">'439199'</span>,<span class="string">'439619'</span>,<span class="string">'432314'</span>,<span class="string">'415807'</span>,<span class="string">'437725'</span>,<span class="string">'418984'</span>,<span class="string">'439932'</span>,<span class="string">'432333'</span>,<span class="string">'439773'</span>,<span class="string">'429497'</span>,<span class="string">'439609'</span>,<span class="string">'415674'</span>,<span class="string">'428729'</span>,<span class="string">'434976'</span>,<span class="string">'237609'</span>,<span class="string">'438566'</span>,<span class="string">'416101'</span>,<span class="string">'426292'</span>,<span class="string">'426251'</span>,<span class="string">'427909'</span>,<span class="string">'432703'</span>,<span class="string">'435501'</span>,<span class="string">'418548'</span>,<span class="string">'438644'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">16.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'416298'</span>,<span class="string">'252892'</span>,<span class="string">'253165'</span>,<span class="string">'436887'</span>,<span class="string">'428371'</span>,<span class="string">'251816'</span>,<span class="string">'229854'</span>,<span class="string">'432686'</span>,<span class="string">'418173'</span>,<span class="string">'411578'</span>,<span class="string">'416559'</span>,<span class="string">'253142'</span>,<span class="string">'298034'</span>,<span class="string">'240938'</span>,<span class="string">'240864'</span>,<span class="string">'409266'</span>,<span class="string">'431641'</span>,<span class="string">'426850'</span>,<span class="string">'432043'</span>,<span class="string">'435222'</span>,<span class="string">'428298'</span>,<span class="string">'229366'</span>,<span class="string">'430458'</span>,<span class="string">'237272'</span>,<span class="string">'298020'</span>,<span class="string">'410783'</span>,<span class="string">'431129'</span>,<span class="string">'249778'</span>,<span class="string">'240946'</span>,<span class="string">'251629'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">17.</span> <span class="keyword">SELECT</span> loupan_page_use,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'237961'</span>,<span class="string">'246760'</span>,<span class="string">'245148'</span>,<span class="string">'400531'</span>,<span class="string">'411079'</span>,<span class="string">'426430'</span>,<span class="string">'252039'</span>,<span class="string">'238153'</span>,<span class="string">'239570'</span>,<span class="string">'237975'</span>,<span class="string">'414382'</span>,<span class="string">'415405'</span>,<span class="string">'430961'</span>,<span class="string">'430002'</span>,<span class="string">'250845'</span>,<span class="string">'416659'</span>,<span class="string">'237984'</span>,<span class="string">'438604'</span>,<span class="string">'416113'</span>,<span class="string">'437075'</span>,<span class="string">'418631'</span>,<span class="string">'431147'</span>,<span class="string">'245171'</span>,<span class="string">'416380'</span>,<span class="string">'246418'</span>,<span class="string">'411336'</span>,<span class="string">'400697'</span>,<span class="string">'418718'</span>,<span class="string">'239952'</span>,<span class="string">'238007'</span>,<span class="string">'238017'</span>,<span class="string">'417838'</span>,<span class="string">'238031'</span>,<span class="string">'252181'</span>,<span class="string">'250326'</span>,<span class="string">'240911'</span>,<span class="string">'414506'</span>,<span class="string">'246970'</span>,<span class="string">'248340'</span>,<span class="string">'241266'</span>,<span class="string">'241018'</span>,<span class="string">'251248'</span>,<span class="string">'241011'</span>,<span class="string">'238054'</span>,<span class="string">'240459'</span>,<span class="string">'251286'</span>,<span class="string">'239843'</span>,<span class="string">'251255'</span>,<span class="string">'438525'</span>,<span class="string">'237986'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">18.</span> <span class="keyword">SELECT</span> loupan_id,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> ((loupan_id=<span class="number">414637</span>) <span class="keyword">AND</span> (house_type_id=<span class="string">"238264"</span>) <span class="keyword">AND</span> (category=<span class="number">3</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,category <span class="keyword">ASC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">100</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">19.</span> <span class="keyword">SELECT</span> loupan_id,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> ((loupan_id=<span class="number">417843</span>) <span class="keyword">AND</span> (category=<span class="number">4</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,category <span class="keyword">ASC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">20.</span> <span class="keyword">SELECT</span> loupan_id,last_update <span class="keyword">FROM</span> mp_loupan_tags <span class="keyword">WHERE</span> loupan_page_use = <span class="string">'1'</span> <span class="keyword">AND</span> mp_type = <span class="string">'1'</span> <span class="keyword">AND</span> loupan_id <span class="keyword">in</span> (<span class="string">'417138'</span>,<span class="string">'416488'</span>,<span class="string">'417434'</span>,<span class="string">'417118'</span>,<span class="string">'414536'</span>,<span class="string">'431886'</span>,<span class="string">'410367'</span>,<span class="string">'399936'</span>,<span class="string">'414636'</span>,<span class="string">'435391'</span>) <span class="keyword">ORDER</span> <span class="keyword">BY</span> display_seq <span class="keyword">ASC</span>,last_update <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">500</span> OFFSET <span class="number">0</span></div><div class="line"><span class="number">21.</span> <span class="keyword">SELECT</span> category,last_update <span class="keyword">FROM</span> loupan_images <span class="keyword">WHERE</span> ((loupan_id=<span class="string">"402011"</span>) <span class="keyword">AND</span> (category=<span class="number">3</span>)) <span class="keyword">ORDER</span> <span class="keyword">BY</span> rank <span class="keyword">DESC</span>,last_update <span class="keyword">DESC</span>,category <span class="keyword">ASC</span>,id <span class="keyword">DESC</span> <span class="keyword">LIMIT</span> <span class="number">5</span> OFFSET <span class="number">0</span></div></pre></td></tr></table></figure>
+
+<p>结果cpu压力果然上涨了，且sys cpu非常高，跟我们的故障场景类似</p>
+<table>
+<thead>
+<tr>
+<th>SQL序号</th>
+<th>dstat结果</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.</td>
+<td>usr:18 sys:3 idle:78</td>
+</tr>
+<tr>
+<td>2.</td>
+<td>usr:8 sys:87 idle:5</td>
+</tr>
+<tr>
+<td>4.</td>
+<td>usr:8 sys:86 idle:6</td>
+</tr>
+<tr>
+<td>n.</td>
+<td>… …</td>
+</tr>
+<tr>
+<td>20.</td>
+<td>usr:7 sys:88 idle:5</td>
+</tr>
+</tbody>
+</table>
+<p>然后用perf top -g 追踪统计下发生了啥</p>
+<p><img src="/image/mysql_innodb_arch/5_system_perf.png" alt="sys_cpu_5" title="sys"></p>
+<p>看到的确是内核态的函数比较多啊，但是这些是干啥的，并不知道哇，只知道自旋锁是瓶颈哇    </p>
+<p>如果这个没法统计，那我只能用pstack去碰碰运气，追踪下当时压力大的时候的点发生了什么？  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"> 1 <span class="tag">ib_wqueue_timedwait</span>(<span class="tag">ib_wqueue_t</span>*,</div><div class="line"> 1 <span class="tag">lock_wait_timeout_thread</span></div><div class="line"> 1 <span class="tag">timer_notify_thread_func</span></div><div class="line"> 6 <span class="tag">os_event</span><span class="pseudo">::timed_wait(timespec</span></div><div class="line"> 6 <span class="tag">os_event</span><span class="pseudo">::wait_time_low(unsigned</span></div><div class="line"> 6 <span class="tag">pthread_cond_timedwait</span><span class="at_rule">@<span class="keyword">@GLIBC_2.3.2</span></span></div><div class="line"><span class="number">55</span> Field_timestampf::<span class="function">get_date_internal</span>(st_mysql_time*)</div><div class="line"><span class="number">55</span> Time_zone_system::<span class="function">gmt_sec_to_TIME</span>(st_mysql_time*,</div></pre></td></tr></table></figure>
+
+<p>似乎发现了什么，没错，就是时区转换函数，从google得之，在有timestamp的场景下，如果MySQL的time_zone=system,会调用linux的时区函数，从而内核态的cpu使用率高  </p>
+<p>timestamp的场景包括很多，什么情况下会导致sys cpu飙高呢，我们不妨测试一把：  </p>
+<ul>
+<li><a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/innodb_storage_structure/time_zone_cpu_less.md" target="_blank" rel="external">链接并发数小于cpu总核数 , sql语句综合</a></li>
+<li><a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/Keithlan/other/share/innodb_storage_structure/time_zone_cpu_grade.md" target="_blank" rel="external">链接并发数大于cpu总核数 , sql语句综合</a></li>
+</ul>
+<p>得到的最后结论是：</p>
+<ul>
+<li>sys cpu高，只跟结果集包含timestamp有关系,跟查询条件是否有timestamp无关  </li>
+<li>使用time_zone=’+8:00’ 来替换 time_zone=’system’ ，可以大大降低sys cpu的使用率  </li>
+</ul>
+<p>最后，我们再针对一开始的21种语句使用 time_zone=’+8:00’ 来模拟一遍</p>
+<table>
+<thead>
+<tr>
+<th>SQL序号</th>
+<th>time_zone=system</th>
+<th>time_zone=’+8:00’</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1.</td>
+<td>usr:18 sys:3 idle:78</td>
+<td>usr:19 sys:3 idle:77</td>
+</tr>
+<tr>
+<td>2.</td>
+<td>usr:8 sys:87 idle:5</td>
+<td>usr:92 sys:1 idle:6</td>
+</tr>
+<tr>
+<td>4.</td>
+<td>usr:8 sys:86 idle:6</td>
+<td>usr:93 sys:2 idle:4</td>
+</tr>
+<tr>
+<td>n.</td>
+<td>… …</td>
+</tr>
+<tr>
+<td>20.</td>
+<td>usr:7 sys:88 idle:5</td>
+<td>usr:90 sys:2 idle:7</td>
+</tr>
+</tbody>
+</table>
+<p>很明显，问题得到解决  </p>
+<h3 id="4-3_线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试">4.3 线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试</h3>
+<ul>
+<li>简单介绍下tcpcopy</li>
+</ul>
+<p><img src="/image/mysql_innodb_arch/6_tcpcopy_arch.png" alt="sys_cpu_6" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/7_tcpcopy.png" alt="sys_cpu_7" title="sys"></p>
+<p>在搭建和测试tcpcopy的时候也遇到一些坑，其中在路由上卡壳了很久，数据包一直被reset， 最终排查下来 1. 由于腾讯机房的交换机上设置了arp自动应答 2. test serve和assistant server必须在同一网段  </p>
+<p>反正过程蛮曲折的，这不是我们今天的重点，先忽略。   </p>
+<p>详细的tcpcopy文章，请参考同事整理的 ： <a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/zhangcd/tools/tcpcopy-usage.md" target="_blank" rel="external">tcpcopy介绍</a>   </p>
+<ul>
+<li>继续问题追踪</li>
+</ul>
+<p>好了，根据4.1的测试，我们认为问题是时区转换导致的，但是为了严谨，我们在对生产环境的真实引流做一次测试，如果引流的时候出问题，然后设置时区可以解决问题，才能正在确定问题的所在  </p>
+<p>好消息是： 当qps达到早高峰的量时，cpu sys压力高的场景复现了<br>坏消息是： 设置了time_zone=’+8:00’ 之后，并没有得到好转，还是自旋锁的问题  </p>
+<p>pstack的跟踪并没有Time_zone_system::gmt_sec_to_TIME(st_mysql_time*  ， 所以跟时区转换没有多大关系   </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"> <span class="number">33</span> alloc_root</div><div class="line"> <span class="number">38</span> dispatch_command</div><div class="line"> <span class="number">38</span> mysql_parse</div><div class="line"> <span class="number">50</span> my_raw_malloc</div><div class="line"> <span class="number">55</span> _L_lock_12685</div><div class="line"> <span class="number">56</span> malloc</div><div class="line"> <span class="number">66</span> fil_aio_wait</div><div class="line"> <span class="number">66</span> __io_getevents_0_4</div><div class="line"> <span class="number">66</span> io_handler_thread</div><div class="line"> <span class="number">66</span> LinuxAIOHandler::collect</div><div class="line"> <span class="number">66</span> LinuxAIOHandler::poll</div><div class="line"> <span class="number">66</span> os_aio_linux_handler</div><div class="line"> <span class="number">71</span> __lll_lock_wait_private</div><div class="line"> <span class="number">80</span> acl_authenticate</div><div class="line"> <span class="number">80</span> check_connection</div><div class="line"> <span class="number">80</span> <span class="keyword">do</span>_auth_once</div><div class="line"> <span class="number">80</span> login_connection</div><div class="line"> <span class="number">80</span> native_password_authenticate</div><div class="line"> <span class="number">80</span> server_mpvio_<span class="built_in">read</span>_packet</div><div class="line"><span class="number">128</span> &lt;Per_thread_connection_handler::LOCK_thread_cache&gt;,</div><div class="line"><span class="number">128</span> that=<span class="number">0</span>x1e7db20</div><div class="line"><span class="number">130</span> native_cond_wait</div><div class="line"><span class="number">142</span> pthread_cond_wait@@GLIBC_2.<span class="number">3.2</span></div><div class="line"><span class="number">212</span> at</div><div class="line"><span class="number">264</span> Protocol_classic::get_command</div><div class="line"><span class="number">302</span> <span class="keyword">do</span>_command</div><div class="line"><span class="number">328</span> vio_io_wait</div><div class="line"><span class="number">328</span> vio_<span class="built_in">read</span></div><div class="line"><span class="number">328</span> vio_socket_io_wait</div><div class="line"><span class="number">329</span> poll</div><div class="line"><span class="number">330</span> Protocol_classic::<span class="built_in">read</span>_packet</div><div class="line"><span class="number">331</span> my_net_<span class="built_in">read</span></div><div class="line"><span class="number">331</span> net_<span class="built_in">read</span>_packet_header</div><div class="line"><span class="number">331</span> net_<span class="built_in">read</span>_raw_loop</div><div class="line"><span class="number">527</span> handle_connection</div><div class="line"><span class="number">532</span> pfs_spawn_thread</div><div class="line"><span class="number">618</span> clone</div><div class="line"><span class="number">618</span> start_thread</div></pre></td></tr></table></figure>
+
+<p>继续从分析结果中寻找猫腻，以上很多函数都见过，那么我们就去寻找下平常不起眼的一些的函数名一个个排查。  </p>
+<p>经过排查后，脑海中对alloc，malloc，my_raw_mallo 有点敏感，意识中就突然想到了tcmalloc，而tcmalloc我的印象中就是解决内存溢出和高并发场景的  </p>
+<p>然后，死马当活马医，抱着试一试的心跳来安装测试下  </p>
+<h3 id="4-4_tcmalloc_安装和部署"><a href="http://gitlab.corp.anjuke.com/_dba/architecture/blob/master/personal/zhangcd/tools/tcmalloc-introduction.md" target="_blank" rel="external">4.4 tcmalloc 安装和部署</a></h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div></pre></td><td class="code"><pre><div class="line">以上是同事整理的 tcmalloc原理&安装&部署&运维经验 相关文档，我这边简单摘要下  </div><div class="line"></div><div class="line"><span class="number">1</span>. 下载gperftools：  </div><div class="line"></div><div class="line">git clone http<span class="variable">s:</span>//github.<span class="keyword">com</span>/gperftools/gperftools.git  </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">2</span>. 编译安装：  </div><div class="line"></div><div class="line"><span class="keyword">sh</span> autogen.<span class="keyword">sh</span>  </div><div class="line">yum install libunwind libunwind-devel  </div><div class="line">./configure --prefix=/usr/local/gperftools  </div><div class="line"><span class="keyword">make</span> <span class="keyword">all</span>  </div><div class="line"><span class="keyword">make</span> install  </div><div class="line"><span class="keyword">ln</span> -<span class="keyword">s</span> /usr/local/gperftools/lib/libtcmalloc.<span class="keyword">so</span> /usr/lib/  </div><div class="line"><span class="keyword">ln</span> -<span class="keyword">s</span> /usr/local/gperftools/lib/libtcmalloc.<span class="keyword">so</span> /usr/lib64/  </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">3</span>. 编辑/etc/my.<span class="keyword">cnf</span>, 在mysqld_safe节中加入：  </div><div class="line"></div><div class="line">malloc-lib = tcmalloc  </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">4</span>. 启动时执行命令：  </div><div class="line"></div><div class="line">mysqld_safe --user=mysql &  </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">5</span>. 查看tcmalloc是否已经被加载到mysqld进程中：  </div><div class="line"></div><div class="line">lsof -<span class="keyword">n</span> | <span class="keyword">grep</span> tcmalloc  </div><div class="line"></div><div class="line">如果输出结果不为空，则说明已经被加载，否则是未加载的状态。</div></pre></td></tr></table></figure>
+
+<h3 id="4-4_malloc_vs_tcmalloc">4.4 malloc vs tcmalloc</h3>
+<blockquote>
+<p> malloc</p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/8_malloc_2.png" alt="8_malloc" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/9_malloc.png" alt="9_malloc" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/10_malloc.png" alt="10_malloc" title="sys"></p>
+<blockquote>
+<p>tcmolloc</p>
+</blockquote>
+<p><img src="/image/mysql_innodb_arch/11_tcmalloc_2.png" alt="sys_cpu_11" title="sys"></p>
+<p><img src="/image/mysql_innodb_arch/12_tcmalloc.png" alt="sys_cpu_12" title="sys"></p>
+<p>以上测试经过了10次以上，通过以上测试看：</p>
+<ol>
+<li>使用glibc自带的malloc，在同样的sql模型下，当MySQL QPS 达到16000的时候，CPU使用率已经高达92%，而sys cpu明显比较高  </li>
+<li>使用google的tcmalloc，在同样的sql模型下，当MySQL QPS达到21000的时候，CPU使用率才39%，而sys cpu明显比较低  </li>
+</ol>
+<p>至此，告一段落，接下来我们还有一系列要做的事情  </p>
+<h1 id="总结">总结</h1>
+<ol>
+<li><p>SQL模型 决定了 QPS的极限 ， 我们需要一套相对靠谱的模型来探测机器的极限, 给后期扩容给出相对靠谱的理论依据      </p>
+</li>
+<li><p>简单的SQL模型意味着更高的QPS，SQL越简单越好，复杂的业务逻辑可以放在程序端处理   </p>
+</li>
+<li><p>time_zone = ‘+8:00’ 来代替 time_zone=’system’ , 用以获得更好的性能  </p>
+</li>
+<li><p>tcmalloc 来替换 malloc ， 用以获得更好的并发，tcmalloc 在小内存分配管理上更加优秀   </p>
+</li>
+<li><p>透明大页需要关闭 : 在之前的N次测试中，perf偶尔会看到compact_zone的出现，而这个可能跟透明大页相关，此问题我没能复现出来，但仍引起我们的关心  </p>
+</li>
+<li><p>如何快速、高效的做读迁移  </p>
+</li>
+<li><p>perf不要随便乱用，尽量升级Linux的内核到高版本，来降低系统bug的可能,当然也许会引进新的bug —需测试       </p>
+</li>
+<li><p>如何用tcpcopy将master的读压力引流到test server , 毕竟master的操作需要非常谨慎  </p>
+</li>
+</ol>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/07/25/sys_high_cpu_mysql/" data-title="MySQL运维系列 之 CPU瓶颈故障案例分析 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/07/24/mysql_group_commit/"  title="MySQL5.7 核心技术揭秘：MySQL Group commit">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL5.7 核心技术揭秘：MySQL Group commit
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/07/25/sys_high_cpu_mysql/" data-title="MySQL运维系列 之 CPU瓶颈故障案例分析" data-url="https://Keithlan.github.io/2018/07/25/sys_high_cpu_mysql/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、背景"><span class="toc-number">1.</span> <span class="toc-text">一、背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、故障降级"><span class="toc-number">2.</span> <span class="toc-text">二、故障降级</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、寻找真相"><span class="toc-number">3.</span> <span class="toc-text">三、寻找真相</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、测试"><span class="toc-number">4.</span> <span class="toc-text">四、测试</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_测试用例一"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 测试用例一</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_线下场景还原：_保留了案发当时的slow_sql_，_使用mysqlslap模拟并发sql，将压力打在测试库上"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 线下场景还原： 保留了案发当时的slow sql ， 使用mysqlslap模拟并发sql，将压力打在测试库上</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3_线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 线下场景还原：使用TCPCOPY的方式在线引入真实的流量测试</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4_tcmalloc_安装和部署"><span class="toc-number">4.4.</span> <span class="toc-text">4.4 tcmalloc 安装和部署</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-4_malloc_vs_tcmalloc"><span class="toc-number">4.5.</span> <span class="toc-text">4.4 malloc vs tcmalloc</span></a></li></ol></li></ol></li><li class="toc-item toc-level-1"><a class="toc-link" href="#总结"><span class="toc-number"></span> <span class="toc-text">总结</span></a>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>29</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>28</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
