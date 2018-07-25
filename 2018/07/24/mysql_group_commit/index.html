@@ -1,0 +1,611 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL5.7 核心技术揭秘：MySQL Group commit | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、大纲
+
+一阶段提交
+
+二阶段提交
+
+三阶段提交
+
+组提交总结
+
+
+二、一阶段提交
+2.1 什么是一阶段提交
+先了解下含义，其实官方并没有定义啥是一阶段，这里只是我为了上下文和好理解，自己定义的一阶段commit流程。  
+好了，这里的一阶段，其实是针对MySQL没有开启binlog为前提的，因为">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/07/24/mysql_group_commit/" title="MySQL5.7 核心技术揭秘：MySQL Group commit" itemprop="url">MySQL5.7 核心技术揭秘：MySQL Group commit</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-07-24T10:03:24.000Z" itemprop="datePublished">Jul 24 2018</time>
+    Updated:<time datetime="2018-07-25T01:10:53.000Z" itemprop="dateModified">Jul 25 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、大纲"><span class="toc-number">1.</span> <span class="toc-text">一、大纲</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、一阶段提交"><span class="toc-number">2.</span> <span class="toc-text">二、一阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_什么是一阶段提交"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 什么是一阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_为什么要有一阶段提交"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 为什么要有一阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_一阶段提交的弊端"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 一阶段提交的弊端</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、二阶段提交"><span class="toc-number">3.</span> <span class="toc-text">三、二阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_什么是二阶段提交"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 什么是二阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_为什么要有二阶段提交"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 为什么要有二阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_二阶段提交的弊端"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 二阶段提交的弊端</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、三阶段提交"><span class="toc-number">4.</span> <span class="toc-text">四、三阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_什么是三阶段提交"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 什么是三阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_为什么要有三阶段提交"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 为什么要有三阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3_再来聊聊MySQL组提交"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 再来聊聊MySQL组提交</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#队列相关"><span class="toc-number">4.3.1.</span> <span class="toc-text">队列相关</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#组提交举例"><span class="toc-number">4.3.2.</span> <span class="toc-text">组提交举例</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、总结"><span class="toc-number">5.</span> <span class="toc-text">五、总结</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#六、思考问题"><span class="toc-number">5.1.</span> <span class="toc-text">六、思考问题</span></a></li></ol></li></ol>
+		</div>
+		
+		<h2 id="一、大纲">一、大纲</h2>
+<ul>
+<li><p>一阶段提交</p>
+</li>
+<li><p>二阶段提交</p>
+</li>
+<li><p>三阶段提交</p>
+</li>
+<li><p>组提交总结</p>
+</li>
+</ul>
+<h2 id="二、一阶段提交">二、一阶段提交</h2>
+<h3 id="2-1_什么是一阶段提交">2.1 什么是一阶段提交</h3>
+<p>先了解下含义，其实官方并没有定义啥是一阶段，这里只是我为了上下文和好理解，自己定义的一阶段commit流程。  </p>
+<p>好了，这里的一阶段，其实是针对MySQL没有开启binlog为前提的，因为没有binlog，所以MySQL commit的时候就相对简单很多。</p>
+<p><img src="/image/mysql_innodb_arch/commit_1.png" alt="commit" title="commit"></p>
+<p>解释几个概念：</p>
+<ul>
+<li>execution state做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在内存修改相关数据，比如：DML的修改</div></pre></td></tr></table></figure>
+
+<ul>
+<li>prepare stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">write</span>() <span class="keyword">redo</span>  日志  </div><div class="line">	<span class="number">1.1</span> 最重要的操作，记住这个时候就开始刷新<span class="keyword">redo</span>了（依赖操作系统<span class="keyword">sync</span>到磁盘），很多同学在这个地方都不太清楚，以为flush <span class="keyword">redo</span>在最后commit阶段才开始  </div><div class="line">	<span class="number">1.2</span> 这一步可以进行多事务的prepare，也就意味着可以多<span class="keyword">redo</span>的flush，<span class="keyword">sync</span>到磁盘，这里是<span class="keyword">redo</span>的组提交. 在此说明MySQL5.<span class="number">6</span>+ <span class="keyword">redo</span>是可以进行组提交的，之后我们讨论的重点是binlog，就不在提及<span class="keyword">redo</span>的组提交了    </div><div class="line"><span class="number">2</span>. 更新<span class="keyword">undo</span>状态</div><div class="line"><span class="number">3</span>. 等等</div></pre></td></tr></table></figure>
+
+<ul>
+<li>innodb commit stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 更新<span class="keyword">undo</span>的状态</div><div class="line"><span class="number">2</span>. fsync <span class="keyword">redo</span> & <span class="keyword">undo</span>(强制<span class="keyword">sync</span>到磁盘) </div><div class="line"><span class="number">3</span>. 写入最终的commit <span class="built_in">log</span>，代表事务结束</div><div class="line"><span class="number">4</span>. 等等</div></pre></td></tr></table></figure>
+
+<p>由于这里面只对应到redo日志，所以我们称之为一阶段commit  </p>
+<h3 id="2-2_为什么要有一阶段提交">2.2 为什么要有一阶段提交</h3>
+<p>一阶段提交，主要是为了crash safe。</p>
+<ul>
+<li>如果在 execution stage mysql crash</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">当MySQL重启后，因为没有记录<span class="keyword">redo</span>，此事务回滚</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如果在 execution stage mysql crash</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">当MySQL重启后，因为没有记录<span class="keyword">redo</span>，此事务回滚</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如果 prepare stage</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">redo</span> <span class="built_in">log</span> <span class="keyword">write</span>()了，但是还没有fsync()到磁盘前，mysqld crash了</div><div class="line">	此时：事务回滚</div><div class="line"></div><div class="line"><span class="number">2</span>. <span class="keyword">redo</span> <span class="built_in">log</span> <span class="keyword">write</span>()了，fsync()也落盘了，mysqld crash了</div><div class="line">	此时：事务还是回滚</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如果 commit stage</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">commit</span> <span class="keyword">log</span> fsync到磁盘了</span></div><div class="line">	此时：事务提交成功，否则事务回滚</div></pre></td></tr></table></figure>
+
+<h3 id="2-3_一阶段提交的弊端">2.3 一阶段提交的弊端</h3>
+<p>缺点也很明显：</p>
+<ul>
+<li>缺点一</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 为什么<span class="keyword">redo</span> fsync到磁盘后，还是要回滚呢？</div></pre></td></tr></table></figure>
+
+<ul>
+<li>缺点二</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>没有开启binlog，性能非常高，但是binlog是用来搭建slave的，否则就是单节点，不适合生产环境</div></pre></td></tr></table></figure>
+
+<h2 id="三、二阶段提交">三、二阶段提交</h2>
+<h3 id="3-1_什么是二阶段提交">3.1 什么是二阶段提交</h3>
+<p><img src="/image/mysql_innodb_arch/commit_2.png" alt="commit" title="commit"></p>
+<p>继续解释几个概念：</p>
+<ul>
+<li>execution state做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在内存修改相关数据，比如：DML的修改</div></pre></td></tr></table></figure>
+
+<ul>
+<li>prepare stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">write</span>() <span class="keyword">redo</span>  日志  --最重要的操作，记住这个时候就开始刷新<span class="keyword">redo</span>了（依赖操作系统<span class="keyword">sync</span>到磁盘），很多同学在这个地方都不太清楚，以为flush <span class="keyword">redo</span>在最后commit阶段才开始</div><div class="line"><span class="number">2</span>. 更新<span class="keyword">undo</span>状态</div><div class="line"><span class="number">3</span>. 等等</div></pre></td></tr></table></figure>
+
+<ul>
+<li>binlog stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">1. write binlog  </div><div class="line">	<span class="operator"><span class="keyword">flush</span> <span class="keyword">binlog</span> 内存日志到磁盘缓存  </span></div><div class="line"><span class="number">2.</span> fsync <span class="keyword">binlog</span>  </div><div class="line">	sync磁盘缓存的<span class="keyword">binlog</span>日志到磁盘持久化</div></pre></td></tr></table></figure>
+
+<ul>
+<li>innodb commit stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 更新<span class="keyword">undo</span>的状态</div><div class="line"><span class="number">2</span>. fsync <span class="keyword">redo</span> & <span class="keyword">undo</span>(强制<span class="keyword">sync</span>到磁盘)</div><div class="line"><span class="number">3</span>. 写入最终的commit <span class="built_in">log</span>，代表事务结束</div><div class="line"><span class="number">4</span>. 等等</div></pre></td></tr></table></figure>
+
+<p>由于这里的流程中包含了binlog和redo日志刷新的协调一致性，我们称之为二阶段  </p>
+<h3 id="3-2_为什么要有二阶段提交">3.2 为什么要有二阶段提交</h3>
+<p>当binlog开启的情况下，我们需要引入另一套流程来保证redo和binlog的一致性 ， 以及crash safe，所以我们用这套二阶段来实现  </p>
+<ul>
+<li><p>在prepare阶段，如果mysqld crash，由于事务未写入binlog且innodb 存储引擎未提交，所以将该事务回滚掉  </p>
+</li>
+<li><p>当binlog阶段</p>
+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1. binlog <span class="operator"><span class="keyword">flush</span> 到磁盘缓存，但是没有永久fsync到磁盘</span></div><div class="line">	如果mysqld crash，此事务回滚	</div><div class="line"></div><div class="line"><span class="number">2.</span> <span class="keyword">binlog</span>永久fsync到磁盘，但是<span class="keyword">innodb</span> <span class="keyword">commit</span> <span class="keyword">log</span>还未提交</div><div class="line">	如果mysqld crash，MySQL 进行recover，从<span class="keyword">binlog</span>的xid提取提交的事务进行重做并<span class="keyword">commit</span>，来保证<span class="keyword">binlog</span>和redo保持一致</div></pre></td></tr></table></figure>
+
+<ul>
+<li>当commit阶段</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">如果innodb <span class="operator"><span class="keyword">commit</span> <span class="keyword">log</span>已经提交，事务成功结束</span></div></pre></td></tr></table></figure>
+
+<p>那为什么要保证redo和binlog的一致性呢？</p>
+<ul>
+<li>物理热备的问题</li>
+</ul>
+<ol>
+<li>多事务中，如果无法保证多事务的redo和binlog一致性，则会有如下问题  </li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">commit</span>提交阶段包含的事情：</span></div><div class="line">	<span class="number">1.</span> <span class="keyword">prepare</span>  </div><div class="line">	<span class="number">2.</span> <span class="keyword">write</span> <span class="keyword">binlog</span>  & fsync <span class="keyword">binlog</span>  </div><div class="line">	<span class="number">3.</span> <span class="keyword">commit</span>  </div><div class="line"></div><div class="line"></div><div class="line">T1 (<span class="comment">---prepare-----write 100[pos1]-------fsync 100--------------------------------------online-backup[pos3:因为热备取的是最近的提交事务位置]-------commit)    </span></div><div class="line"></div><div class="line">T2 (<span class="comment">------prepare------write 200[pos2]---------fsync 200------commit)    </span></div><div class="line"></div><div class="line">T3 (<span class="comment">-----------prepare-------write 300[pos3]--------fsync 300--------commit)    </span></div><div class="line"></div><div class="line"></div><div class="line">解析：  </div><div class="line">	事务的开始顺序： T1 -》T2 -》T3  </div><div class="line">	事务的提交结束顺序：  T2 -》T3 -》T1  </div><div class="line">	<span class="keyword">binlog</span>的写入顺序： T1 -》 T2 -》T3</div><div class="line"></div><div class="line">结论：  </div><div class="line">	T2 ， T3 引擎层提交结束，T1 fsync <span class="keyword">binlog</span> <span class="number">100</span> 也已经结束，但是T1引擎成没有提交成功，所以这时候online-<span class="keyword">backup</span>记录的<span class="keyword">binlog</span>位置是pos3（也就是T3提交后的位置）  </div><div class="line">	如果拿着备份重新恢复<span class="keyword">slave</span>，由于热备是不会备份<span class="keyword">binlog</span>的，所以事务T1会回滚掉，那么<span class="keyword">change</span> <span class="keyword">master</span> <span class="keyword">to</span> pos3的时候，因为T1的位置是pos1（在pos3之前），所以T1事务被<span class="keyword">slave</span>完美的漏掉了</div></pre></td></tr></table></figure>
+
+<ol>
+<li>多事务中，可以通过三阶段提交（下面一节讲）保证redo和binlog的一致性，则备份无问题. 接下来看一个多事务中，事务日志和binlog日志一致的情况    </li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">commit</span>提交阶段包含的事情：</span></div><div class="line">    <span class="number">1.</span> <span class="keyword">prepare</span></div><div class="line">    <span class="number">2.</span> <span class="keyword">write</span> <span class="keyword">binlog</span>  & fsync <span class="keyword">binlog</span></div><div class="line">    <span class="number">3.</span> <span class="keyword">commit</span></div><div class="line"></div><div class="line"></div><div class="line">T1 (<span class="comment">---prepare-----write 100[pos1]-------fsync 100-------------commit)</span></div><div class="line"></div><div class="line">T2 (<span class="comment">------prepare------write 200[pos2]---------fsync 200----------------online-backup[pos2:因为热备取的是最近的提交事务位置]---commit)</span></div><div class="line"></div><div class="line">T3 (<span class="comment">-----------prepare-------write 300[pos3]--------fsync 300----------------------------------------------------------------------------commit)</span></div><div class="line"></div><div class="line"></div><div class="line">解析：</div><div class="line">    事务的开始顺序： T1 -》T2 -》T3</div><div class="line">    事务的提交结束顺序：  T1 -》T2 -》T3</div><div class="line">    <span class="keyword">binlog</span>的写入顺序： T1 -》 T2 -》T3</div><div class="line">	ps：以上的事务和<span class="keyword">binlog</span>完全按照顺序一致运行  </div><div class="line"></div><div class="line">结论：</div><div class="line">    T1 引擎层提交结束，T2 fsync <span class="keyword">binlog</span> <span class="number">200</span> 也已经结束，但是T2引擎成没有提交成功，所以这时候online-<span class="keyword">backup</span>记录的<span class="keyword">binlog</span>位置是pos1（也就是T1提交后的位置）</div><div class="line">    如果拿着备份重新恢复<span class="keyword">slave</span>，由于热备是不会备份<span class="keyword">binlog</span>的，所以事务T2会回滚掉，那么<span class="keyword">change</span> <span class="keyword">master</span> <span class="keyword">to</span> pos1的时候，因为T1的位置是pos1（在pos2之前），所以T2、T3事务会被重做，最终保持一致</div></pre></td></tr></table></figure>
+
+<p>总结：<br>    以上的问题，主要原因是热备份工具无法备份binlog导致的根据备份恢复的slave回滚导致的，产生这样的原因最后还是要归结于最后引擎层的日志没有提交导致<br>    所以，xtrabackup意识到了这一点，最后多了这一步flush no_write_to_binlog engine logs，表示将innodb层的redo全部持久化到磁盘后再进行备份，在通俗的说，就是图例上的T2一定成功后，才会再继续进行拷贝备份<br>    那么如果是这样，图例上的T2在恢复的时候，就不会被回滚了，所以就自然不会丢失事务啦   </p>
+<ul>
+<li>主从数据不一致问题</li>
+</ul>
+<p>如果redo和binlog不是一致的，那么有可能就是master执行事务的顺序和slave执行事务顺序不一样，那么不一样会导致什么问题呢？<br>在一些依赖事务顺序的场景，尤其重要，比如我们看一个例子</p>
+<p>master节点提交T1和T2事务按照以下顺序  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>.  State0: <span class="variable">x=</span> <span class="number">1</span>, <span class="variable">y=</span> <span class="number">1</span>  --初始值  </div><div class="line"></div><div class="line"><span class="number">2</span>.  T1: { x:= Read(y);            </div><div class="line"></div><div class="line"><span class="number">3</span>.          x:= x+<span class="number">1</span>;          </div><div class="line"></div><div class="line"><span class="number">4</span>.          Write(x);          </div><div class="line"></div><div class="line"><span class="number">5</span>.          Commit; }  </div><div class="line"></div><div class="line">    </div><div class="line">  </div><div class="line">State1: <span class="variable">x=</span> <span class="number">2</span>, <span class="variable">y=</span> <span class="number">1</span>  </div><div class="line"></div><div class="line"><span class="number">7</span>.  T2: { y:= Read(x);  </div><div class="line"></div><div class="line"><span class="number">8</span>.            y:=y+<span class="number">1</span>;            </div><div class="line"></div><div class="line"><span class="number">9</span>.           Write(y);            </div><div class="line"></div><div class="line"><span class="number">10</span>.          Commit; }  </div><div class="line"></div><div class="line">State2: <span class="variable">x=</span> <span class="number">2</span>, <span class="variable">y=</span> <span class="number">3</span>      </div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">以上两个事务顺序在master为 T1 -&gt; T2  </div><div class="line">最终结果为   </div><div class="line">	State1: <span class="variable">x=</span> <span class="number">2</span>, <span class="variable">y=</span> <span class="number">1</span>  </div><div class="line">	State2: <span class="variable">x=</span> <span class="number">2</span>, <span class="variable">y=</span> <span class="number">3</span></div></pre></td></tr></table></figure>
+
+<p>如果slave的事务执行顺序与master相反，会怎么样呢？  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1.  </span>State0: x= 1, y= 1 --初始值    </div><div class="line"></div><div class="line"><span class="bullet">2.  </span>T2: { y:= Read(x);  </div><div class="line"></div><div class="line"><span class="bullet">3.            </span>y:= y+1;  </div><div class="line"></div><div class="line"><span class="bullet">4.            </span>Write(y);  </div><div class="line"></div><div class="line"><span class="bullet">5.            </span>Commit; }  </div><div class="line"></div><div class="line"><span class="bullet">6.    </span></div><div class="line">State1: x= 1, y= 2  </div><div class="line"></div><div class="line"><span class="bullet">7.  </span>T1: { x:= Read(y);  </div><div class="line"></div><div class="line"><span class="bullet">8.            </span>x:=x+1;  </div><div class="line"></div><div class="line"><span class="bullet">9.            </span>Write(x);  </div><div class="line"></div><div class="line"><span class="bullet">10.           </span>Commit; }  </div><div class="line"></div><div class="line"><span class="bullet">11.   </span></div><div class="line">State2: x= 3, y= 2  </div><div class="line"></div><div class="line">以上两个事务顺序在master为 T2 -&gt; T1  </div><div class="line">最终结果为  </div><div class="line"><span class="code">    State1: x= 1, y= 2  </span></div><div class="line"><span class="code">    State2: x= 3, y= 2</span></div></pre></td></tr></table></figure>
+
+<p>结论： </p>
+<ol>
+<li>为了保证主备数据一致性，slave节点必须按照同样的顺序执行，如果顺序不一致容易造成主备库数据不一致的风险。</li>
+<li>而redo 和 binlog的一致性，在单线程复制下是master和slave数据一致性的另一个保证， 多线程复制需要依赖MTS的设置  </li>
+<li>所以，MySQL必须要保证redo 和 binlog的一致性，也就是：引擎层提交的顺序和server层binlog fsync的顺序必须一致，那么二阶段提交就是这样的机制  </li>
+</ol>
+<h3 id="3-3_二阶段提交的弊端">3.3 二阶段提交的弊端</h3>
+<p>二阶段提交能够保证同一个事务的redo和binlog的顺序一致性问题，但是无法解决多个事务提交顺序一致性的问题     </p>
+<h2 id="四、三阶段提交">四、三阶段提交</h2>
+<h3 id="4-1_什么是三阶段提交">4.1 什么是三阶段提交</h3>
+<p><img src="/image/mysql_innodb_arch/commit_3.png" alt="commit" title="commit"></p>
+<p>继续解释几个概念：</p>
+<ul>
+<li>execution state做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">在内存修改相关数据，比如：DML的修改</div></pre></td></tr></table></figure>
+
+<ul>
+<li>prepare stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">write</span>() <span class="keyword">redo</span>  日志  --最重要的操作，记住这个时候就开始刷新<span class="keyword">redo</span>了（依赖操作系统<span class="keyword">sync</span>到磁盘），很多同学在这个地方都不太清楚，以为flush <span class="keyword">redo</span>在最后commit阶段才开始</div><div class="line"><span class="number">2</span>. 更新<span class="keyword">undo</span>状态</div><div class="line"><span class="number">3</span>. 等等</div></pre></td></tr></table></figure>
+
+<ul>
+<li>binlog stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">1. write binlog  <span class="comment">--一组有序的binlog    </span></div><div class="line">    <span class="operator"><span class="keyword">flush</span> <span class="keyword">binlog</span> 内存日志到磁盘缓存  </span></div><div class="line"><span class="number">2.</span> fsync <span class="keyword">binlog</span>  <span class="comment">--一组有序的binlog    </span></div><div class="line">    sync磁盘缓存的<span class="keyword">binlog</span>日志到磁盘持久化</div></pre></td></tr></table></figure>
+
+<ul>
+<li>innodb commit stage做什么事情呢</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 更新<span class="keyword">undo</span>的状态</div><div class="line"><span class="number">2</span>. fsync <span class="keyword">redo</span> & <span class="keyword">undo</span>(强制<span class="keyword">sync</span>到磁盘)</div><div class="line"><span class="number">3</span>. 写入最终的commit <span class="built_in">log</span>，代表事务结束  --一组有序的commit日志,按序提交     </div><div class="line"><span class="number">4</span>. 等等</div></pre></td></tr></table></figure>
+
+<p>这里将整个事务提交的过程分为了三个大阶段</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">InnoDB, <span class="operator"><span class="keyword">Prepare</span></span></div><div class="line">    <span class="keyword">SQL</span>已经成功执行并生成了相应的redo日志  </div><div class="line"><span class="keyword">Binlog</span>, <span class="keyword">Flush</span> Stage(<span class="keyword">group</span>)  <span class="comment">-- 一阶段</span></div><div class="line">    写入<span class="keyword">binlog</span>缓存；</div><div class="line"><span class="keyword">Binlog</span>, Sync Stage(<span class="keyword">group</span>)  <span class="comment">-- 二阶段  </span></div><div class="line">    <span class="keyword">binlog</span>缓存将sync到磁盘</div><div class="line"><span class="keyword">InnoDB</span>, <span class="keyword">Commit</span> stage(<span class="keyword">group</span>) <span class="comment">-- 三阶段  </span></div><div class="line">    leader根据顺序调用存储引擎提交事务；</div><div class="line"></div><div class="line"></div><div class="line">重要参数：  </div><div class="line"></div><div class="line">binlog_group_commit_sync_delay=N ： 等待N us后，开始刷盘<span class="keyword">binlog</span>    </div><div class="line">binlog_group_commit_sync_no_delay_count=N : 如果队列的事务数达到N个后，就开始刷盘<span class="keyword">binlog</span></div></pre></td></tr></table></figure>
+
+<h3 id="4-2_为什么要有三阶段提交">4.2 为什么要有三阶段提交</h3>
+<p>目的就是保证多事务之间的redo和binlog顺序一致性问题, 以及加入组提交机制，让redo和binlog都可以以组的形式（有序集合）进行fsync来提高并发性能  </p>
+<h3 id="4-3_再来聊聊MySQL组提交">4.3 再来聊聊MySQL组提交</h3>
+<h4 id="队列相关">队列相关</h4>
+<p><img src="/image/mysql_innodb_arch/commit_4.png" alt="commit" title="commit"></p>
+<h4 id="组提交举例">组提交举例</h4>
+<p><img src="/image/mysql_innodb_arch/commit_5.png" alt="commit" title="commit"></p>
+<p>（一）、T1事务第一个进入第一阶段 FLUSH ， 由于是第一个，所以是leader，然后再等待（按照具体算法）<br>（二）、T2事务第二个进行第一阶段 FLUSH ， 由于是第二个，所以是follower，然后等待leader调度<br>（三）、FLUSH队列等待结束后，开始进入下一阶段SYNC阶段，此时T1带领T2进行一次fsync操作,之后进入commit阶段，按序提交完成，这就是一次组提交的简要过程了<br>（四）、prepare可以并行，说明两个事务没有任何冲突。有冲突的prepare无法进行进入同一队列<br>（五）、每个队列之间都是可以并行运行的  </p>
+<h2 id="五、总结">五、总结</h2>
+<ul>
+<li><p>组提交的核心思想就是：一次fsync（）调用，可以刷新N个事务的redo log(redo的组提交) &amp; binlog(binlog的组提交)</p>
+</li>
+<li><p>组提交的最终目的就是为了减少IO的频繁刷盘，来提高并发性能,当然也是之后多线程复制的基础   </p>
+</li>
+<li><p>组提交中：sync_binlog=1 &amp; innodb_trx_at_commit=1 代表的不再是1个事务，而是一组事务和一个事务组的binlog    </p>
+</li>
+<li><p>组提交中：binlog是顺序fsync的，事务也是按照顺序进行提交的，这都是有序的，MySQL5.7 并对这些有序的事务进行打好标记（last_committed，sequence_number ）  </p>
+</li>
+</ul>
+<h3 id="六、思考问题">六、思考问题</h3>
+<ul>
+<li><p>如何保证slave执行的同一组binlog的事务顺序跟master的一致  </p>
+<p>  如果slave上同一组事务中的后面的事务先执行，那么slave的gtid该如何表示<br>  如何保证slave上同一组事务中的事务是按照顺序执行的   </p>
+</li>
+<li><p>如果slave突然挂了，那么执行到一半的一组事务，是全部回滚？还是部分回滚？    </p>
+<p>  如果是部分回滚，那么如何知道哪些回滚了，哪些没有回滚，mysql如何自动修复掉回滚的那部分事务    </p>
+</li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/07/24/mysql_group_commit/" data-title="MySQL5.7 核心技术揭秘：MySQL Group commit | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/06/26/mysql_iotop/"  title="MySQL运维系列 之 如何快速定位IO瓶颈">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维系列 之 如何快速定位IO瓶颈
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/07/24/mysql_group_commit/" data-title="MySQL5.7 核心技术揭秘：MySQL Group commit" data-url="https://Keithlan.github.io/2018/07/24/mysql_group_commit/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、大纲"><span class="toc-number">1.</span> <span class="toc-text">一、大纲</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、一阶段提交"><span class="toc-number">2.</span> <span class="toc-text">二、一阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_什么是一阶段提交"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 什么是一阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_为什么要有一阶段提交"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 为什么要有一阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_一阶段提交的弊端"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 一阶段提交的弊端</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、二阶段提交"><span class="toc-number">3.</span> <span class="toc-text">三、二阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_什么是二阶段提交"><span class="toc-number">3.1.</span> <span class="toc-text">3.1 什么是二阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_为什么要有二阶段提交"><span class="toc-number">3.2.</span> <span class="toc-text">3.2 为什么要有二阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-3_二阶段提交的弊端"><span class="toc-number">3.3.</span> <span class="toc-text">3.3 二阶段提交的弊端</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、三阶段提交"><span class="toc-number">4.</span> <span class="toc-text">四、三阶段提交</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_什么是三阶段提交"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 什么是三阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_为什么要有三阶段提交"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 为什么要有三阶段提交</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-3_再来聊聊MySQL组提交"><span class="toc-number">4.3.</span> <span class="toc-text">4.3 再来聊聊MySQL组提交</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#队列相关"><span class="toc-number">4.3.1.</span> <span class="toc-text">队列相关</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#组提交举例"><span class="toc-number">4.3.2.</span> <span class="toc-text">组提交举例</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、总结"><span class="toc-number">5.</span> <span class="toc-text">五、总结</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#六、思考问题"><span class="toc-number">5.1.</span> <span class="toc-text">六、思考问题</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>28</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>27</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
