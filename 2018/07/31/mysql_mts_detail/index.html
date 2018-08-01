@@ -1,0 +1,462 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL并行复制的深入浅出 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、并行复制的背景
+
+首先，为什么会有并行复制这个概念呢？ 
+
+1234567891011121. DBA都应该知道，MySQL的复制是基于binlog的。  2. MySQL复制包括两部分，IO线程 和 SQL线程。  3. IO线程主要是用于拉取接收Master传递过来的binlog，并将其写入">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/07/31/mysql_mts_detail/" title="MySQL并行复制的深入浅出" itemprop="url">MySQL并行复制的深入浅出</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-07-31T00:03:24.000Z" itemprop="datePublished">Jul 31 2018</time>
+    Updated:<time datetime="2018-08-01T12:09:55.000Z" itemprop="dateModified">Aug 1 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、并行复制的背景"><span class="toc-number">1.</span> <span class="toc-text">一、并行复制的背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、重点"><span class="toc-number">2.</span> <span class="toc-text">二、重点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MySQL5-6_基于schema的并行复制"><span class="toc-number">3.</span> <span class="toc-text">三、MySQL5.6 基于schema的并行复制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、MySQL5-7_基于group_commit的并行复制"><span class="toc-number">4.</span> <span class="toc-text">四、MySQL5.7 基于group commit的并行复制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_Commit-Parent-Based模式"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 Commit-Parent-Based模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_Lock-Based模式"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 Lock-Based模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、MySQL8-0_基于write-set的并行复制"><span class="toc-number">5.</span> <span class="toc-text">五、MySQL8.0 基于write-set的并行复制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、如何让slave的并行复制和master的事务执行的顺序一致呢"><span class="toc-number">6.</span> <span class="toc-text">六、如何让slave的并行复制和master的事务执行的顺序一致呢</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、并行复制的背景">一、并行复制的背景</h2>
+<ul>
+<li>首先，为什么会有并行复制这个概念呢？ </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>DBA都应该知道，MySQL的复制是基于binlog的。  </div><div class="line"><span class="bullet">2. </span>MySQL复制包括两部分，IO线程 和 SQL线程。  </div><div class="line"><span class="bullet">3. </span>IO线程主要是用于拉取接收Master传递过来的binlog，并将其写入到relay log  </div><div class="line"><span class="bullet">4. </span>SQL线程主要负责解析relay log，并应用到slave中  </div><div class="line"><span class="bullet">5. </span>不管怎么说，IO和SQL线程都是单线程的，然后master却是多线程的，所以难免会有延迟，为了解决这个问题，多线程应运而生了。  </div><div class="line"><span class="bullet">6. </span>IO多线程？  </div><div class="line"><span class="code">	6.1 IO没必要多线程，因为IO线程并不是瓶颈啊  </span></div><div class="line"><span class="bullet">7. </span>SQL多线程？</div><div class="line"><span class="code">	7.1 没错，目前最新的5.6，5.7，8.0 都是在SQL线程上实现了多线程，来提升slave的并发度   </span></div><div class="line"></div><div class="line"></div><div class="line">接下来，我们就来一窥MySQL在并行复制上的努力和成果吧</div></pre></td></tr></table></figure>
+
+<h2 id="二、重点">二、重点</h2>
+<p>是否能够并行，关键在于多事务之间是否有锁冲突，这是关键。 下面的并行复制原理就是在看如何让避免锁冲突  </p>
+<h2 id="三、MySQL5-6_基于schema的并行复制">三、MySQL5.6 基于schema的并行复制</h2>
+<blockquote>
+<p>slave-parallel-type=DATABASE(不同库的事务，没有锁冲突)</p>
+</blockquote>
+<p>之前说过，并行复制的目的就是要让slave尽可能的多线程跑起来，当然基于库级别的多线程也是一种方式(不同库的事务，没有锁冲突)  </p>
+<p>先说说优点： 实现相对来说简单，对用户来说使用起来也简单<br>再说说缺点： 由于是基于库的，那么并行的粒度非常粗，现在很多公司的架构是一库一实例，针对这样的架构，5.6的并行复制无能为力。当然还有就是主从事务的先后顺序，对于5.6也是个大问题  </p>
+<p>话不多说，来张图好了  </p>
+<p><img src="/image/mysql_innodb_arch/mts_1.png" alt="mts" title="mts"></p>
+<h2 id="四、MySQL5-7_基于group_commit的并行复制">四、MySQL5.7 基于group commit的并行复制</h2>
+<blockquote>
+<p>slave-parallel-type=LOGICAL_CLOCK : Commit-Parent-Based模式(同一组的事务[last-commit相同]，没有锁冲突. 同一组，肯定没有冲突，否则没办法成为同一组)<br>slave-parallel-type=LOGICAL_CLOCK : Lock-Based模式(即便不是同一组的事务，只要事务之间没有锁冲突[prepare阶段]，就可以并发。 不在同一组，只要N个事务prepare阶段可以重叠，说明没有锁冲突)        </p>
+</blockquote>
+<p>group commit，之前的文章有详细描述，这里不多解释。MySQL5.7在组提交的时候，还为每一组的事务打上了标记，现在想想就是为了方便进行MTS吧。</p>
+<p>我们先看一组binlog</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="variable">last_committed=</span><span class="number">0</span> <span class="variable">sequence_number=</span><span class="number">1</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">1</span> <span class="variable">sequence_number=</span><span class="number">2</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">2</span> <span class="variable">sequence_number=</span><span class="number">3</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">3</span> <span class="variable">sequence_number=</span><span class="number">4</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">4</span> <span class="variable">sequence_number=</span><span class="number">5</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">4</span> <span class="variable">sequence_number=</span><span class="number">6</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">4</span> <span class="variable">sequence_number=</span><span class="number">7</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">6</span> <span class="variable">sequence_number=</span><span class="number">8</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">6</span> <span class="variable">sequence_number=</span><span class="number">9</span></div><div class="line"><span class="variable">last_committed=</span><span class="number">9</span> <span class="variable">sequence_number=</span><span class="number">10</span></div></pre></td></tr></table></figure>
+
+<h3 id="4-1_Commit-Parent-Based模式">4.1 Commit-Parent-Based模式</h3>
+<p><img src="/image/mysql_innodb_arch/mts_2.png" alt="mts" title="mts"></p>
+<h3 id="4-2_Lock-Based模式">4.2 Lock-Based模式</h3>
+<p><img src="/image/mysql_innodb_arch/mts_3.png" alt="mts" title="mts"> </p>
+<h2 id="五、MySQL8-0_基于write-set的并行复制">五、MySQL8.0 基于write-set的并行复制</h2>
+<blockquote>
+<p>基于主键的冲突检测(binlog_transaction_depandency_tracking = COMMIT_ORDERE|WRITESET|WRITESET_SESSION, 修改的row的主键或非空唯一键没有冲突，即可并行)<br>5.7.22 也支持了 write-set 机制  </p>
+</blockquote>
+<ul>
+<li>事务依赖关系：binlog_transaction_depandency_tracking = COMMIT_ORDERE|WRITESET|WRITESET_SESSION</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">COMMIT_ORDERE</span>: <span class="string">继续基于组提交方式</span></div><div class="line"><span class="attribute">WRITESET</span>: <span class="string">基于写集合决定事务依赖</span></div><div class="line"><span class="attribute">WRITESET_SESSION</span>: <span class="string">基于写集合，但是同一个session中的事务不会有相同的last_committed</span></div></pre></td></tr></table></figure>
+
+
+<ul>
+<li>事务检测算法：transaction_write_set_extraction = OFF| XXHASH64 | MURMUR32</li>
+</ul>
+<p>MySQL会有一个变量来存储已经提交的事务HASH值，所有已经提交的事务所修改的主键（或唯一键）的值经过hash后都会与那个变量的集合进行对比，来判断改行是否与其冲突，并以此来确定依赖关系  </p>
+<p>这里说的变量，可以通过这个设置大小： binlog_transaction_dependency_history_size  </p>
+<p>这样的粒度，就到了 row级别了，此时并行的粒度更加精细，并行的速度会更快，某些情况下，说slave的并行度超越master也不为过(master是单线程的写，slave也可以并行回放)        </p>
+<h2 id="六、如何让slave的并行复制和master的事务执行的顺序一致呢">六、如何让slave的并行复制和master的事务执行的顺序一致呢</h2>
+<p>5.7.19 之后，可以通过设置 slave_preserve_commit_order = 1  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">官方解释：  </div><div class="line"><span class="keyword">For</span> multithreaded slaves, enabling this <span class="keyword">variable</span> ensures that transactions are externalized <span class="keyword">on</span> the slave <span class="keyword">in</span> the same order as they appear <span class="keyword">in</span> the slave<span class="attribute">'s</span> relay log.   </div><div class="line">Setting this <span class="keyword">variable</span> has no effect <span class="keyword">on</span> slaves <span class="keyword">for</span> which multithreading <span class="keyword">is</span> <span class="keyword">not</span> enabled.   </div><div class="line"><span class="keyword">All</span> replication threads (<span class="keyword">for</span> <span class="keyword">all</span> replication channels <span class="keyword">if</span> you are using multiple replication channels) must be stopped before changing this <span class="keyword">variable</span>.   </div><div class="line"><span class="comment">--log-bin and --log-slave-updates must be enabled on the slave.   </span></div><div class="line"><span class="keyword">In</span> addition <span class="comment">--slave-parallel-type must be set to LOGICAL_CLOCK.  </span></div><div class="line"></div><div class="line">Once a multithreaded slave has been started, transactions can <span class="keyword">begin</span> <span class="keyword">to</span> execute <span class="keyword">in</span> parallel.   </div><div class="line"><span class="keyword">With</span> slave_preserve_commit_order enabled, the executing thread waits <span class="keyword">until</span> <span class="keyword">all</span> previous transactions are committed before committing.   </div><div class="line"><span class="keyword">While</span> the slave thread <span class="keyword">is</span> waiting <span class="keyword">for</span> other workers <span class="keyword">to</span> commit their transactions it reports its status as Waiting <span class="keyword">for</span> preceding transaction <span class="keyword">to</span> commit.</div><div class="line"></div><div class="line">大致实现原理就是：excecution阶段可以并行执行，binlog flush的时候，按顺序进行。 引擎层提交的时候，根据binlog_order_commit也是排队顺序完成  </div><div class="line">换句话说，如果设置了这个参数，master是怎么并行的，slave就怎么办并行</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/07/31/mysql_mts_detail/" data-title="MySQL并行复制的深入浅出 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2018/08/01/mysql_replication_lag_ideas/" title="MySQL复制延迟优化的方法论">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  MySQL复制延迟优化的方法论</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2018/07/25/sys_high_cpu_mysql/"  title="MySQL运维系列 之 CPU瓶颈故障案例分析">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维系列 之 CPU瓶颈故障案例分析
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/07/31/mysql_mts_detail/" data-title="MySQL并行复制的深入浅出" data-url="https://Keithlan.github.io/2018/07/31/mysql_mts_detail/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、并行复制的背景"><span class="toc-number">1.</span> <span class="toc-text">一、并行复制的背景</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、重点"><span class="toc-number">2.</span> <span class="toc-text">二、重点</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、MySQL5-6_基于schema的并行复制"><span class="toc-number">3.</span> <span class="toc-text">三、MySQL5.6 基于schema的并行复制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、MySQL5-7_基于group_commit的并行复制"><span class="toc-number">4.</span> <span class="toc-text">四、MySQL5.7 基于group commit的并行复制</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#4-1_Commit-Parent-Based模式"><span class="toc-number">4.1.</span> <span class="toc-text">4.1 Commit-Parent-Based模式</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#4-2_Lock-Based模式"><span class="toc-number">4.2.</span> <span class="toc-text">4.2 Lock-Based模式</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、MySQL8-0_基于write-set的并行复制"><span class="toc-number">5.</span> <span class="toc-text">五、MySQL8.0 基于write-set的并行复制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、如何让slave的并行复制和master的事务执行的顺序一致呢"><span class="toc-number">6.</span> <span class="toc-text">六、如何让slave的并行复制和master的事务执行的顺序一致呢</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>31</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>30</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

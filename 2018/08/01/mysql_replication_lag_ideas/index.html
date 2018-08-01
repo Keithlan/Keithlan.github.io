@@ -1,0 +1,456 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL复制延迟优化的方法论 | Focus on MySQL,Focus on Focus</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、MySQL为什么会延迟
+数据延迟： 是指master执行了N个事务，slave却只执行了N-M个事务，说明master和slave之间产生了延迟  
+延迟原因：延迟的原因很多种，大部分情况下是 slave的处理能力跟不上master导致  
+接下来，我们从各种角度分析下延迟的原因  
+1.1 M">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Focus">Focus on MySQL,Focus on Focus</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/08/01/mysql_replication_lag_ideas/" title="MySQL复制延迟优化的方法论" itemprop="url">MySQL复制延迟优化的方法论</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-08-01T10:03:24.000Z" itemprop="datePublished">Aug 1 2018</time>
+    Updated:<time datetime="2018-08-01T12:10:36.000Z" itemprop="dateModified">Aug 1 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、MySQL为什么会延迟"><span class="toc-number">1.</span> <span class="toc-text">一、MySQL为什么会延迟</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_MySQL复制的架构"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 MySQL复制的架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_大事务导致的延迟"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 大事务导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_IO线程导致的延迟"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 IO线程导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4_SQL线程导致的延迟"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 SQL线程导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5_网络问题导致的延迟"><span class="toc-number">1.5.</span> <span class="toc-text">1.5 网络问题导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-6_硬件问题导致的延迟"><span class="toc-number">1.6.</span> <span class="toc-text">1.6 硬件问题导致的延迟</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、延迟场景的解决方案"><span class="toc-number">2.</span> <span class="toc-text">二、延迟场景的解决方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_DDL"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 DDL</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-1-1_ddl的最佳实践"><span class="toc-number">2.1.0.1.</span> <span class="toc-text">2.1.1 ddl的最佳实践</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_大事务"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 大事务</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-2-1_大事务拆小事务"><span class="toc-number">2.2.0.1.</span> <span class="toc-text">2.2.1 大事务拆小事务</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_大量并发事务"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 大量并发事务</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-1_调整安全参数"><span class="toc-number">2.3.0.1.</span> <span class="toc-text">2.3.1 调整安全参数</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-2_MTS(enhanced_multi-threaded_slave)"><span class="toc-number">2.3.0.2.</span> <span class="toc-text">2.3.2 MTS(enhanced multi-threaded slave)</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#终极大招"><span class="toc-number">3.</span> <span class="toc-text">终极大招</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、MySQL为什么会延迟">一、MySQL为什么会延迟</h2>
+<p>数据延迟： 是指master执行了N个事务，slave却只执行了N-M个事务，说明master和slave之间产生了延迟  </p>
+<p>延迟原因：延迟的原因很多种，大部分情况下是 slave的处理能力跟不上master导致  </p>
+<p>接下来，我们从各种角度分析下延迟的原因  </p>
+<h3 id="1-1_MySQL复制的架构">1.1 MySQL复制的架构</h3>
+<p><img src="/image/mysql_innodb_arch/delay_1.png" alt="delay" title="delay"></p>
+<p>通过架构图，可以直观的看到数据延迟的点有哪些，当然也就可以知道如何优化了  </p>
+<h3 id="1-2_大事务导致的延迟">1.2 大事务导致的延迟</h3>
+<p>大家都知道，binlog的写入时机是在commit的时候，redo的写入时机是在事务执行阶段就开始。  </p>
+<p>Oracle是通过物理复制，我们姑且认为是redo的复制，因为redo是事务执行阶段就开始写入的，所以，oracle的复制几乎没有延迟  </p>
+<p>MySQL是基于binlog复制的，如果有一个非常大的事务，如果需要1个小时，那么master在1小时候后才会生成binlog，而此时，slave就比master慢了至少1个小时，还不算是binlog传输时间  </p>
+<p>这是第一种延迟原因，破解方法后面说    </p>
+<p>PS: DDL虽然不是事务，但是特性跟大事务一样，都是在master上执行了一个巨大无比的操作才写的binlog  </p>
+<h3 id="1-3_IO线程导致的延迟">1.3 IO线程导致的延迟</h3>
+<p>根据复制的架构，Master写完binlog后，需要通过网络传输给slave（这部分我们需要网络的支持）<br>然后呢，IO thread会将binlog写到slave的relay log中，这部分工作由IO thread完成  </p>
+<p>好了，这里我们分析下瓶颈：</p>
+<ol>
+<li>io thread 是单线程的  </li>
+<li>io thread 写入 relay log的速度</li>
+</ol>
+<p>经过分析以及大量的实战，IO thread并不是我们的瓶颈，因为relay log是顺序的写入，非常快，几乎碰不到瓶颈  </p>
+<h3 id="1-4_SQL线程导致的延迟">1.4 SQL线程导致的延迟</h3>
+<p>master 上面的事务是可以进行并发的，然后binlog传输到slave后，slave是却以单线程的模式读取和执行relay log<br>这是典型的消费能力不足  </p>
+<h3 id="1-5_网络问题导致的延迟">1.5 网络问题导致的延迟</h3>
+<p>网络问题不用多说了吧，如果要复制良好，一个稳定的网路环境是在所难免的   </p>
+<h3 id="1-6_硬件问题导致的延迟">1.6 硬件问题导致的延迟</h3>
+<p>如果master是SSD，但是slave还是机械硬盘，这样的架构存在延迟也不足为奇  </p>
+<h2 id="二、延迟场景的解决方案">二、延迟场景的解决方案</h2>
+<h3 id="2-1_DDL">2.1 DDL</h3>
+<h5 id="2-1-1_ddl的最佳实践">2.1.1 ddl的最佳实践</h5>
+<ol>
+<li><p>通过pt-osc 或者 gh-ost 来让ddl拆分成一个个小事务，并且还有流控功能  </p>
+</li>
+<li><p>在slave上先ddl，然后master-slave切换，然后再old master上进行ddl，从而完美的解决了这个问题  </p>
+</li>
+</ol>
+<h3 id="2-2_大事务">2.2 大事务</h3>
+<h5 id="2-2-1_大事务拆小事务">2.2.1 大事务拆小事务</h5>
+<p>如果说大事务对于binlog的产生有极大的影响，那么我们认为定义小事务，大事务不允许执行  </p>
+<p>有大事务的监控，可以基于时间，可以基于数据量，监控到不符合规范的trx自动kill  </p>
+<h3 id="2-3_大量并发事务">2.3 大量并发事务</h3>
+<h5 id="2-3-1_调整安全参数">2.3.1 调整安全参数</h5>
+<p>sync_binlog = 0 &amp;&amp;  innodb_flush_trx_commit = 0  可以极大的提高事务处理的吞吐量，因为IO fsync的次数变少了，可以非常有效的降低数据延迟  </p>
+<p>风险：如果slave挂了，需要重做slave  </p>
+<h5 id="2-3-2_MTS(enhanced_multi-threaded_slave)">2.3.2 MTS(enhanced multi-threaded slave)</h5>
+<p>之前有深入讨论过MTS的文章，它主要的功能就是让slave拥有比master更快的并行能力，从而有效的让延迟缩短，甚至无延迟  </p>
+<h2 id="终极大招">终极大招</h2>
+<p>半同步： 半同步可以让延迟为0，但是半同步有自动切换为异步复制的可能  </p>
+<p>全同步： MySQL的group replication 就是这类的代表，这个话题以后再聊  </p>
+<p>最后，以上就是关于MySQL延迟优化的方法，几乎涵盖了90%的方案，如果大家还有更好的方案，不妨拿出来大家一起探讨  </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/08/01/mysql_replication_lag_ideas/" data-title="MySQL复制延迟优化的方法论 | Focus on MySQL,Focus on Focus" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/07/31/mysql_mts_detail/"  title="MySQL并行复制的深入浅出">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL并行复制的深入浅出
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/08/01/mysql_replication_lag_ideas/" data-title="MySQL复制延迟优化的方法论" data-url="https://Keithlan.github.io/2018/08/01/mysql_replication_lag_ideas/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、MySQL为什么会延迟"><span class="toc-number">1.</span> <span class="toc-text">一、MySQL为什么会延迟</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_MySQL复制的架构"><span class="toc-number">1.1.</span> <span class="toc-text">1.1 MySQL复制的架构</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_大事务导致的延迟"><span class="toc-number">1.2.</span> <span class="toc-text">1.2 大事务导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_IO线程导致的延迟"><span class="toc-number">1.3.</span> <span class="toc-text">1.3 IO线程导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-4_SQL线程导致的延迟"><span class="toc-number">1.4.</span> <span class="toc-text">1.4 SQL线程导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-5_网络问题导致的延迟"><span class="toc-number">1.5.</span> <span class="toc-text">1.5 网络问题导致的延迟</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-6_硬件问题导致的延迟"><span class="toc-number">1.6.</span> <span class="toc-text">1.6 硬件问题导致的延迟</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、延迟场景的解决方案"><span class="toc-number">2.</span> <span class="toc-text">二、延迟场景的解决方案</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_DDL"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 DDL</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-1-1_ddl的最佳实践"><span class="toc-number">2.1.0.1.</span> <span class="toc-text">2.1.1 ddl的最佳实践</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_大事务"><span class="toc-number">2.2.</span> <span class="toc-text">2.2 大事务</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-2-1_大事务拆小事务"><span class="toc-number">2.2.0.1.</span> <span class="toc-text">2.2.1 大事务拆小事务</span></a></li></ol></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-3_大量并发事务"><span class="toc-number">2.3.</span> <span class="toc-text">2.3 大量并发事务</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-1_调整安全参数"><span class="toc-number">2.3.0.1.</span> <span class="toc-text">2.3.1 调整安全参数</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#2-3-2_MTS(enhanced_multi-threaded_slave)"><span class="toc-number">2.3.0.2.</span> <span class="toc-text">2.3.2 MTS(enhanced multi-threaded slave)</span></a></li></ol></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#终极大招"><span class="toc-number">3.</span> <span class="toc-text">终极大招</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>31</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>30</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
