@@ -81,7 +81,7 @@
     </p>
   <p class="article-time">
     <time datetime="2018-07-31T00:03:24.000Z" itemprop="datePublished">Jul 31 2018</time>
-    Updated:<time datetime="2018-09-03T08:23:36.000Z" itemprop="dateModified">Sep 3 2018</time>
+    Updated:<time datetime="2018-09-03T08:26:39.000Z" itemprop="dateModified">Sep 3 2018</time>
     
   </p>
 </header>
@@ -143,6 +143,11 @@
 <li>要不要开启并行复制呢？  </li>
 </ul>
 <figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">1. 基于order-<span class="operator"><span class="keyword">commit</span>的模式，本身并行复制已经很好了，如果并发量非常高，那么<span class="keyword">order</span>-<span class="keyword">commit</span>可以有很好的表现，如果并发量低，<span class="keyword">order</span>-<span class="keyword">commit</span>体现不了并行的优势。       </span></div><div class="line">但是大家想想，并发量低的MySQL，根本也不需要并行复制吧       </div><div class="line"></div><div class="line"><span class="number">2.</span> 基于<span class="keyword">write</span>-<span class="keyword">set</span>的模式，这是目前并发度最高的并行复制了，基本可以解决大部分场景，如果并发量高，或者新搭建的<span class="keyword">slave</span>需要快速追主库，这是最好的办法。         </div><div class="line"></div><div class="line"><span class="number">3.</span> 单线程复制 + 安全参数双<span class="number">0</span>，这种模式同样拥有不随的表现，一般压力均可应付。       </div><div class="line"></div><div class="line">以上三种情况，是目前解决延迟的最普遍的方法，目前我用的最多的是最后一种</div></pre></td></tr></table></figure>
+
+<ul>
+<li>后面的事务比前面的事务先执行，有什么影响  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>slave的gtid会产生gap  </div><div class="line"></div><div class="line"><span class="bullet">2. </span>事务在某个时刻是不一致的，但是最终是一致的, 满足最终一致性  </div><div class="line"></div><div class="line"><span class="bullet">3. </span>相同记录的修改，会按照顺序执行。不同记录的修改，可以产生并行，并无数据一致性风险  </div><div class="line"></div><div class="line">总结，基本没啥影响</div></pre></td></tr></table></figure>
 
 <h2 id="六、如何让slave的并行复制和master的事务执行的顺序一致呢">六、如何让slave的并行复制和master的事务执行的顺序一致呢</h2>
 <p>5.7.19 之后，可以通过设置 slave_preserve_commit_order = 1  </p>
