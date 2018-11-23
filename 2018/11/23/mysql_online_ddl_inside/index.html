@@ -1,0 +1,732 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL Online DDL 方案剖析 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、常见的几种方案
+
+1.1 MySQL源生的IN-PLACE ONLINE DDL
+
+12345.5，5.6 开始支持5.7 支持的更好，有更多ddl操作支持online8.0 支持快速加列功能
+
+
+1.2 第三方工具
+
+121. pt-online-schema-change2. gh-ost
+">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/11/23/mysql_online_ddl_inside/" title="MySQL Online DDL 方案剖析" itemprop="url">MySQL Online DDL 方案剖析</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-11-22T21:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+    Updated:<time datetime="2018-11-23T12:59:44.000Z" itemprop="dateModified">Nov 23 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、常见的几种方案"><span class="toc-number">1.</span> <span class="toc-text">一、常见的几种方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、方案剖析"><span class="toc-number">2.</span> <span class="toc-text">二、方案剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_MySQL源生的IN-PLACE_ONLINE_DDL"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 MySQL源生的IN-PLACE ONLINE DDL</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、第三方工具"><span class="toc-number">3.</span> <span class="toc-text">三、第三方工具</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-0_第三方工具大致原理"><span class="toc-number">3.1.</span> <span class="toc-text">3.0 第三方工具大致原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_pt-online-shema-change"><span class="toc-number">3.2.</span> <span class="toc-text">3.1 pt-online-shema-change</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_gh-ost"><span class="toc-number">3.3.</span> <span class="toc-text">3.2 gh-ost</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、_slave_先ddl，后切换主从"><span class="toc-number">4.</span> <span class="toc-text">四、  slave 先ddl，后切换主从</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、_ONLINE_DDL_最佳方案选型"><span class="toc-number">5.</span> <span class="toc-text">五、 ONLINE DDL 最佳方案选型</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、常见的几种方案">一、常见的几种方案</h2>
+<ul>
+<li>1.1 MySQL源生的IN-PLACE ONLINE DDL</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">5.5，5.6 开始支持</div><div class="line">5.7 支持的更好，有更多ddl操作支持online</div><div class="line">8.0 支持快速加列功能</div></pre></td></tr></table></figure>
+
+<ul>
+<li>1.2 第三方工具</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">pt</span>-online-schema-<span class="keyword">change</span></div><div class="line"><span class="number">2</span>. gh-ost</div></pre></td></tr></table></figure>
+
+<ul>
+<li>1.3 slave 先ddl，后切换主从  </li>
+</ul>
+<h2 id="二、方案剖析">二、方案剖析</h2>
+<h3 id="2-1_MySQL源生的IN-PLACE_ONLINE_DDL">2.1 MySQL源生的IN-PLACE ONLINE DDL</h3>
+<ul>
+<li>原理</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">原理比较复杂，不一一解读。但是中间有几个重要的过程：  </div><div class="line"><span class="bullet">1. </span>加一会排它锁，开启战场，并释放排它锁    </div><div class="line"><span class="bullet">2. </span>记录ddl期间产生的增量dml（大小由innodb<span class="emphasis">_online_</span>alter<span class="emphasis">_log_</span>max_size控制）  </div><div class="line"><span class="bullet">3. </span>应用这些增量dml  </div><div class="line"><span class="bullet">4. </span>再加一会排它锁，清理战场，释放排它锁  </div><div class="line"></div><div class="line">这里关心的问题：</div><div class="line"><span class="bullet">1. </span>如果再ddl期间，innodb<span class="emphasis">_online_</span>alter<span class="emphasis">_log_</span>max_size的大小被占满，会有怎样的后果？</div><div class="line"><span class="bullet">2. </span>如果DDL期间，被强行终止了，会有怎么样的后果？</div></pre></td></tr></table></figure>
+
+<ul>
+<li>优点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>官方出品，原生态，品质有保障</div></pre></td></tr></table></figure>
+
+<ul>
+<li>缺点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>有所等待风险  </div><div class="line"><span class="bullet">2. </span>innodb<span class="emphasis">_online_</span>alter<span class="emphasis">_log_</span>max_size 是有限制的  </div><div class="line"><span class="bullet">3. </span>有可能造成主从延迟  </div><div class="line"><span class="bullet">4. </span>不是所有的ddl都是online的，对ddl类型有要求</div></pre></td></tr></table></figure>
+
+<ul>
+<li>哪些DDL可以online  (基于5.7的官方文档)</li>
+</ul>
+<blockquote>
+<p>8.0 可以支持快速加列  </p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>操作</th>
+<th>是否需要copy数据，重新rebuild表</th>
+<th>是否允许并发DML</th>
+<th>是否只修改元数据</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>索引相关</td>
+<td>创建、添加二级索引</td>
+<td>NO</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>索引相关</td>
+<td>删除索引</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>索引相关</td>
+<td>重命名索引</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>索引相关</td>
+<td>添加FULLTEXT索引</td>
+<td>NO*</td>
+<td>NO</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>索引相关</td>
+<td>添加SPATIAL索引</td>
+<td>NO</td>
+<td>NO</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>索引相关</td>
+<td>改变索引类型（USING {BTREE or HASH}）</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>主键相关</td>
+<td>添加主键</td>
+<td>YES*</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>主键相关</td>
+<td>删除主键</td>
+<td>YES</td>
+<td>NO</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>主键相关</td>
+<td>删除主键并且又添加主键</td>
+<td>YES</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>添加列</td>
+<td>YES</td>
+<td>YES*</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>删除列</td>
+<td>YES</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>重命名列</td>
+<td>NO</td>
+<td>YES*</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>重新排列列（use FIRST or AFTER）</td>
+<td>YES</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>设置列的默认值</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>修改列的数据类型</td>
+<td>YES</td>
+<td>NO</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>扩展varchar列的长度</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>0~255 , 256 ~ 256+ 这两个区间可以in-place  </td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>删除列的默认值</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>修改auto-increcement的值</td>
+<td>NO</td>
+<td>YES</td>
+<td>NO*</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>使某列修改成NULL</td>
+<td>YES*</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>使某列修改成NOT NULL</td>
+<td>YES*</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>列操作相关</td>
+<td>修改列定义为ENUM、SET</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+<tr>
+<td>表相关操作</td>
+<td>optimizing table</td>
+<td>YES</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>表相关操作</td>
+<td>Rebuilding with the FORCE option</td>
+<td>YES</td>
+<td>YES</td>
+<td>NO</td>
+<td>-</td>
+</tr>
+<tr>
+<td>表相关操作</td>
+<td>Renaming a table</td>
+<td>NO</td>
+<td>YES</td>
+<td>YES</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<h2 id="三、第三方工具">三、第三方工具</h2>
+<h3 id="3-0_第三方工具大致原理">3.0 第三方工具大致原理</h3>
+<ol>
+<li>先创建一个临时表   old_table_tmp </li>
+<li>给临时表变更结构   alter old_table_tmp …</li>
+<li>然后呢就是关键了： 将增量数据 和 原表的数据 都拷贝到 临时表  </li>
+<li>当原表数据拷贝完毕后，对原表加锁，进行切换  </li>
+<li>打扫战场，结束  </li>
+</ol>
+<p>好了，这里pt-online-shema-change 是通过触发器的方式，来同步增量数据的 ， gh-ost 是通过模拟slave，监听binlog并应用binlog来完成增量数据同步的，这里是主要区别。</p>
+<p>所以，不管哪种方式，这里需要解决一个时序的问题(因为rowcopy和row_apply是并行的，不知道哪个先哪个后)，我们暂且认为 拷贝原表数据叫： rowcopy ， 拷贝增量数据并应用为 row_apply  </p>
+<p>由于rowcopy从时序上来说，都是老数据，所以它的优先级是最低的，所以将rowcopy的动作转换为inset ignore，意味着，row apply是可以覆盖rowcopy数据的，这样理解没问题吧    </p>
+<p>好了，上面的问题解决了，其他的基本就不是问题了  </p>
+<h3 id="3-1_pt-online-shema-change">3.1 pt-online-shema-change</h3>
+<ul>
+<li>优点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>percona 出品，必属金品</div><div class="line"></div><div class="line"><span class="bullet">2. </span>经过多年的生产环境验证，质量可靠</div><div class="line"></div><div class="line"><span class="bullet">3. </span>支持并发DML操作</div></pre></td></tr></table></figure>
+
+<ul>
+<li>缺点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 原表不能有触发器</div><div class="line"><span class="number">3</span>. 由于触发器的原因，对master的性能消耗比较大</div><div class="line"><span class="number">4</span>. 处理外键有一定的风险，需要特殊处理  </div><div class="line"><span class="number">5</span>. 原表中至少要有主键或者唯一键</div><div class="line">	检查是否具有主键或者唯一索引，如果都没有，这一步会报错  </div><div class="line">	提示The <span class="keyword">new</span> table `xx`.`_xx_new` does not have <span class="keyword">a</span> PRIMARY KEY <span class="built_in">or</span> <span class="keyword">a</span> unique <span class="built_in">index</span> which <span class="keyword">is</span> required <span class="keyword">for</span> the DELETE trigger.</div><div class="line"></div><div class="line"><span class="number">6</span>. ddl不能有添加唯一索引的操作</div><div class="line">	如果对表增加唯一索引的话，会存在丢数据的风险。  </div><div class="line">	具体原因是因为<span class="keyword">pt</span>-osc在<span class="built_in">copy</span>已有的数据时会使用<span class="built_in">insert</span> ignore将老表中的数据插入到新表中，因为新表已经增加了unique <span class="built_in">index</span>，所以重复的数据会被ignore掉</div><div class="line">	--check-unique-key-<span class="keyword">change</span> 可以避免  , 默认yes</div></pre></td></tr></table></figure>
+
+<ul>
+<li>原理</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">1. 创建一张新表  </div><div class="line">2. <span class="operator"><span class="keyword">alter</span>新表</span></div><div class="line"><span class="number">3.</span> 原表创建<span class="keyword">insert</span>，<span class="keyword">update</span>，<span class="keyword">delete</span>三种触发器</div><div class="line"><span class="number">4.</span> 原表开始拷贝数据到新表，且触发器也开始映射到新表</div><div class="line"><span class="number">5.</span> 处理外键（如果没有忽略）</div><div class="line"><span class="number">6.</span> 重命名新表和原表  </div><div class="line"><span class="number">7.</span> 清理战场  </div><div class="line"></div><div class="line"></div><div class="line">重要：</div><div class="line"></div><div class="line"><span class="keyword">insert</span>触发器 =<span class="keyword">SQL</span>转换=&gt; <span class="keyword">replace</span> <span class="keyword">into</span></div><div class="line"></div><div class="line"><span class="keyword">update</span>触发器 </div><div class="line">	=<span class="keyword">SQL</span>转换=&gt; <span class="keyword">delete</span> <span class="keyword">ignore</span> + <span class="keyword">replace</span> <span class="keyword">into</span> (大于<span class="number">3.0</span><span class="number">.2</span>版本)</div><div class="line">	=<span class="keyword">SQL</span>转换=&gt; <span class="keyword">replace</span> <span class="keyword">into</span>（低于<span class="number">3.0</span><span class="number">.2</span>版本，所以这个版本会有问题，如果这时候对老的主键修改，那么修改之前的值不会去掉，从而多了一些异常数据）  </div><div class="line"><span class="keyword">delete</span>触发器 =<span class="keyword">SQL</span>转换=&gt; <span class="keyword">delete</span> <span class="keyword">ignore</span></div><div class="line"></div><div class="line">copy <span class="keyword">rows</span>    =<span class="keyword">SQL</span>转换=&gt; <span class="keyword">insert</span> <span class="keyword">ignore</span> <span class="keyword">into</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>最佳实践</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>innodb<span class="emphasis">_autoinc_</span>lock_mode 设置成 2 ， 否则会经常死锁，autoinc锁  </div><div class="line"><span class="bullet">2. </span>如果中途ddl失败，需要先删除触发器，再删除新的临时表</div></pre></td></tr></table></figure>
+
+<h3 id="3-2_gh-ost">3.2 gh-ost</h3>
+<ul>
+<li>优点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>无触发器设计</div><div class="line"><span class="bullet">2. </span>out-over方案设计</div><div class="line"><span class="bullet">3. </span>对主机性能级别无影响</div><div class="line"><span class="bullet">4. </span>可以暂停</div></pre></td></tr></table></figure>
+
+<ul>
+<li>缺点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>原表不能有外键</div><div class="line"><span class="bullet">2. </span>原表不能有触发器</div><div class="line"><span class="bullet">3. </span>强制要求binlog为row格式</div><div class="line"><span class="bullet">4. </span>原表不能有字母大小不同的同名表</div><div class="line"><span class="bullet">5. </span>当并发写入多的时候，在应用binlog阶段由于是单线程，所以会非常慢,影响ddl性能和进度</div></pre></td></tr></table></figure>
+
+<ul>
+<li>原理</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">原理基本都一样，这里主要的区别就是row apply这里，<span class="keyword">pt</span>-osc是触发器，这里是监听master binlog并应用日志，其余的差别不大，这里不再赘述</div></pre></td></tr></table></figure>
+
+<h2 id="四、_slave_先ddl，后切换主从">四、  slave 先ddl，后切换主从</h2>
+<p>如果其余方式都不行，只能祭出大招slave先ddl，然后主从切换了  </p>
+<ul>
+<li>优点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>slave操作，不影响master</div></pre></td></tr></table></figure>
+
+<ul>
+<li>缺点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> 需要主从切换，主从切换越平滑，此方案就越好  </div><div class="line"><span class="number">2.</span> 有几点需要考虑和处理下：</div><div class="line">	<span class="number">2.1</span> <span class="built_in">add</span> column <span class="keyword">after</span>|<span class="keyword">before</span> ， 这样的操作slave先做是否有影响  </div><div class="line">	<span class="number">2.2</span> slave先新增字段，可能会导致主从同步停掉，需要设置某些参数</div></pre></td></tr></table></figure>
+
+<h2 id="五、_ONLINE_DDL_最佳方案选型">五、 ONLINE DDL 最佳方案选型</h2>
+<ul>
+<li><ol>
+<li>如果是创建索引、修改默认值这样的，online ddl 快速且无影响的操作，尽量优先选择online ddl</li>
+</ol>
+</li>
+<li><ol>
+<li>如果当前服务器写入量不高，负载不高，且原表没有触发器，没有外键，且此表有主键，尽量优先选择pt-online-schema-change  </li>
+</ol>
+</li>
+<li><ol>
+<li>其余情况，选择主从切换  </li>
+</ol>
+</li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/11/23/mysql_online_ddl_inside/" data-title="MySQL Online DDL 方案剖析 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/11/23/pt-online-schema-change_practise/"  title="pt-online-schema-change 最佳实践">
+ <strong>NEXT:</strong><br/> 
+ <span>pt-online-schema-change 最佳实践
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/11/23/mysql_online_ddl_inside/" data-title="MySQL Online DDL 方案剖析" data-url="https://Keithlan.github.io/2018/11/23/mysql_online_ddl_inside/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、常见的几种方案"><span class="toc-number">1.</span> <span class="toc-text">一、常见的几种方案</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、方案剖析"><span class="toc-number">2.</span> <span class="toc-text">二、方案剖析</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_MySQL源生的IN-PLACE_ONLINE_DDL"><span class="toc-number">2.1.</span> <span class="toc-text">2.1 MySQL源生的IN-PLACE ONLINE DDL</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、第三方工具"><span class="toc-number">3.</span> <span class="toc-text">三、第三方工具</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#3-0_第三方工具大致原理"><span class="toc-number">3.1.</span> <span class="toc-text">3.0 第三方工具大致原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-1_pt-online-shema-change"><span class="toc-number">3.2.</span> <span class="toc-text">3.1 pt-online-shema-change</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#3-2_gh-ost"><span class="toc-number">3.3.</span> <span class="toc-text">3.2 gh-ost</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、_slave_先ddl，后切换主从"><span class="toc-number">4.</span> <span class="toc-text">四、  slave 先ddl，后切换主从</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、_ONLINE_DDL_最佳方案选型"><span class="toc-number">5.</span> <span class="toc-text">五、 ONLINE DDL 最佳方案选型</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>35</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>34</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
