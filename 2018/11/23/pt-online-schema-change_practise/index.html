@@ -1,0 +1,569 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>pt-online-schema-change 最佳实践 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="pt的详细步骤
+12345678910111213Step 1: Create the new table.Step 2: Alter the new, empty table.  		This should be very quick, or die if the user specified a">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/11/23/pt-online-schema-change_practise/" title="pt-online-schema-change 最佳实践" itemprop="url">pt-online-schema-change 最佳实践</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-11-22T18:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+    Updated:<time datetime="2018-11-23T12:50:48.000Z" itemprop="dateModified">Nov 23 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#pt的详细步骤"><span class="toc-number">1.</span> <span class="toc-text">pt的详细步骤</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、常用参数解读"><span class="toc-number">2.</span> <span class="toc-text">一、常用参数解读</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-0_生产环境使用的参数"><span class="toc-number">2.1.</span> <span class="toc-text">1.0 生产环境使用的参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_基本用法"><span class="toc-number">2.2.</span> <span class="toc-text">1.1 基本用法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_安全的pt-online-schema-change"><span class="toc-number">2.3.</span> <span class="toc-text">1.2 安全的pt-online-schema-change</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_常用参数"><span class="toc-number">2.4.</span> <span class="toc-text">1.3 常用参数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、使用限制"><span class="toc-number">3.</span> <span class="toc-text">二、使用限制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、关于触发器"><span class="toc-number">4.</span> <span class="toc-text">三、关于触发器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、错误处理"><span class="toc-number">5.</span> <span class="toc-text">四、错误处理</span></a></li></ol>
+		</div>
+		
+		<h2 id="pt的详细步骤">pt的详细步骤</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">Step 1: <span class="operator"><span class="keyword">Create</span> the new <span class="keyword">table</span>.</span></div><div class="line">Step <span class="number">2</span>: <span class="keyword">Alter</span> the new, empty <span class="keyword">table</span>.  </div><div class="line">		This should be very <span class="keyword">quick</span>, <span class="keyword">or</span> die <span class="keyword">if</span> the <span class="keyword">user</span> specified a bad <span class="keyword">alter</span> statement.</div><div class="line">Step <span class="number">3</span>: <span class="keyword">Create</span> the <span class="keyword">triggers</span> <span class="keyword">to</span> capture changes <span class="keyword">on</span> the original <span class="keyword">table</span> <span class="keyword">and</span> apply them <span class="keyword">to</span> the new <span class="keyword">table</span>.</div><div class="line">Step <span class="number">4</span>: Copy <span class="keyword">rows</span>.</div><div class="line">Step <span class="number">5</span>: <span class="keyword">Rename</span> <span class="keyword">tables</span>: orig -&gt; old, new -&gt; orig</div><div class="line">Step <span class="number">6</span>: <span class="keyword">Update</span> <span class="keyword">foreign</span> <span class="keyword">key</span> <span class="keyword">constraints</span> <span class="keyword">if</span> there <span class="keyword">are</span> child <span class="keyword">tables</span>.</div><div class="line">Step <span class="number">7</span>: <span class="keyword">Drop</span> the old <span class="keyword">table</span>.</div><div class="line">		<span class="keyword">DROP</span> <span class="keyword">TABLE</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> <span class="string">`_xx_old`</span></div><div class="line">		<span class="keyword">DROP</span> <span class="keyword">TRIGGER</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> <span class="string">`pt_osc_xx_xx_del`</span>;</div><div class="line">		<span class="operator"><span class="keyword">DROP</span> <span class="keyword">TRIGGER</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> <span class="string">`pt_osc_xx_xx_upd`</span>;</span></div><div class="line">		<span class="operator"><span class="keyword">DROP</span> <span class="keyword">TRIGGER</span> <span class="keyword">IF</span> <span class="keyword">EXISTS</span> <span class="string">`pt_osc_xx_xx_ins`</span>;</span></div><div class="line">done</div></pre></td></tr></table></figure>
+
+<h2 id="一、常用参数解读">一、常用参数解读</h2>
+<h3 id="1-0_生产环境使用的参数">1.0 生产环境使用的参数</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div></pre></td><td class="code"><pre><div class="line">inception调用pt-online-schema-change，相关参数如下：</div><div class="line"></div><div class="line"><span class="constant">inception_osc_alter_foreign_keys_method</span> = rebuild_constraints</div><div class="line"><span class="constant">inception_osc_check_alter</span> = on</div><div class="line"><span class="constant">inception_osc_check_interval</span> = 5</div><div class="line"><span class="constant">inception_osc_check_replication_filters</span> = OFF</div><div class="line"><span class="constant">inception_osc_chunk_size</span> = 1000</div><div class="line"><span class="constant">inception_osc_chunk_size_limit</span> = 4</div><div class="line"><span class="constant">inception_osc_chunk_time</span> = 1</div><div class="line"><span class="constant">inception_osc_critical_thread_connected</span> = 4000</div><div class="line"><span class="constant">inception_osc_critical_thread_running</span> = 300</div><div class="line"><span class="constant">inception_osc_drop_new_table</span> = on</div><div class="line"><span class="constant">inception_osc_drop_old_table</span> = on</div><div class="line"><span class="constant">inception_osc_max_lag</span> = 3</div><div class="line"><span class="constant">inception_osc_max_thread_connected</span> = 2500</div><div class="line"><span class="constant">inception_osc_max_thread_running</span> = 200</div><div class="line"><span class="constant">inception_osc_min_table_size</span> = 16</div><div class="line"><span class="constant">inception_osc_recursion_method</span> = none</div><div class="line"></div><div class="line">以上inception参数对应的pt-online-schema-change的命令参数如下：</div><div class="line"></div><div class="line">pt-online-schema-change </div><div class="line">	--alter <span class="string">" xx "</span> </div><div class="line">	--alter-foreign-keys-method=rebuild_constraints </div><div class="line">	--check-alter=yes </div><div class="line">	--check-interval=5 </div><div class="line">	--check-replication-filters=no </div><div class="line">	--chunk-size=1000</div><div class="line">	--chunk-size-limit=4</div><div class="line">	--chunk-time=1</div><div class="line">	--critical-load=thread_connected:4000,thread_running:300</div><div class="line">	--max-load=thread_connected:2500,thread_running:200</div><div class="line">	--drop-new-table=yes</div><div class="line">	--drop-old-table=yes</div><div class="line">	--max-lag=3</div><div class="line">	--recursion-method=none</div></pre></td></tr></table></figure>
+
+<h3 id="1-1_基本用法">1.1 基本用法</h3>
+<ul>
+<li>pt-online-schema-change [OPTIONS] DSN</li>
+<li>pt-online-schema-change —alter “ADD COLUMN c1 INT” D=sakila,t=actor</li>
+<li>pt-online-schema-change —alter “ENGINE=InnoDB” D=sakila,t=actor</li>
+</ul>
+<h3 id="1-2_安全的pt-online-schema-change">1.2 安全的pt-online-schema-change</h3>
+<p>默认情况下，pt-online-schema-change 是不会修改表的，除非你显示的指定了  —execute<br>pt-online-schema-change 有一系列动作来阻住一切不期望的后果发生，包括 自动检测复制，以及以下相关措施  </p>
+<ul>
+<li>大部分情况下，pt-online-schema-change会拒绝给没有主键和唯一键的表做操作，可以参考 —alter 了解更多信息  </li>
+<li>如果检测到复制过滤（ignore-db，do-db等），pt-online-schema-change会拒绝操作，可以参考 —[no]check-replication-filters 了解更多信息  </li>
+<li>如果发现复制严重的厉害，那么会暂停copy数据，可以参考 —max-lag 了解更多的信息  </li>
+<li>如果发现服务器负载非常高，那么也会暂停或者停止相关操作，可以参考  —max-load and —critical-load 了解更多信息  </li>
+<li>该工具默认会设置 innodb_lock_wait_timeout=1 和 lock_wait_timeout=60来减少竞争 ， 参考 —set-vars 了解更多信息  </li>
+<li>如果有外键约束，那么禁止改表，出发你指定  —alter-foreign-keys-method.  </li>
+<li>Percona XtraDB Cluster中禁止修改MYISAM的表  </li>
+</ul>
+<h3 id="1-3_常用参数">1.3 常用参数</h3>
+<ul>
+<li><p>—dry-run and —execute , 这两个是互斥的参数，一个是打印，一个是执行  </p>
+</li>
+<li><p>—alter</p>
+</li>
+</ul>
+<blockquote>
+<p>通过这个选项，就不需要alter table关键字了。  你可以通过逗号来指定多个修改操作。  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">* 以下列出<span class="comment">--alter中的一些限制，大家谨记和避免  </span></div><div class="line"></div><div class="line">1. 原表必须要有主键或唯一键，因为<span class="operator"><span class="keyword">delete</span>触发器需要用到，否则会报错  </span></div><div class="line"></div><div class="line"><span class="number">2.</span> <span class="keyword">rename</span>子句，不允许给表重命名  </div><div class="line"></div><div class="line"><span class="number">2.1</span> 不能通过删除一列，然后再新增一列的方式来完成对列的重命名操作  </div><div class="line"></div><div class="line"><span class="number">3.</span> 新增字段，如果这个字段是<span class="keyword">NOT</span> <span class="literal">NULL</span>，必须要指定<span class="keyword">default</span>值，否则报错。  你必须指定默认值  </div><div class="line"></div><div class="line"><span class="number">4.</span> 如果是<span class="keyword">DROP</span> <span class="keyword">FOREIGN</span> <span class="keyword">KEY</span> constraint_name ， 那么必须指定 _ 加上 constraint_name ， 而不是 constraint_name。 </div><div class="line">	举例： <span class="keyword">CONSTRAINT</span> <span class="string">`fk_foo`</span> <span class="keyword">FOREIGN</span> <span class="keyword">KEY</span> (<span class="string">`foo_id`</span>) <span class="keyword">REFERENCES</span> <span class="string">`bar`</span> (<span class="string">`foo_id`</span>)</div><div class="line">	你必须指定： <span class="comment">--alter "DROP FOREIGN KEY _fk_foo"  而不是  --alter "DROP FOREIGN KEY fk_foo".</span></div><div class="line"></div><div class="line"><span class="number">5.</span> 必须确保数据库高于<span class="number">5.0</span>版本，因为<span class="number">5.0</span>版本转换MYSIAM到<span class="keyword">InnoDB</span>会出错</div></pre></td></tr></table></figure>
+
+<ul>
+<li>[no]check-alter</li>
+</ul>
+<blockquote>
+<p>默认yes, 给—alter 做一些检测  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">* 列的重命名</div><div class="line"></div><div class="line">在之前的版本 <span class="operator"><span class="keyword">CHANGE</span> <span class="keyword">COLUMN</span> name new_name 这个操作是会丢失数据的，现在的工具修复了</span></div><div class="line"></div><div class="line">但是，由于pt代码并不是<span class="keyword">full</span>-blown <span class="keyword">SQL</span> parser，所以，你应该先 <span class="comment">--dry-run and --print ， 确认下renamed的列名是否正确，以确保无误  </span></div><div class="line"></div><div class="line">* 删除主键</div><div class="line"></div><div class="line">删除主键是很危险的事情，尽量不要做这样的动作</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—alter-foreign-keys-method</li>
+</ul>
+<blockquote>
+<p>我们的规范不允许有外键，如果有外键，我们采取其他方式DDL  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">如何把外键引用到新表?需要特殊处理带有外键约束的表,以保证它们可以应用到新表.当重命名表的时候,外键关系会带到重命名后的表上。</div><div class="line">该工具有两种方法,可以自动找到子表,并修改约束关系。</div><div class="line">    <span class="literal">auto</span>： 在rebuild_constraints和drop_swap两种处理方式中选择一个。</div><div class="line">    rebuild_constraints：使用 ALTER TABLE语句先删除外键约束,然后再添加.如果子表很大的话,会导致长时间的阻塞。</div><div class="line">    drop_swap： 执行FOREIGN_KEY_CHECKS=<span class="number">0</span>,禁止外键约束,删除原表,再重命名新表。这种方式很快,也不会产生阻塞,但是有风险：</div><div class="line">		    <span class="number">1</span>, 在删除原表和重命名新表的短时间内,表是不存在的,程序会返回错误。</div><div class="line">    		<span class="number">2</span>, 如果重命名表出现错误,也不能回滚了.因为原表已经被删除。</div><div class="line">	<span class="literal">none</span>： 类似<span class="string">"drop_swap"</span>的处理方式,但是它不删除原表,并且外键关系会随着重命名转到老表上面。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—host=xxx —user=xxx —password=xxx</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">连接实例信息，缩写</span><span class="literal">-</span><span class="comment">h</span> <span class="comment">xxx</span> <span class="literal">-</span><span class="comment">u</span> <span class="comment">xxx</span> <span class="literal">-</span><span class="comment">p</span> <span class="comment">xxx，密码可以使用参数</span><span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span> <span class="comment">手动输入。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>D=db_name,t=table_name</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">指定要ddl的数据库名和表名</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—charset</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">最好设置为MySQL默认字符集： utf8</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—check-interval</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">默认<span class="number">1</span>秒，检测--<span class="built_in">max</span>-lag</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—[no]check-replication-filters</li>
+</ul>
+<blockquote>
+<p>默认yes</p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">如果发现任何服务器有 binlog_ignore_db and replicate_<span class="keyword">do</span>_db ， 那么就报错</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—check-slave-lag</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">指定一个从库的DSN连接地址,如果从库超过--<span class="built_in">max</span>-lag参数设置的值,就会暂停操作。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—[no]swap-tables </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">默认yes。交换原始表和新表，除非你禁止--[<span class="keyword">no</span>]<span class="keyword">drop</span>-old-table。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—max-lag</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="comment">默认1s。</span></div><div class="line"><span class="comment">每个chunk拷贝完成后，会查看所有复制Slave的延迟情况。</span></div><div class="line"><span class="comment">要是延迟大于该值，则暂停复制数据，直到所有从的滞后小于这个值，使用Seconds_Behind_Master。</span></div><div class="line"><span class="comment">如果有任何从滞后超过此选项的值，则该工具将睡眠</span><span class="literal">-</span><span class="literal">-</span><span class="comment">check</span><span class="literal">-</span><span class="comment">interval指定的时间，再检查。</span></div><div class="line"><span class="comment">如果从被停止，将会永远等待，直到从开始同步，并且延迟小于该值。</span></div><div class="line"><span class="comment">如果指定</span><span class="literal">-</span><span class="literal">-</span><span class="comment">check</span><span class="literal">-</span><span class="comment">slave</span><span class="literal">-</span><span class="comment">lag，该工具只检查该服务器的延迟，而不是所有服务器。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—max-load</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">默认为Threads_running=25。</div><div class="line">每个chunk拷贝完后，会检查<span class="operator"><span class="keyword">SHOW</span> <span class="keyword">GLOBAL</span> <span class="keyword">STATUS</span>的内容，检查指标是否超过了指定的阈值。</span></div><div class="line">如果超过，则先暂停。</div><div class="line">这里可以用逗号分隔，指定多个条件，</div><div class="line">每个条件格式： <span class="keyword">status</span>指标=MAX_VALUE 或者 <span class="keyword">status</span>指标:MAX_VALUE。</div><div class="line">如果不指定MAX_VALUE，那么工具会设置其为当前值的<span class="number">120</span>%。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—critical-load </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">默认为Threads_running=<span class="number">50</span>。</div><div class="line">用法基本与--<span class="keyword">max</span>-load类似，如果不指定MAX_VALUE，那么工具会这只其为当前值的<span class="number">200</span><span class="variable">%。</span></div><div class="line">如果超过指定值，则工具直接退出，而不是暂停。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—print</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">打印SQL语句到标准输出。指定此选项可以让你看到该工具所执行的语句，和</span><span class="literal">-</span><span class="literal">-</span><span class="comment">dry</span><span class="literal">-</span><span class="comment">run配合最佳。</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—progress</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">复制数据的时候打印进度报告，二部分组成：第一部分是百分比，第二部分是时间。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—set-vars </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">设置MySQL变量，多个用逗号分割。</div><div class="line">默认该工具设置的是： <span class="variable">wait_timeout=</span><span class="number">10000</span> <span class="variable">innodb_lock_wait_timeout=</span><span class="number">1</span> <span class="variable">lock_wait_timeout=</span><span class="number">60</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—recursion-method</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">默认是<span class="operator"><span class="keyword">show</span> <span class="keyword">processlist</span>，发现从的方法，也可以是host，但需要在从上指定report_host，通过<span class="keyword">show</span> <span class="keyword">slave</span> <span class="keyword">hosts</span>来找到，可以指定none来不检查<span class="keyword">Slave</span>。</span></div><div class="line">METHOD       USES</div><div class="line">===========  ==================</div><div class="line"><span class="keyword">processlist</span>  <span class="keyword">SHOW</span> <span class="keyword">PROCESSLIST</span></div><div class="line"><span class="keyword">hosts</span>        <span class="keyword">SHOW</span> <span class="keyword">SLAVE</span> <span class="keyword">HOSTS</span></div><div class="line">dsn=DSN      DSNs <span class="keyword">from</span> a <span class="keyword">table</span></div><div class="line">none         <span class="keyword">Do</span> <span class="keyword">not</span> find slaves</div><div class="line"></div><div class="line">指定none则表示不在乎从的延迟。</div></pre></td></tr></table></figure>
+
+<p>—pause-file</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">可以指定文件暂停<span class="keyword">pt</span>-online-schema-<span class="keyword">change</span></div></pre></td></tr></table></figure>
+
+<h2 id="二、使用限制">二、使用限制</h2>
+<ul>
+<li>哪些ddl是不可以做的，做了容易出错  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>禁止创建唯一索引，会丢失数据，更加不允许添加 --alter-check=no，--check-unique-key-change=no  </div><div class="line"><span class="bullet">2. </span>如果原表没有主键，或者也没有唯一索引，这些表是不允许用pt做DDL的  </div><div class="line"><span class="bullet">3. </span>禁止对外键的表进行pt ddl</div><div class="line"><span class="bullet">4. </span>禁止对表进行重命名</div><div class="line"><span class="bullet">5. </span>禁止对列进行重命名，如果一定要做，也必须先print出来检测清楚列名是否正确  </div><div class="line"><span class="bullet">6. </span>新增字段，NOT NULL必须要指定默认值</div><div class="line"><span class="bullet">7. </span>不允许删除主键</div></pre></td></tr></table></figure>
+
+<ul>
+<li><p>由于pt触发器原理，rowcopy会产业一堆的binlog，所以做之前要检测binlog空间是否够用，也要检测数据空间多一倍表空间是否够用  </p>
+</li>
+<li><p>禁止在业务高峰期进行pt-online-schema-change操作  </p>
+</li>
+<li><p>原表不能有触发器  </p>
+</li>
+<li><p>MySQL最好设置为innodb_autoinc_lock_mode=2，否则在高并发的写入情况下，很容易产生所等待以及死锁  </p>
+</li>
+<li><p>master的表结构必须跟slave的表结构一致，不允许异构，否则pt-online-schema-change的原理就是会rename，然后slave不一致的表结构会被master覆盖，谨记  </p>
+</li>
+</ul>
+<h2 id="三、关于触发器">三、关于触发器</h2>
+<ul>
+<li>3.0.2之前的update触发器</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">REPLACE INTO <span class="escape">`l</span>c<span class="escape">`.</span><span class="escape">`_</span>hb_new<span class="escape">` </span>(<span class="escape">`i</span>d<span class="escape">`,</span> <span class="escape">`t</span>s<span class="escape">`,</span> <span class="escape">`t</span>s2<span class="escape">`,</span> <span class="escape">`c</span>1<span class="escape">`)</span> VALUES (NEW.<span class="escape">`i</span>d<span class="escape">`,</span> NEW.<span class="escape">`t</span>s<span class="escape">`,</span> NEW.<span class="escape">`t</span>s2<span class="escape">`,</span> NEW.<span class="escape">`c</span>1<span class="escape">`)</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>3.0.2之后的update触发器</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">BEGIN </div><div class="line">	DELETE IGNORE FROM <span class="escape">`l</span>c<span class="escape">`.</span><span class="escape">`_</span>hb_new<span class="escape">` </span>WHERE !(OLD.<span class="escape">`i</span>d<span class="escape">` </span>&lt;=&gt; NEW.<span class="escape">`i</span>d<span class="escape">`)</span> <span class="literal">AND</span> <span class="escape">`l</span>c<span class="escape">`.</span><span class="escape">`_</span>hb_new<span class="escape">`.</span><span class="escape">`i</span>d<span class="escape">` </span>&lt;=&gt; OLD.<span class="escape">`i</span>d<span class="escape">`;</span></div><div class="line">	REPLACE INTO <span class="escape">`l</span>c<span class="escape">`.</span><span class="escape">`_</span>hb_new<span class="escape">` </span>(<span class="escape">`i</span>d<span class="escape">`,</span> <span class="escape">`t</span>s<span class="escape">`,</span> <span class="escape">`t</span>s2<span class="escape">`)</span> VALUES (NEW.<span class="escape">`i</span>d<span class="escape">`,</span> NEW.<span class="escape">`t</span>s<span class="escape">`,</span> NEW.<span class="escape">`t</span>s2<span class="escape">`)</span><span class="comment">;</span></div><div class="line">END</div></pre></td></tr></table></figure>
+
+<ul>
+<li>原理</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div></pre></td><td class="code"><pre><div class="line">update触发器</div><div class="line"><span class="code">    =SQL转换=&gt; delete ignore + replace into (大于3.0.2版本)</span></div><div class="line"><span class="code">    =SQL转换=&gt; replace into（低于3.0.2版本，所以这个版本会有问题，如果这时候对老的主键修改，那么修改之前的值不会去掉，从而多了一些异常数据）</span></div><div class="line"></div><div class="line"></div><div class="line">举例：t表中有三条数据，第一列id是主键</div><div class="line"></div><div class="line"><span class="code">------</span></div><div class="line">1 lc  --row1</div><div class="line">2 lc  --row2</div><div class="line">3 lc  --row3</div><div class="line">------</div><div class="line"></div><div class="line">pt-online-schema-change的原理大致四个阶段：</div><div class="line"></div><div class="line">1. 创建临时表<span class="emphasis">_t_</span>new</div><div class="line">2. 创建触发器</div><div class="line">3. 老数据row copy</div><div class="line">4. swap table</div><div class="line"></div><div class="line"></div><div class="line">好了，我们来举个例子：</div><div class="line"></div><div class="line">1. 创建临时表<span class="emphasis">_t_</span>new	</div><div class="line">2. 创建触发器</div><div class="line">3. 老数据row copy</div><div class="line"><span class="code">	3.1 拷贝数据row1，row2完毕</span></div><div class="line"><span class="code">	3.2 这时候业务有一个update语句， update t set id = 10 where id=1;</span></div><div class="line"><span class="code">	3.3 拷贝数据row3</span></div><div class="line">4. swap table</div><div class="line"></div><div class="line">这时候脑补一下原表和新表的示意图, 这时候已经执行到3.1阶段</div><div class="line"></div><div class="line"><span class="header">老表</span></div><div class="line">------------</div><div class="line">1 lc  --row1</div><div class="line">2 lc  --row2    </div><div class="line"><span class="header">3 lc  --row3</span></div><div class="line">------------</div><div class="line"></div><div class="line"><span class="header">新表</span></div><div class="line">-----------</div><div class="line">1 lc</div><div class="line"><span class="header">2 lc</span></div><div class="line">-----------</div><div class="line"></div><div class="line">这时候脑补一下原表和新表的示意图, 这时候已经执行到3.3阶段</div><div class="line"></div><div class="line"><span class="header">老表(update t set id = 10 where id=1)</span></div><div class="line">------------</div><div class="line">10 lc  --row1</div><div class="line">2 lc  --row2</div><div class="line"><span class="header">3 lc  --row3</span></div><div class="line">------------</div><div class="line"></div><div class="line"><span class="header">新表(3.0.2之前版本的触发器，没有delete映射，所以最终结果如下，跟老表相比已经不一致了，多了一条数据1，lc) , 触发器 replace into _t_new(id,name) values(10,lc) </span></div><div class="line">-----------</div><div class="line">1 lc</div><div class="line">2 lc</div><div class="line">10 lc</div><div class="line"><span class="header">3 lc</span></div><div class="line">-----------</div><div class="line"></div><div class="line"><span class="header">新表(3.0.2之后版本的触发器，有delete映射，所以最终结果如下，于老表的数据一致) , 触发器 delete ignore _t_new where id = 1;replace into _t_new(id,name) values(10,lc);</span></div><div class="line">-----------</div><div class="line">2 lc</div><div class="line">10 lc</div><div class="line"><span class="header">3 lc</span></div><div class="line">-----------</div></pre></td></tr></table></figure>
+
+<h2 id="四、错误处理">四、错误处理</h2>
+<blockquote>
+<p>遇到错误后，继续补充完整  </p>
+</blockquote>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/11/23/pt-online-schema-change_practise/" data-title="pt-online-schema-change 最佳实践 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/11/23/pt_kill_practise/"  title="pt-tools系统：pt-kill 实战">
+ <strong>NEXT:</strong><br/> 
+ <span>pt-tools系统：pt-kill 实战
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/11/23/pt-online-schema-change_practise/" data-title="pt-online-schema-change 最佳实践" data-url="https://Keithlan.github.io/2018/11/23/pt-online-schema-change_practise/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#pt的详细步骤"><span class="toc-number">1.</span> <span class="toc-text">pt的详细步骤</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、常用参数解读"><span class="toc-number">2.</span> <span class="toc-text">一、常用参数解读</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#1-0_生产环境使用的参数"><span class="toc-number">2.1.</span> <span class="toc-text">1.0 生产环境使用的参数</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-1_基本用法"><span class="toc-number">2.2.</span> <span class="toc-text">1.1 基本用法</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-2_安全的pt-online-schema-change"><span class="toc-number">2.3.</span> <span class="toc-text">1.2 安全的pt-online-schema-change</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#1-3_常用参数"><span class="toc-number">2.4.</span> <span class="toc-text">1.3 常用参数</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、使用限制"><span class="toc-number">3.</span> <span class="toc-text">二、使用限制</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、关于触发器"><span class="toc-number">4.</span> <span class="toc-text">三、关于触发器</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、错误处理"><span class="toc-number">5.</span> <span class="toc-text">四、错误处理</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>34</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>33</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
