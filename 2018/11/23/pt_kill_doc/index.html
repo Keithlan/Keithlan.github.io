@@ -1,0 +1,631 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html  
+
+一、NAME
+pt-kill字面意思就是： kill掉MySQL满足某些特征的query语句
+二、大纲：使用方法
+1pt-kill [OPTIONS] [DSN]
+
+">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/11/23/pt_kill_doc/" title="Percona XtraBackup 核心文档" itemprop="url">Percona XtraBackup 核心文档</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-11-22T16:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+    Updated:<time datetime="2018-11-23T12:44:20.000Z" itemprop="dateModified">Nov 23 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、NAME"><span class="toc-number">1.</span> <span class="toc-text">一、NAME</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、大纲：使用方法"><span class="toc-number">2.</span> <span class="toc-text">二、大纲：使用方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、风险"><span class="toc-number">3.</span> <span class="toc-text">三、风险</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、说明"><span class="toc-number">4.</span> <span class="toc-text">四、说明</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、GROUP,_MATCH_AND_KILL"><span class="toc-number">5.</span> <span class="toc-text">五、GROUP, MATCH AND KILL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、OUTPUT"><span class="toc-number">6.</span> <span class="toc-text">六、OUTPUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、OPTIONS"><span class="toc-number">7.</span> <span class="toc-text">七、OPTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、QUERY_MATCHES"><span class="toc-number">8.</span> <span class="toc-text">八、QUERY MATCHES</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、CLASS_MATCHES"><span class="toc-number">9.</span> <span class="toc-text">九、CLASS MATCHES</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、ACTIONS"><span class="toc-number">10.</span> <span class="toc-text">十、ACTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、DSN_OPTIONS"><span class="toc-number">11.</span> <span class="toc-text">十一、DSN OPTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、ENVIRONMENT"><span class="toc-number">12.</span> <span class="toc-text">十二、ENVIRONMENT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、SYSTEM_REQUIREMENTS"><span class="toc-number">13.</span> <span class="toc-text">十三、SYSTEM REQUIREMENTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十四、BUGS"><span class="toc-number">14.</span> <span class="toc-text">十四、BUGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十五、DOWNLOADING"><span class="toc-number">15.</span> <span class="toc-text">十五、DOWNLOADING</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十六、VERSION"><span class="toc-number">16.</span> <span class="toc-text">十六、VERSION</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十七、作者"><span class="toc-number">17.</span> <span class="toc-text">十七、作者</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html" target="_blank" rel="external">https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html</a>  </p>
+</blockquote>
+<h2 id="一、NAME">一、NAME</h2>
+<p>pt-kill字面意思就是： kill掉MySQL满足某些特征的query语句</p>
+<h2 id="二、大纲：使用方法">二、大纲：使用方法</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="tag">pt-kill</span> <span class="attr_selector">[OPTIONS]</span> <span class="attr_selector">[DSN]</span></div></pre></td></tr></table></figure>
+
+<p>pt-kill kill MySQL的链接。如果pt-kill没有指定特定文件的话，它连接到MySQL Server，然后通过show processlist 来得到查询语句<br>如果参数指定了文件，则可以从包含show processlist的文件中读取query语句并分析处理<br>默认从STDIN获取  </p>
+<ul>
+<li>kill掉执行时间超过60s的query</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">pt-<span class="keyword">kill</span> --busy-<span class="keyword">time</span> <span class="number">60</span> --<span class="keyword">kill</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>打印出执行时间超过60s的query，仅仅是打印，不会kill</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">pt-<span class="keyword">kill</span> --busy-<span class="keyword">time</span> <span class="number">60</span> --<span class="keyword">print</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>每10s 去检查sleep 状态的query ， 并kill掉</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">pt</span>-kill --<span class="built_in">match</span>-<span class="keyword">command</span> Sleep --kill --victims <span class="keyword">all</span> --interval <span class="number">10</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>打印所有login 状态的 query</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">pt</span>-kill --<span class="built_in">match</span>-state login --<span class="keyword">print</span> --victims <span class="keyword">all</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>通过文件分析哪些query满足match条件</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">mysql -e <span class="string">"SHOW PROCESSLIST"</span> &gt; proclist.txt</div><div class="line">pt-<span class="keyword">kill</span> --test-matching proclist.txt --busy-<span class="keyword">time</span> <span class="number">60</span> --<span class="keyword">print</span></div></pre></td></tr></table></figure>
+
+<h2 id="三、风险">三、风险</h2>
+<p>任何软件都有风险，在使用这个工具前，如下建议请关注：  </p>
+<ul>
+<li>仔细阅读此工具的说明书</li>
+<li>review此工具的已知BUGS</li>
+<li>在非生产环境进行测试</li>
+<li>做好备份并检查你的备份是否可用  </li>
+</ul>
+<h2 id="四、说明">四、说明</h2>
+<p>pt-kill 获取从show processlist中获取query，并进行过滤，然后要么kill，要么print  </p>
+<p>在某种场景，这也是公认的另一种slow query终结者  </p>
+<p>主要目的就是观察那些有可能使用非常多资源的query，然后进行kill来保护数据库  </p>
+<p>通常pt-kill是通过连接MySQL，然后show processlist来获取query，但也还有另一种方法，就是通过指定file  </p>
+<p>在指定文件这种场景下，pt-kill中的参数—kill就不起作用了，你应该使用—print  </p>
+<p>当你指定—test-matching的时候，才表示你从文件获取query，然后test是否满足相关匹配条件  </p>
+<p>接下来，你还有很多规则需要遵守，比如：‘不要将replication thread’ 给kill了，千万别kill掉一些比较重要的thread</p>
+<p>两个重要的options ： —busy-time  和  —victims</p>
+<p>—busy-time 指的是query的执行时间(需要测试 —match-command 和 —busy-time 都指定的话，是或的关系，还是且的关系  )<br>—victims 指的是满足条件的query是否都需要kill，是删除oldest query，还是所有的都删除  </p>
+<p>通常，你至少需要制定一个—match option，否则没有query将会被匹配<br>你也可以制定—match-all 去匹配所有query（不包括—ignore忽略的）  </p>
+<h2 id="五、GROUP,_MATCH_AND_KILL">五、GROUP, MATCH AND KILL</h2>
+<p>query语句是如何经过层层筛选，最终得到精确的语句的呢？接下来我们具体来看看详细的流程</p>
+<ul>
+<li>第一步：group query into classes</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. --<span class="keyword">group</span>-<span class="keyword">by</span> 选项就是控制grouping的。  </div><div class="line"><span class="number">2</span>. 默认--<span class="keyword">group</span>-<span class="keyword">by</span>没有值，表示所有queries都被分在默认的<span class="keyword">class</span>中。</div><div class="line"><span class="number">3</span>. 第二步中的<span class="keyword">matching</span>规则将会应用在每个<span class="keyword">class</span>中，如果你不想全部应用的话，就需要单独分组<span class="keyword">group</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>第二步：matching</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">Matching</span> <span class="keyword">implies</span> filtering since <span class="keyword">if</span> a query doesn’t match some criteria, it <span class="keyword">is</span> removed <span class="keyword">from</span> its <span class="keyword">class</span>.</div><div class="line"><span class="keyword">Matching</span> happens <span class="keyword">for</span> <span class="keyword">each</span> <span class="keyword">class</span>. First, queries are filtered <span class="keyword">from</span> their <span class="keyword">class</span> <span class="keyword">by</span> the various Query Matches options like --match-user. </div><div class="line"><span class="keyword">Then</span>, entire classes are filtered <span class="keyword">by</span> the various <span class="keyword">Class</span> Matches options like --query-count.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>第三步：KILL</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">最后一步其实就是victim selection </div><div class="line"></div><div class="line">你是想<span class="operator"><span class="keyword">kill</span> oldest <span class="keyword">query</span>  还是 <span class="keyword">all</span> queries,  由 <span class="comment">--victims 决定</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>最后</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">The forth <span class="keyword">and</span> final <span class="keyword">step</span> <span class="keyword">is</span> <span class="keyword">to</span> <span class="keyword">take</span> some action <span class="keyword">on</span> all matching queries <span class="keyword">from</span> all classes.</div><div class="line"></div><div class="line">action: 有这些 ， 按照 --print, --execute-command, --kill<span class="string">"/"</span>--kill-query 的顺序执行</div></pre></td></tr></table></figure>
+
+<h2 id="六、OUTPUT">六、OUTPUT</h2>
+<p>如果仅仅指定了 —kill ， 那么不会有output<br>如果仅仅指定了 —print， 那么你会看到这样的output</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"># 2009-07-15T15:04:01 <span class="operator"><span class="keyword">KILL</span> <span class="number">8</span> (<span class="keyword">Query</span> <span class="number">42</span> sec) <span class="keyword">SELECT</span> * <span class="keyword">FROM</span> huge_table</span></div></pre></td></tr></table></figure>
+
+<p>这一行显示了时间戳，query的id是8，时间是42秒，info 是query SQL本身  </p>
+<p>如果同时指定了 —kill —print ，那么匹配后的query会被kill，且会打印出来</p>
+<h2 id="七、OPTIONS">七、OPTIONS</h2>
+<p>至少要指定这些参数里面的一个：   —kill, —kill-query, —print, —execute-command or —stop  </p>
+<p>—any-busy-time and —each-busy-time 这两个参数是互斥的，二者只能取其一<br>—kill and —kill-query 这两个参数是互斥的，二者只能取其一<br>—daemonize and —test-matching 这两个参数是互斥的，二者只能取其一  </p>
+<p>它还可以接受命令行参数： —ask-pass ： 连接MySQL的时候输入的密码  </p>
+<p>—charset： 默认字符集<br>—config：Read this comma-separated list of config files; if specified, this must be the first option on the command line.<br>—create-log-table：创建一个—log-dsn指定的表<br>—daemonize：后台运行<br>—database：数据库名<br>—defaults-file：给定决定路径，仅从这个文件去获取MySQL的options<br>—filter：这个不常用，不做多解释，用的时候再来看<br>—group-by：可以根据不同show processlist字段分组，比如：info，可以根据SQL语句分组，这样的用法也不常见，有需求的时候再细看<br>—help：查看帮助<br>—host：ip<br>—interval :  检查频率，如果—busy-time没有指定，那么默认的interval就是30秒。 否则，interval就是—busy-time的一半。  如果同时指定，频率就以显示指定的—interval为准<br>—log： 当后台运行时，output打印到指定日志<br>—log-dsn： 存储每一个被kill的query到DSN(数据库表)<br>—password: 数据库密码<br>—pid： 指定pid，如果pid存在，则此工具不会运行<br>—port： 端口<br>—run-time: pt-kill工具可以运行多长时间，默认是永久。<br>—sentinel： 当某个文件存在时，pt-kill自动停止运行<br>—slave-user &amp; —slave-password ： slave相关的选项，以更小的权限访问slave而已<br>—set-vars ： 在MySQL中设置某些变量，比如： wait_timeout=10000<br>—socket：socket file to use for connection<br>—stop： Stop running instances by creating the —sentinel file<br>—[no]strip-comments ： 删除掉query后面的comment<br>—version： 显示pt-kill的版本<br>—user： 用户名<br>—[no]version-check  ：  版本检查<br>—victims ： 默认是oldest ，其他选项为（all，all-but-oldest）  </p>
+<h2 id="八、QUERY_MATCHES">八、QUERY MATCHES</h2>
+<p>默认是区分大小写的，可以通过regex不区分大小写，比如：（?i-xsm:select）  </p>
+<ul>
+<li>—busy-time: </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">time; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="nix">状态：<span class="variable">Command=</span>Query ， 执行时间超过<span class="variable">--busy-time=</span>N 秒</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—idle-time</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">type</span>: <span class="typename">time</span>; <span class="keyword">group</span>: Query Matches</div><div class="line">状态：Command=Sleep ，空闲时间超过<span class="comment">--idle-time=N 秒</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-command</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="livecodeserver">忽略的<span class="command"><span class="keyword">command</span>，支持正则</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-db</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="x86asm">忽略的<span class="pseudo">DB</span>，支持正则匹配</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-host</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="haxe">Ignore queries whose Host matches <span class="keyword">this</span> Perl regex.</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-info</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="erlang"><span class="variable">Ignore</span> queries whose <span class="variable">Info</span> (<span class="keyword">query</span>) matches this <span class="variable">Perl</span> regex.</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—[no]ignore-self</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">default</span>: <span class="string">yes; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="sql">Don’t <span class="operator"><span class="keyword">kill</span> pt-<span class="keyword">kill</span>‘s own <span class="keyword">connection</span>.  默认不会删除pt-<span class="keyword">kill</span>自己的连接</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-state</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">type</span>: string; <span class="keyword">group</span>: Query Matches; <span class="keyword">default</span>: <span class="keyword">Locked</span></div><div class="line"></div><div class="line">Ignore queries whose State matches this Perl regex. The <span class="keyword">default</span> <span class="keyword">is</span> <span class="keyword">to</span> keep threads <span class="keyword">from</span> being killed <span class="keyword">if</span> they are <span class="keyword">locked</span> waiting <span class="keyword">for</span> another thread.</div><div class="line"></div><div class="line">默认如果被锁住，那么是不会被kill掉的</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—ignore-user</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="nsis">Ignore queries whose <span class="literal">user</span> matches this Perl regex.</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-all</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">如果没有指定</span><span class="literal">-</span><span class="literal">-</span><span class="comment">ignore，那么匹配所有query(不包括replication</span> <span class="comment">thread，除非指定</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">replication</span><span class="literal">-</span><span class="comment">threads)</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-command</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="sql">Match only queries whose Command matches this Perl regex.</span></div><div class="line"></div><div class="line">常用的Command如下：</div><div class="line"></div><div class="line">Query</div><div class="line">Sleep</div><div class="line">Binlog Dump</div><div class="line">Connect</div><div class="line">Delayed <span class="operator"><span class="keyword">insert</span></span></div><div class="line"><span class="keyword">Execute</span></div><div class="line"><span class="keyword">Fetch</span></div><div class="line">Init DB</div><div class="line"><span class="keyword">Kill</span></div><div class="line"><span class="keyword">Prepare</span></div><div class="line"><span class="keyword">Processlist</span></div><div class="line">Quit</div><div class="line"><span class="keyword">Reset</span> stmt</div><div class="line"><span class="keyword">Table</span> Dump</div><div class="line"></div><div class="line"></div><div class="line">See http://dev.mysql.com/doc/refman/<span class="number">5.1</span>/en/thread-commands.html <span class="keyword">for</span> a <span class="keyword">full</span> list <span class="keyword">and</span> description <span class="keyword">of</span> Command <span class="keyword">values</span>.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-db</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="haxe">Match only queries whose db (database) matches <span class="keyword">this</span> Perl regex.</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-host</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="livecodeserver">Match only queries whose Host matches this Perl regex.</span></div><div class="line"></div><div class="line">The Host <span class="built_in">value</span> often <span class="built_in">time</span> includes <span class="operator">the</span> port like “host:port”.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-info</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="coffeescript">Match only queries whose Info (query) matches <span class="keyword">this</span> Perl regex.</span></div><div class="line"></div><div class="line">The Info column <span class="keyword">of</span> the processlist shows the query that <span class="keyword">is</span> being executed <span class="keyword">or</span> NULL <span class="keyword">if</span> <span class="literal">no</span> query <span class="keyword">is</span> being executed.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-state</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">ype</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="nimrod"><span class="type">Match</span> only queries whose <span class="type">State</span> matches this <span class="type">Perl</span> regex.</span></div><div class="line"></div><div class="line">常用state如下：</div><div class="line"></div><div class="line"><span class="type">Locked</span></div><div class="line">login</div><div class="line">copy to tmp table</div><div class="line"><span class="type">Copying</span> to tmp table</div><div class="line"><span class="type">Copying</span> to tmp table on disk</div><div class="line"><span class="type">Creating</span> tmp table</div><div class="line">executing</div><div class="line"><span class="type">Reading</span> <span class="keyword">from</span> net</div><div class="line"><span class="type">Sending</span> data</div><div class="line"><span class="type">Sorting</span> <span class="keyword">for</span> order</div><div class="line"><span class="type">Sorting</span> <span class="literal">result</span></div><div class="line"><span class="type">Table</span> lock</div><div class="line"><span class="type">Updating</span></div><div class="line"></div><div class="line"><span class="type">See</span> http://dev.mysql.com/doc/refman/<span class="number">5</span>.<span class="number">1</span>/en/general-thread-states.html <span class="keyword">for</span> a full list <span class="keyword">and</span> description <span class="keyword">of</span> <span class="type">State</span> values.</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-user</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">string; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="haxe">Match only queries whose User matches <span class="keyword">this</span> Perl regex.</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—replication-threads</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">group</span>: <span class="string">Query Matches</span></div><div class="line"></div><div class="line"><span class="vbnet">Allow matching <span class="keyword">and</span> killing replication threads.</span></div><div class="line"></div><div class="line"><span class="keyword">By</span> <span class="keyword">default</span>, matches <span class="keyword">do</span> <span class="keyword">not</span> apply <span class="keyword">to</span> replication threads; i.e. replication threads are completely ignored. Specifying this <span class="keyword">option</span> allows matches <span class="keyword">to</span> match (<span class="keyword">and</span> potentially kill) replication threads <span class="keyword">on</span> masters <span class="keyword">and</span> slaves.</div><div class="line"></div><div class="line"></div><div class="line">默认，是不允许kill 复制线程的，除非显示指定了这个选项</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—test-matching</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="attribute">type</span>: <span class="string">array; group: Query Matches</span></div><div class="line"></div><div class="line"><span class="oxygene">Files <span class="keyword">with</span> processlist snapshots <span class="keyword">to</span> test <span class="keyword">matching</span> options against. Since the <span class="keyword">matching</span> options can be complex, you can save snapshots <span class="keyword">of</span> processlist <span class="keyword">in</span> files, <span class="keyword">then</span> test <span class="keyword">matching</span> options against queries <span class="keyword">in</span> those files.</span></div><div class="line"></div><div class="line">This option disables --run-time, --interval, <span class="keyword">and</span> --[no]ignore-<span class="keyword">self</span>.</div><div class="line"></div><div class="line">指定一个文件，根据文件中的show processlist来匹配，而不是连接数据库</div></pre></td></tr></table></figure>
+
+<h2 id="九、CLASS_MATCHES">九、CLASS MATCHES</h2>
+<p>忽略  </p>
+<h2 id="十、ACTIONS">十、ACTIONS</h2>
+<p>默认的执行顺序是：  —print, —execute-command, —kill”/“—kill-query  </p>
+<ul>
+<li>—execute-command</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">当query匹配后，执行这个<span class="command"><span class="keyword">command</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—kill</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">当query匹配后，执行<span class="operator"><span class="keyword">kill</span> 删除<span class="keyword">connection</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—kill-busy-commands</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">默认是<span class="operator"><span class="keyword">kill</span> command为<span class="keyword">query</span>的连接，但是如果你想<span class="keyword">kill</span>其他command，怎么办呢？</span></div><div class="line"></div><div class="line"><span class="comment">--kill-busy-commands=Query,Execute  参考下</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—kill-query</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">只<span class="operator"><span class="keyword">kill</span> <span class="keyword">query</span>，不<span class="keyword">kill</span> <span class="keyword">connection</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—print</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">打印被<span class="operator"><span class="keyword">kill</span>的语句</span></div></pre></td></tr></table></figure>
+
+<h2 id="十一、DSN_OPTIONS">十一、DSN OPTIONS</h2>
+<p>忽略  </p>
+<h2 id="十二、ENVIRONMENT">十二、ENVIRONMENT</h2>
+<p>忽略  </p>
+<h2 id="十三、SYSTEM_REQUIREMENTS">十三、SYSTEM REQUIREMENTS</h2>
+<p>You need Perl, DBI, DBD::mysql, and some core packages that ought to be installed in any reasonably new version of Perl.</p>
+<h2 id="十四、BUGS">十四、BUGS</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">http</span>://www.percona.com/bugs/pt-<span class="built_in">kill</span>.</div></pre></td></tr></table></figure>
+
+<h2 id="十五、DOWNLOADING">十五、DOWNLOADING</h2>
+<p><a href="http://www.percona.com/software/percona-toolkit/" target="_blank" rel="external">http://www.percona.com/software/percona-toolkit/</a>   </p>
+<h2 id="十六、VERSION">十六、VERSION</h2>
+<p>pt-kill 3.0.12</p>
+<h2 id="十七、作者">十七、作者</h2>
+<p>Baron Schwartz and Daniel Nichter  </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/11/23/pt_kill_doc/" data-title="Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/08/01/mysql_replication_lag_ideas/"  title="MySQL复制延迟优化的方法论">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL复制延迟优化的方法论
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/11/23/pt_kill_doc/" data-title="Percona XtraBackup 核心文档" data-url="https://Keithlan.github.io/2018/11/23/pt_kill_doc/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、NAME"><span class="toc-number">1.</span> <span class="toc-text">一、NAME</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、大纲：使用方法"><span class="toc-number">2.</span> <span class="toc-text">二、大纲：使用方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、风险"><span class="toc-number">3.</span> <span class="toc-text">三、风险</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、说明"><span class="toc-number">4.</span> <span class="toc-text">四、说明</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、GROUP,_MATCH_AND_KILL"><span class="toc-number">5.</span> <span class="toc-text">五、GROUP, MATCH AND KILL</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、OUTPUT"><span class="toc-number">6.</span> <span class="toc-text">六、OUTPUT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、OPTIONS"><span class="toc-number">7.</span> <span class="toc-text">七、OPTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、QUERY_MATCHES"><span class="toc-number">8.</span> <span class="toc-text">八、QUERY MATCHES</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、CLASS_MATCHES"><span class="toc-number">9.</span> <span class="toc-text">九、CLASS MATCHES</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、ACTIONS"><span class="toc-number">10.</span> <span class="toc-text">十、ACTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、DSN_OPTIONS"><span class="toc-number">11.</span> <span class="toc-text">十一、DSN OPTIONS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、ENVIRONMENT"><span class="toc-number">12.</span> <span class="toc-text">十二、ENVIRONMENT</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、SYSTEM_REQUIREMENTS"><span class="toc-number">13.</span> <span class="toc-text">十三、SYSTEM REQUIREMENTS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十四、BUGS"><span class="toc-number">14.</span> <span class="toc-text">十四、BUGS</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十五、DOWNLOADING"><span class="toc-number">15.</span> <span class="toc-text">十五、DOWNLOADING</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十六、VERSION"><span class="toc-number">16.</span> <span class="toc-text">十六、VERSION</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十七、作者"><span class="toc-number">17.</span> <span class="toc-text">十七、作者</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>32</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>31</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
