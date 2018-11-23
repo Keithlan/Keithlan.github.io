@@ -1,0 +1,516 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="列出几种常用场景，并进行分析实战测试  
+
+特殊、 打印出执行时间超过3秒的connection，仅仅打印，不kill
+
+每2秒循环一次，超过10秒就退出pt-kill程序
+
+12345678910111213141516171819202122232425262728293031323334353">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2016/04/19/pt_kill_practise/" title="Percona XtraBackup 核心文档" itemprop="url">Percona XtraBackup 核心文档</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2016-04-19T02:32:24.000Z" itemprop="datePublished">Apr 19 2016</time>
+    Updated:<time datetime="2018-11-23T12:45:31.000Z" itemprop="dateModified">Nov 23 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#特殊、_打印出执行时间超过3秒的connection，仅仅打印，不kill"><span class="toc-number">1.</span> <span class="toc-text">特殊、 打印出执行时间超过3秒的connection，仅仅打印，不kill</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、打印出sleep时间超过3秒的connection，仅仅打印，不kill"><span class="toc-number">2.</span> <span class="toc-text">一、打印出sleep时间超过3秒的connection，仅仅打印，不kill</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、kill掉query语句中带有sleep关键字(不区分大小写)的connection,_且Time超过3秒"><span class="toc-number">3.</span> <span class="toc-text">二、kill掉query语句中带有sleep关键字(不区分大小写)的connection, 且Time超过3秒</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、kill掉非系统用户的select开头，且执行时间超过3秒的_connection"><span class="toc-number">4.</span> <span class="toc-text">三、kill掉非系统用户的select开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的_connection"><span class="toc-number">5.</span> <span class="toc-text">四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、kill掉指定特征的query语句"><span class="toc-number">6.</span> <span class="toc-text">五、kill掉指定特征的query语句</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、kill掉非系统库的select开头，且执行时间超过3秒的_connection"><span class="toc-number">7.</span> <span class="toc-text">六、kill掉非系统库的select开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住_的_connection"><span class="toc-number">8.</span> <span class="toc-text">七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting_for_order等状态），且执行时间超过3秒_的_connection"><span class="toc-number">9.</span> <span class="toc-text">八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting for order等状态），且执行时间超过3秒 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、kill掉非系统用户，指定Command（Query、Sleep、Binlog_Dump、Connect等状态），且执行时间超过3秒_的_connection"><span class="toc-number">10.</span> <span class="toc-text">九、kill掉非系统用户，指定Command（Query、Sleep、Binlog Dump、Connect等状态），且执行时间超过3秒 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、kill掉指定来源host_ip_，且select开头的，且执行时间超过3s的connection"><span class="toc-number">11.</span> <span class="toc-text">十、kill掉指定来源host ip ，且select开头的，且执行时间超过3s的connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection"><span class="toc-number">12.</span> <span class="toc-text">十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志"><span class="toc-number">13.</span> <span class="toc-text">十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、—victims的用法"><span class="toc-number">14.</span> <span class="toc-text">十三、—victims的用法</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p>列出几种常用场景，并进行分析实战测试  </p>
+</blockquote>
+<h2 id="特殊、_打印出执行时间超过3秒的connection，仅仅打印，不kill">特殊、 打印出执行时间超过3秒的connection，仅仅打印，不kill</h2>
+<ul>
+<li>每2秒循环一次，超过10秒就退出pt-kill程序</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div></pre></td><td class="code"><pre><div class="line">pt-<span class="operator"><span class="keyword">kill</span>  <span class="comment">--host xx.xxx.126.164 --port 3306 --user pt_kill --ask-pass  --print --ignore-self --busy-time=3 --interval 2 --run-time=10</span></span></div><div class="line"></div><div class="line">重点注意： 这里的<span class="comment">--busy-time=3，指的是Command=Query的连接，其他的并不会被匹配哦 ， 所以一般情况下删除的都是比较安全的用户thread  </span></div><div class="line">重点注意<span class="number">2</span>： ddl，dml，<span class="keyword">select</span>，都是属于Command=<span class="keyword">Query</span>  </div><div class="line"></div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------+</span></div><div class="line">| Id   | <span class="keyword">User</span>          | Host                 | db           | Command          | <span class="keyword">Time</span>   | State                                                         | Info                                      |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------+</span></div><div class="line">|    <span class="number">3</span> | repl          | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">60528</span> | <span class="literal">NULL</span>         | <span class="keyword">Binlog</span> Dump GTID | <span class="number">492777</span> | <span class="keyword">Master</span> has sent <span class="keyword">all</span> <span class="keyword">binlog</span> <span class="keyword">to</span> <span class="keyword">slave</span>; waiting for more updates | NULL                                      |</div><div class="line">|    4 | repl          | xx.xxx.126.165:48604 | NULL         | Binlog Dump GTID | 492765 | Master has sent all binlog to slave; waiting for more updates | NULL                                      |</div><div class="line">|  502 | job_heartbeat | xx.xxx.2.217:34626   | heartbeat_db | Sleep            |      0 |                                                               | NULL                                      |</div><div class="line">| 1053 | dbadmin       | localhost            | heartbeat_db | Query            |      1 | altering table                                                | <span class="operator"><span class="keyword">alter</span> <span class="keyword">table</span> heartbeat <span class="keyword">add</span> <span class="keyword">column</span> ts2 <span class="built_in">date</span> |</span></div><div class="line">| <span class="number">1055</span> | pt_kill       | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">63167</span> | <span class="literal">NULL</span>         | <span class="keyword">Sleep</span>            |      <span class="number">1</span> |                                                               | <span class="literal">NULL</span>                                      |</div><div class="line">| <span class="number">1056</span> | dbadmin       | localhost            | <span class="literal">NULL</span>         | <span class="keyword">Query</span>            |      <span class="number">0</span> | <span class="keyword">starting</span>                                                      | <span class="keyword">show</span> <span class="keyword">processlist</span>                          |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------+</span></div><div class="line"></div><div class="line"></div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------------+</span></div><div class="line">| Id   | <span class="keyword">User</span>          | Host                 | db           | Command          | <span class="keyword">Time</span>   | State                                                         | Info                                            |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------------+</span></div><div class="line">|    <span class="number">3</span> | repl          | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">60528</span> | <span class="literal">NULL</span>         | <span class="keyword">Binlog</span> Dump GTID | <span class="number">492716</span> | <span class="keyword">Master</span> has sent <span class="keyword">all</span> <span class="keyword">binlog</span> <span class="keyword">to</span> <span class="keyword">slave</span>; waiting for more updates | NULL                                            |</div><div class="line">|    4 | repl          | xx.xxx.126.165:48604 | NULL         | Binlog Dump GTID | 492704 | Master has sent all binlog to slave; waiting for more updates | NULL                                            |</div><div class="line">|  502 | job_heartbeat | xx.xxx.2.217:34626   | heartbeat_db | Sleep            |      0 |                                                               | NULL                                            |</div><div class="line">| 1053 | dbadmin       | localhost            | heartbeat_db | Query            |      3 | updating                                                      | <span class="operator"><span class="keyword">update</span> heartbeat <span class="keyword">set</span> ts = <span class="string">'2018-09-06 00:07:58'</span> |</span></div><div class="line">| <span class="number">1055</span> | pt_kill       | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">63167</span> | <span class="literal">NULL</span>         | <span class="keyword">Sleep</span>            |      <span class="number">0</span> |                                                               | <span class="literal">NULL</span>                                            |</div><div class="line">| <span class="number">1056</span> | dbadmin       | localhost            | <span class="literal">NULL</span>         | <span class="keyword">Query</span>            |      <span class="number">0</span> | <span class="keyword">starting</span>                                                      | <span class="keyword">show</span> <span class="keyword">processlist</span>                                |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------------------------------------+</span></div><div class="line"></div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------+</span></div><div class="line">| Id   | <span class="keyword">User</span>          | Host                 | db           | Command          | <span class="keyword">Time</span>   | State                                                         | Info              |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------+</span></div><div class="line">|    <span class="number">3</span> | repl          | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">60528</span> | <span class="literal">NULL</span>         | <span class="keyword">Binlog</span> Dump GTID | <span class="number">492613</span> | <span class="keyword">Master</span> has sent <span class="keyword">all</span> <span class="keyword">binlog</span> <span class="keyword">to</span> <span class="keyword">slave</span>; waiting for more updates | NULL              |</div><div class="line">|    4 | repl          | xx.xxx.126.165:48604 | NULL         | Binlog Dump GTID | 492601 | Master has sent all binlog to slave; waiting for more updates | NULL              |</div><div class="line">|  502 | job_heartbeat | xx.xxx.2.217:34626   | heartbeat_db | Sleep            |      0 |                                                               | NULL              |</div><div class="line">| 1053 | dbadmin       | localhost            | heartbeat_db | Query            |      3 | User sleep                                                    | <span class="operator"><span class="keyword">select</span> <span class="number">1</span>,<span class="keyword">sleep</span>(<span class="number">4</span>) |</span></div><div class="line">| <span class="number">1055</span> | pt_kill       | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">63167</span> | <span class="literal">NULL</span>         | <span class="keyword">Sleep</span>            |      <span class="number">1</span> |                                                               | <span class="literal">NULL</span>              |</div><div class="line">| <span class="number">1056</span> | dbadmin       | localhost            | <span class="literal">NULL</span>         | <span class="keyword">Query</span>            |      <span class="number">0</span> | <span class="keyword">starting</span>                                                      | <span class="keyword">show</span> <span class="keyword">processlist</span>  |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+-------------------+</span></div><div class="line"></div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+------------------+</span></div><div class="line">| Id   | <span class="keyword">User</span>          | Host                 | db           | Command          | <span class="keyword">Time</span>   | State                                                         | Info             |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+------------------+</span></div><div class="line">|    <span class="number">3</span> | repl          | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">60528</span> | <span class="literal">NULL</span>         | <span class="keyword">Binlog</span> Dump GTID | <span class="number">492740</span> | <span class="keyword">Master</span> has sent <span class="keyword">all</span> <span class="keyword">binlog</span> <span class="keyword">to</span> <span class="keyword">slave</span>; waiting for more updates | NULL             |</div><div class="line">|    4 | repl          | xx.xxx.126.165:48604 | NULL         | Binlog Dump GTID | 492728 | Master has sent all binlog to slave; waiting for more updates | NULL             |</div><div class="line">|  502 | job_heartbeat | xx.xxx.2.217:34626   | heartbeat_db | Sleep            |      0 |                                                               | NULL             |</div><div class="line">| 1053 | dbadmin       | localhost            | heartbeat_db | Query            |      4 | starting                                                      | <span class="operator"><span class="keyword">rollback</span>         |</span></div><div class="line">| <span class="number">1055</span> | pt_kill       | xx.xxx<span class="number">.126</span><span class="number">.166</span>:<span class="number">63167</span> | <span class="literal">NULL</span>         | <span class="keyword">Sleep</span>            |      <span class="number">0</span> |                                                               | <span class="literal">NULL</span>             |</div><div class="line">| <span class="number">1056</span> | dbadmin       | localhost            | <span class="literal">NULL</span>         | <span class="keyword">Query</span>            |      <span class="number">0</span> | <span class="keyword">starting</span>                                                      | <span class="keyword">show</span> <span class="keyword">processlist</span> |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+------------------+</span></div></pre></td></tr></table></figure>
+
+<h2 id="一、打印出sleep时间超过3秒的connection，仅仅打印，不kill">一、打印出sleep时间超过3秒的connection，仅仅打印，不kill</h2>
+<ul>
+<li>每2秒循环一次，无限循环下去</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">idle</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>每2秒循环一次，超过10秒就退出pt-kill程序  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">idle</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">run</span><span class="literal">-</span><span class="comment">time=10</span></div></pre></td></tr></table></figure>
+
+<h2 id="二、kill掉query语句中带有sleep关键字(不区分大小写)的connection,_且Time超过3秒">二、kill掉query语句中带有sleep关键字(不区分大小写)的connection, 且Time超过3秒</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:(sleep))"</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="三、kill掉非系统用户的select开头，且执行时间超过3秒的_connection">三、kill掉非系统用户的select开头，且执行时间超过3秒的 connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的_connection">四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的 connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(update))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(delete))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="五、kill掉指定特征的query语句">五、kill掉指定特征的query语句</h2>
+<ul>
+<li>kill掉非系统用户,且query语句中同时包含heartbeat 和 where ，且heartbeat在前where在后，且执行时间超过3秒的 connection</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">pt-<span class="operator"><span class="keyword">kill</span>  <span class="comment">--host xx.xxx.126.164 --port 3306 --user pt_kill --ask-pass  --ignore-self --print  --interval 2 --match-info ".*heartbeat.*where.*"  --ignore-user="root|repl"  --busy-time=3 --kill --victims all</span></span></div><div class="line"></div><div class="line"></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T10:<span class="number">38</span>:<span class="number">03</span> <span class="keyword">KILL</span> <span class="number">1053</span> (<span class="keyword">Query</span> <span class="number">27</span> sec) <span class="keyword">select</span> *,<span class="keyword">sleep</span>(<span class="number">10</span>) <span class="keyword">from</span> heartbeat  <span class="keyword">where</span> id &lt; <span class="string">'1000000000'</span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T10:<span class="number">38</span>:<span class="number">05</span> <span class="keyword">KILL</span> <span class="number">1053</span> (<span class="keyword">Query</span> <span class="number">29</span> sec) <span class="keyword">select</span> *,<span class="keyword">sleep</span>(<span class="number">10</span>) <span class="keyword">from</span> heartbeat  <span class="keyword">where</span> id &lt; <span class="string">'1000000000'</span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T10:<span class="number">38</span>:<span class="number">07</span> <span class="keyword">KILL</span> <span class="number">1053</span> (<span class="keyword">Query</span> <span class="number">31</span> sec) <span class="keyword">select</span> *,<span class="keyword">sleep</span>(<span class="number">10</span>) <span class="keyword">from</span> heartbeat  <span class="keyword">where</span> id &lt; <span class="string">'1000000000'</span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T10:<span class="number">38</span>:<span class="number">09</span> <span class="keyword">KILL</span> <span class="number">1053</span> (<span class="keyword">Query</span> <span class="number">33</span> sec) <span class="keyword">select</span> *,<span class="keyword">sleep</span>(<span class="number">10</span>) <span class="keyword">from</span> heartbeat  <span class="keyword">where</span> id &lt; <span class="string">'1000000000'</span></div></pre></td></tr></table></figure>
+
+<h2 id="六、kill掉非系统库的select开头，且执行时间超过3秒的_connection">六、kill掉非系统库的select开头，且执行时间超过3秒的 connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">db="mysql|information_schema"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住_的_connection">七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住 的 connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(update))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(delete))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">state="Locked"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting_for_order等状态），且执行时间超过3秒_的_connection">八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting for order等状态），且执行时间超过3秒 的 connection</h2>
+<ul>
+<li>指定Locked的connection删除掉</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(update))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(delete))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">state="Locked"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="九、kill掉非系统用户，指定Command（Query、Sleep、Binlog_Dump、Connect等状态），且执行时间超过3秒_的_connection">九、kill掉非系统用户，指定Command（Query、Sleep、Binlog Dump、Connect等状态），且执行时间超过3秒 的 connection</h2>
+<ul>
+<li>kill掉指定Connect的command connection</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(update))|(?i</span><span class="literal">-</span><span class="comment">xsm:^(delete))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">command="Connect"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="十、kill掉指定来源host_ip_，且select开头的，且执行时间超过3s的connection">十、kill掉指定来源host ip ，且select开头的，且执行时间超过3s的connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"(?i</span><span class="literal">-</span><span class="comment">xsm:^(select))"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">host="x</span><span class="string">.</span><span class="comment">x</span><span class="string">.</span><span class="comment">x</span><span class="string">.</span><span class="comment">x"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection">十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">idle</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志">十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">"</span><span class="string">.</span><span class="comment">*heartbeat</span><span class="string">.</span><span class="comment">*where</span><span class="string">.</span><span class="comment">*"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">daemonize</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">log='/root/kill</span><span class="string">.</span><span class="comment">log'</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">all</span></div></pre></td></tr></table></figure>
+
+<h2 id="十三、—victims的用法">十三、—victims的用法</h2>
+<ul>
+<li>背景</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">pid：1103 ， 是最早开启事务的空闲进程 T1</div><div class="line">pid：1095 ， 是第二早开启事务的ddl进程 T2</div><div class="line">pid：502  ， 是最后一个开启事务的dml进程 T3</div><div class="line"></div><div class="line">事务顺序是： T1 锁住了 T2，T3，  T2锁住了T3 ， T3被T1，T2锁住  </div><div class="line"></div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+---------------------------------------------------------+</span></div><div class="line">| Id   | User          | Host                 | db           | Command          | Time   | State                                                         | Info                                                    |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+---------------------------------------------------------+</span></div><div class="line">|    3 | repl          | xx.xxx.126.166:60528 | NULL         | Binlog Dump GTID | 507504 | Master has sent all binlog to slave; waiting for more updates | NULL                                                    |</div><div class="line">|    4 | repl          | xx.xxx.126.165:48604 | NULL         | Binlog Dump GTID | 507492 | Master has sent all binlog to slave; waiting for more updates | NULL                                                    |</div><div class="line">|  502 | job_heartbeat | xx.xxx.2.217:34626   | heartbeat_db | Query            |    328 | Waiting for table metadata <span class="operator"><span class="keyword">lock</span>                               | <span class="keyword">insert</span> <span class="keyword">into</span> heartbeat(ts) <span class="keyword">values</span>(<span class="string">'2018-11-15 13:43:50'</span>) |</span></div><div class="line">| <span class="number">1095</span> | dbadxxx       | localhost            | heartbeat_db | <span class="keyword">Query</span>            |    <span class="number">329</span> | Waiting <span class="keyword">for</span> <span class="keyword">table</span> metadata <span class="keyword">lock</span>                               | <span class="keyword">alter</span> <span class="keyword">table</span> heartbeat <span class="keyword">add</span> <span class="keyword">column</span> ts3 <span class="built_in">date</span>               |</div><div class="line">| <span class="number">1103</span> | dbadxxx       | localhost            | heartbeat_db | <span class="keyword">Sleep</span>            |    <span class="number">341</span> |                                                               | <span class="literal">NULL</span>                                                    |</div><div class="line">| <span class="number">1104</span> | dbadxxx       | localhost            | <span class="literal">NULL</span>         | <span class="keyword">Query</span>            |      <span class="number">0</span> | <span class="keyword">starting</span>                                                      | <span class="keyword">show</span> <span class="keyword">processlist</span>                                        |</div><div class="line">+<span class="comment">------+---------------+----------------------+--------------+------------------+--------+---------------------------------------------------------------+---------------------------------------------------------+</span></div><div class="line"><span class="number">6</span> <span class="keyword">rows</span> <span class="keyword">in</span> <span class="keyword">set</span> (<span class="number">0.00</span> sec)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-command=”Query|Sleep”   —victims oldest —busy-time=3</li>
+</ul>
+<blockquote>
+<p>只kill最老的command为Query|Sleep的最老的链接  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment">pt</span><span class="literal">-</span><span class="comment">kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">host</span> <span class="comment">xx</span><span class="string">.</span><span class="comment">xxx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">164</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">port</span> <span class="comment">3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">user</span> <span class="comment">pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ask</span><span class="literal">-</span><span class="comment">pass</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">self</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">print</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">interval</span> <span class="comment">2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">ignore</span><span class="literal">-</span><span class="comment">user="root|repl"</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">match</span><span class="literal">-</span><span class="comment">command="Query|Sleep"</span>      <span class="literal">-</span><span class="literal">-</span><span class="comment">busy</span><span class="literal">-</span><span class="comment">time=3</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">victims</span> <span class="comment">oldest</span></div><div class="line"></div><div class="line"><span class="comment">Enter</span> <span class="comment">MySQL</span> <span class="comment">password:</span></div><div class="line"><span class="comment">#</span> <span class="comment">2018</span><span class="literal">-</span><span class="comment">11</span><span class="literal">-</span><span class="comment">15T13:49:07</span> <span class="comment">KILL</span> <span class="comment">1103</span> <span class="comment">(Sleep</span> <span class="comment">330</span> <span class="comment">sec)</span> <span class="comment">NULL</span></div><div class="line"><span class="comment">#</span> <span class="comment">2018</span><span class="literal">-</span><span class="comment">11</span><span class="literal">-</span><span class="comment">15T13:49:09</span> <span class="comment">KILL</span> <span class="comment">1103</span> <span class="comment">(Sleep</span> <span class="comment">332</span> <span class="comment">sec)</span> <span class="comment">NULL</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-command=”Query|Sleep”   —victims all —busy-time=3</li>
+</ul>
+<blockquote>
+<p>kill 所有command=”Query|Sleep” 的所有链接  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">Enter MySQL password:</div><div class="line"># 2018-11-15T13:48:41 <span class="operator"><span class="keyword">KILL</span> <span class="number">1103</span> (<span class="keyword">Sleep</span> <span class="number">304</span> sec) <span class="literal">NULL</span></span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T13:<span class="number">48</span>:<span class="number">41</span> <span class="keyword">KILL</span> <span class="number">1095</span> (<span class="keyword">Query</span> <span class="number">292</span> sec) <span class="keyword">alter</span> <span class="keyword">table</span> heartbeat <span class="keyword">add</span> <span class="keyword">column</span> ts3 <span class="built_in">date</span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T13:<span class="number">48</span>:<span class="number">41</span> <span class="keyword">KILL</span> <span class="number">502</span> (<span class="keyword">Query</span> <span class="number">291</span> sec) <span class="keyword">insert</span> <span class="keyword">into</span> heartbeat(ts) <span class="keyword">values</span>(<span class="string">'2018-11-15 13:43:50'</span>)</div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T13:<span class="number">48</span>:<span class="number">41</span> <span class="keyword">KILL</span> <span class="number">1104</span> (<span class="keyword">Sleep</span> <span class="number">262</span> sec) <span class="literal">NULL</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-command=”Query”   —victims all —busy-time=3</li>
+</ul>
+<blockquote>
+<p>kill 所有 command=”Query”（默认不填也就是Query）的所有链接  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">Enter MySQL password:</div><div class="line"># 2018-11-15T13:46:59 <span class="operator"><span class="keyword">KILL</span> <span class="number">1095</span> (<span class="keyword">Query</span> <span class="number">190</span> sec) <span class="keyword">alter</span> <span class="keyword">table</span> heartbeat <span class="keyword">add</span> <span class="keyword">column</span> ts3 <span class="built_in">date</span></span></div><div class="line"># <span class="number">2018</span>-<span class="number">11</span>-<span class="number">15</span>T13:<span class="number">46</span>:<span class="number">59</span> <span class="keyword">KILL</span> <span class="number">502</span> (<span class="keyword">Query</span> <span class="number">189</span> sec) <span class="keyword">insert</span> <span class="keyword">into</span> heartbeat(ts) <span class="keyword">values</span>(<span class="string">'2018-11-15 13:43:50'</span>)</div></pre></td></tr></table></figure>
+
+<ul>
+<li>—match-command=”Query”   —victims oldest —busy-time=3</li>
+</ul>
+<blockquote>
+<p>kill 所有 command=”Query”（默认不填也就是Query）的最老的链接  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">Enter MySQL password:</div><div class="line"># 2018-11-15T13:59:01 <span class="operator"><span class="keyword">KILL</span> <span class="number">1095</span> (<span class="keyword">Query</span> <span class="number">912</span> sec) <span class="keyword">alter</span> <span class="keyword">table</span> heartbeat <span class="keyword">add</span> <span class="keyword">column</span> ts3 <span class="built_in">date</span></span></div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/分享/">分享</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2016/04/19/pt_kill_practise/" data-title="Percona XtraBackup 核心文档 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2016/04/19/xtrabackup_doc/" title="Percona XtraBackup 核心文档">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  Percona XtraBackup 核心文档</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2016/04/07/idb_biger/"  title="MySQL实战系列：大字段如何优化">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL实战系列：大字段如何优化
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2016/04/19/pt_kill_practise/" data-title="Percona XtraBackup 核心文档" data-url="https://Keithlan.github.io/2016/04/19/pt_kill_practise/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#特殊、_打印出执行时间超过3秒的connection，仅仅打印，不kill"><span class="toc-number">1.</span> <span class="toc-text">特殊、 打印出执行时间超过3秒的connection，仅仅打印，不kill</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、打印出sleep时间超过3秒的connection，仅仅打印，不kill"><span class="toc-number">2.</span> <span class="toc-text">一、打印出sleep时间超过3秒的connection，仅仅打印，不kill</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、kill掉query语句中带有sleep关键字(不区分大小写)的connection,_且Time超过3秒"><span class="toc-number">3.</span> <span class="toc-text">二、kill掉query语句中带有sleep关键字(不区分大小写)的connection, 且Time超过3秒</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、kill掉非系统用户的select开头，且执行时间超过3秒的_connection"><span class="toc-number">4.</span> <span class="toc-text">三、kill掉非系统用户的select开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的_connection"><span class="toc-number">5.</span> <span class="toc-text">四、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、kill掉指定特征的query语句"><span class="toc-number">6.</span> <span class="toc-text">五、kill掉指定特征的query语句</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、kill掉非系统库的select开头，且执行时间超过3秒的_connection"><span class="toc-number">7.</span> <span class="toc-text">六、kill掉非系统库的select开头，且执行时间超过3秒的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住_的_connection"><span class="toc-number">8.</span> <span class="toc-text">七、kill掉非系统用户的select，update，delete开头，且执行时间超过3秒,且不是被locked住 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting_for_order等状态），且执行时间超过3秒_的_connection"><span class="toc-number">9.</span> <span class="toc-text">八、kill掉非系统用户，指定state（Locked、login、Updating、Sorting for order等状态），且执行时间超过3秒 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、kill掉非系统用户，指定Command（Query、Sleep、Binlog_Dump、Connect等状态），且执行时间超过3秒_的_connection"><span class="toc-number">10.</span> <span class="toc-text">九、kill掉非系统用户，指定Command（Query、Sleep、Binlog Dump、Connect等状态），且执行时间超过3秒 的 connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、kill掉指定来源host_ip_，且select开头的，且执行时间超过3s的connection"><span class="toc-number">11.</span> <span class="toc-text">十、kill掉指定来源host ip ，且select开头的，且执行时间超过3s的connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection"><span class="toc-number">12.</span> <span class="toc-text">十一、kill掉非系统用户，Command=Sleep，且空闲时间为3s的connection</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志"><span class="toc-number">13.</span> <span class="toc-text">十二、kill掉非系统用户，指定特征的query，在后台运行，并打印日志</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、—victims的用法"><span class="toc-number">14.</span> <span class="toc-text">十三、—victims的用法</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>35</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>33</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">6</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>32</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
