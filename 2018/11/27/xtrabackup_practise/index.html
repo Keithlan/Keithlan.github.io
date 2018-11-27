@@ -1,0 +1,517 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>pt-tools系列：xtrabackup 最佳实践 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="安装xtrabackup
+
+下载2.4版本即可
+
+运行报错
+
+
+1234567891011121314151617181920212223242526272829303132333435363738/data/Keithlan/pt_backup/bin/innobackupex: /usr/lib">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/11/27/xtrabackup_practise/" title="pt-tools系列：xtrabackup 最佳实践" itemprop="url">pt-tools系列：xtrabackup 最佳实践</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-11-27T08:32:24.000Z" itemprop="datePublished">Nov 27 2018</time>
+    Updated:<time datetime="2018-11-27T09:48:08.000Z" itemprop="dateModified">Nov 27 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#安装xtrabackup"><span class="toc-number">1.</span> <span class="toc-text">安装xtrabackup</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装qpress"><span class="toc-number">2.</span> <span class="toc-text">安装qpress</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、生产环境默认参数"><span class="toc-number">3.</span> <span class="toc-text">一、生产环境默认参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、各种场景实战"><span class="toc-number">4.</span> <span class="toc-text">二、各种场景实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_gtid和non-gtid"><span class="toc-number">4.1.</span> <span class="toc-text">2.1 gtid和non-gtid</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_生产环境常用"><span class="toc-number">4.2.</span> <span class="toc-text">2.2 生产环境常用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-1_备份"><span class="toc-number">4.3.</span> <span class="toc-text">2.2.1 备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-2_还原备份"><span class="toc-number">4.4.</span> <span class="toc-text">2.2.2 还原备份</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、已知的限制和不足"><span class="toc-number">5.</span> <span class="toc-text">三、已知的限制和不足</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、频繁问到的问题"><span class="toc-number">6.</span> <span class="toc-text">四、频繁问到的问题</span></a></li></ol>
+		</div>
+		
+		<h2 id="安装xtrabackup">安装xtrabackup</h2>
+<ol>
+<li><p>下载2.4版本即可</p>
+</li>
+<li><p>运行报错</p>
+</li>
+</ol>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/data/Keithlan/pt_backup/bin/innobackupex:</span> <span class="comment">/usr/lib64/libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6:</span> <span class="comment">version</span> <span class="comment">`GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">15'</span> <span class="comment">not</span> <span class="comment">found</span> <span class="comment">(required</span> <span class="comment">by</span> <span class="comment">/data/Keithlan/pt_backup/bin/innobackupex)</span></div><div class="line"></div><div class="line"><span class="comment">解决问题：</span></div><div class="line"></div><div class="line"><span class="comment">strings</span> <span class="comment">/usr/lib64/libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6</span> <span class="comment">|</span> <span class="comment">grep</span> <span class="comment">GLIBCXX</span> </div><div class="line"></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">1</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">2</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">3</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">4</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">5</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">6</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">7</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">8</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">9</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">10</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">11</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">12</span></div><div class="line"><span class="comment">GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">13</span></div><div class="line"><span class="comment">GLIBCXX_FORCE_NEW</span></div><div class="line"><span class="comment">GLIBCXX_DEBUG_MESSAGE_LENGTH</span></div><div class="line"></div><div class="line"><span class="comment">发现的确没有GLIBCXX_3</span><span class="string">.</span><span class="comment">4</span><span class="string">.</span><span class="comment">15</span>  </div><div class="line"></div><div class="line"><span class="comment">那么需要下载相关文件并替代</span></div><div class="line"></div><div class="line"><span class="comment">http://ftp</span><span class="string">.</span><span class="comment">de</span><span class="string">.</span><span class="comment">debian</span><span class="string">.</span><span class="comment">org/debian/pool/main/g/gcc</span><span class="literal">-</span><span class="comment">4</span><span class="string">.</span><span class="comment">7/libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="comment">6_4</span><span class="string">.</span><span class="comment">7</span><span class="string">.</span><span class="comment">2</span><span class="literal">-</span><span class="comment">5_amd64</span><span class="string">.</span><span class="comment">deb</span>  <span class="comment">去这里下载</span></div><div class="line"></div><div class="line"><span class="comment">然后：</span></div><div class="line"></div><div class="line"><span class="comment">ar</span> <span class="literal">-</span><span class="comment">x</span> <span class="comment">libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="comment">6_4</span><span class="string">.</span><span class="comment">7</span><span class="string">.</span><span class="comment">2</span><span class="literal">-</span><span class="comment">5_amd64</span><span class="string">.</span><span class="comment">deb</span>  <span class="comment">&&</span> <span class="comment">tar</span> <span class="comment">xvf</span> <span class="comment">data</span><span class="string">.</span><span class="comment">tar</span><span class="string">.</span><span class="comment">gz</span></div><div class="line"><span class="comment">cp</span> <span class="literal">-</span><span class="comment">p</span>  <span class="comment">libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6</span><span class="string">.</span><span class="comment">0</span><span class="string">.</span><span class="comment">17</span> <span class="comment">/usr/lib64</span></div><div class="line"><span class="comment">cd</span> <span class="comment">/usr/lib64/</span></div><div class="line"><span class="comment">rm</span> <span class="comment">libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6</span></div><div class="line"><span class="comment">ln</span> <span class="literal">-</span><span class="comment">s</span> <span class="comment">libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6</span><span class="string">.</span><span class="comment">0</span><span class="string">.</span><span class="comment">17</span> <span class="comment">libstdc</span><span class="literal">+</span><span class="literal">+</span><span class="string">.</span><span class="comment">so</span><span class="string">.</span><span class="comment">6</span></div><div class="line"></div><div class="line"><span class="comment">此问题解决</span></div></pre></td></tr></table></figure>
+
+<h2 id="安装qpress">安装qpress</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>这是解压*.qp的工具，如果你使用了--compress 压缩备份的话  </div><div class="line"></div><div class="line"><span class="bullet">2. </span>官方地址：http://www.quicklz.com/</div><div class="line"></div><div class="line"><span class="bullet">3. </span>tar xf qpress-11-linux-x64.tar</div></pre></td></tr></table></figure>
+
+<h2 id="一、生产环境默认参数">一、生产环境默认参数</h2>
+<ul>
+<li>常用参数</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div></pre></td><td class="code"><pre><div class="line">* 基本option： </div><div class="line">	<span class="comment">--defaults-file=[MY.CNF]:</span></div><div class="line">		指定配置文件，一定要放在最参数最前面  </div><div class="line">		</div><div class="line">	<span class="comment">--user=$backupUser </span></div><div class="line">	<span class="comment">--password=$backupPwd </span></div><div class="line">	<span class="comment">--socket=$socket</span></div><div class="line"></div><div class="line"></div><div class="line">    <span class="comment">--ibbackup=$ibbackup</span></div><div class="line">		主要用于指定xtrabackup二进制文件的，在某些场景特别有用：比如多个xtrabackup文件，比如xtrabackup没有在环境变量中 等等  </div><div class="line">	<span class="comment">--stream=xbstream</span></div><div class="line">		流式备份的格式，目前常用的是xbstream  </div><div class="line">	<span class="comment">--rsync</span></div><div class="line">		主要是用来优化本地文件传输的  </div><div class="line">		使用rsync代替cp，用来传输所有non-innodb文件，可以更加快速的传输文件  </div><div class="line">	<span class="comment">--kill-long-queries-timeout=30 </span></div><div class="line">		在<span class="operator"><span class="keyword">FLUSH</span> <span class="keyword">TABLES</span> <span class="keyword">WITH</span> <span class="keyword">READ</span> <span class="keyword">LOCK</span> 开始之前，xtrabackup等待指定秒数进行<span class="keyword">kill</span>掉其他<span class="keyword">query</span>  </span></div><div class="line">		主要目的就是要保证<span class="keyword">FLUSH</span> <span class="keyword">TABLES</span> <span class="keyword">WITH</span> <span class="keyword">READ</span> <span class="keyword">LOCK</span>能够执行成功，所以xtrabackup用户需要process和super权限  </div><div class="line">	<span class="comment">--kill-long-query-type=all </span></div><div class="line">		什么类型的<span class="keyword">query</span>会被<span class="keyword">kill</span>掉，配合上面的参数一起使用  </div><div class="line">	<span class="comment">--parallel=8 </span></div><div class="line">		备份文件的时候并行多少个进程，用来加快备份速度,如果你的ibd文件越多，作用越大。如果你就一个大表，那么不起作用    </div><div class="line">	<span class="comment">--compress：</span></div><div class="line">		创建一个压缩的备份  </div><div class="line">	<span class="comment">--compress-threads=#:</span></div><div class="line">		派生出几个工作线程用于压缩 </div><div class="line">	<span class="comment">--no-timestamp </span></div><div class="line">		指定该参数后，备份目录<span class="keyword">BACKUP</span>-ROOT-DIR不会有时间戳  </div><div class="line">	<span class="comment">--slave-info</span></div><div class="line">		这个参数非常有用，尤其是在<span class="keyword">slave</span>进行备份  </div><div class="line">		将<span class="keyword">binlog</span>位置和<span class="keyword">master</span>的<span class="keyword">binlog</span>写到xtrabackup_slave_info，作为<span class="keyword">change</span> <span class="keyword">master</span>的命令  </div><div class="line">				</div><div class="line">	<span class="comment">--tmpdir=$tmpDIR</span></div><div class="line">		临时文件存放的目录</div><div class="line">		redo日志就是先存放在这个临时目录，然后在拷贝到remote host的。</div><div class="line">	<span class="comment">--copy-back</span></div><div class="line">		拷贝所有备份的文件到original目录  </div><div class="line">		它不会覆盖已经存在的文件，除非你指定了 <span class="comment">--force-non-empty-directories  </span></div><div class="line">	<span class="comment">--move-back</span></div><div class="line">		跟copy back类型，但是它会删掉老的文件 , 使用前请谨慎    </div><div class="line"></div><div class="line">	传输速度:  <span class="number">61440</span> KB/S</div><div class="line">	/usr/<span class="keyword">bin</span>/rsync -auvP <span class="comment">--bwlimit=$bwlimit $dataDir  主要适用于针对local备份，然后rsync到remote server用的  </span></div><div class="line"></div><div class="line">* 其他<span class="keyword">option</span>    	</div><div class="line"></div><div class="line">	<span class="comment">--apply-log：</span></div><div class="line">		将redo日志（xtrabackup_logfile）apply到备份中，并且根据<span class="keyword">backup</span>-my.cnf重新创建redo日志  </div><div class="line">		innobackupex –apply-<span class="keyword">log</span> 使用的是<span class="keyword">backup</span>-my.cnf，或者你显示指定了–defaults-file ，它主要是初始化innodb_page_size，innodb_log_block_size等等，所以不要随意添加配置文件  </div><div class="line"></div><div class="line">	<span class="comment">--backup-locks：</span></div><div class="line">		备份锁是在percona <span class="keyword">server</span>独有的，如果MySQL <span class="keyword">Server</span>不支持back <span class="keyword">lock</span>，那么会忽略掉，使用原生态的<span class="keyword">FLUSH</span> <span class="keyword">TABLES</span> <span class="keyword">WITH</span> <span class="keyword">READ</span> <span class="keyword">LOCK</span>  </div><div class="line"></div><div class="line">	<span class="comment">--compact：</span></div><div class="line">		对所有溢出的二级索引页创建一个紧凑的（compact）格式，一般情况下有碎片和稀疏    </div><div class="line">	</div><div class="line">	<span class="comment">--rebuild-indexes:</span></div><div class="line">		这个参数用于<span class="comment">--apply-log阶段，在每次apply完日志后，会重建所有二级索引</span></div><div class="line">		所以这个参数主要是用来跟上面<span class="comment">--compact对应的，用于创建compact backups</span></div><div class="line"></div><div class="line">	<span class="comment">--rebuild-threads=NUMBER-OF-THREADS:</span></div><div class="line">		重建二级索引的线程数  </div><div class="line"></div><div class="line">	<span class="comment">--decompress:</span></div><div class="line">		解压缩<span class="comment">--compress的.qp扩展的文件  </span></div><div class="line">		默认xtrabackup不会自动删除*.qp文件，所以如果你需要clean up这些文件，需要自己手动接入进来  	</div><div class="line">	</div><div class="line">	<span class="comment">--export:</span></div><div class="line">		主要用于export独立的表（而不是整个备份），用于恢复到另外的<span class="keyword">server</span>上去  		</div><div class="line">		</div><div class="line">	<span class="comment">--sshopt=SSH-OPTION:</span></div><div class="line">		主要用于传输相关ssh的参数，尤其是指定了 <span class="comment">--remost-host</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>xtrabackup备份相关的常用文件</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div></pre></td><td class="code"><pre><div class="line">* backup-my.cnf</div><div class="line">	跟原始my.cnf不一样，这是xtrabackup创建出来的my.cnf </div><div class="line">	只包含了备份需要的选项</div><div class="line">	[mysqld]</div><div class="line">	<span class="variable">innodb_checksum_algorithm=</span>crc32</div><div class="line">	<span class="variable">innodb_log_checksum_algorithm=</span>strict_crc32</div><div class="line">	<span class="variable">innodb_data_file_path=</span>ibdata1:<span class="number">4</span>G:autoextend</div><div class="line">	<span class="variable">innodb_log_files_in_group=</span><span class="number">2</span></div><div class="line">	<span class="variable">innodb_log_file_size=</span><span class="number">4294967296</span></div><div class="line">	<span class="variable">innodb_fast_checksum=</span><span class="constant">false</span></div><div class="line">	<span class="variable">innodb_page_size=</span><span class="number">16384</span></div><div class="line">	<span class="variable">innodb_log_block_size=</span><span class="number">512</span></div><div class="line">	<span class="variable">innodb_undo_directory=</span>./</div><div class="line">	<span class="variable">innodb_undo_tablespaces=</span><span class="number">0</span></div><div class="line">	<span class="variable">server_id=</span><span class="number">1261261646</span></div><div class="line">	<span class="variable">redo_log_version=</span><span class="number">1</span></div><div class="line">	<span class="variable">server_uuid=</span>f085ef25-dbf5-<span class="number">11</span>e8-<span class="number">8813</span>-ecf4bbf1f518</div><div class="line">	<span class="variable">master_key_id=</span><span class="number">0</span></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">* xtrabackup_checkpoints</div><div class="line">	包含了LSN和备份的类型</div><div class="line">	<span class="variable">backup_type =</span> full-backuped</div><div class="line">	<span class="variable">from_lsn =</span> <span class="number">0</span></div><div class="line">	<span class="variable">to_lsn =</span> <span class="number">74398727925</span></div><div class="line">	<span class="variable">last_lsn =</span> <span class="number">74398729153</span></div><div class="line">	<span class="variable">compact =</span> <span class="number">0</span></div><div class="line">	<span class="variable">recover_binlog_info =</span> <span class="number">0</span></div><div class="line"></div><div class="line"></div><div class="line">* xtrabackup_info</div><div class="line">	备份相关的日志信息</div><div class="line">	<span class="variable">uuid =</span> dcfccff9-f174-<span class="number">11</span>e8-a83b-ecf4bbf1f518</div><div class="line">	<span class="variable">name =</span></div><div class="line">	<span class="variable">tool_name =</span> innobackupex</div><div class="line">	<span class="variable">tool_command =</span> <span class="variable">--defaults-file=</span>/etc/my.cnf <span class="variable">--user=</span>pt_kill <span class="variable">--password=</span>... <span class="variable">--socket=</span>/tmp/mysql.sock --rsync <span class="variable">--kill-long-queries-timeout=</span><span class="number">30</span> <span class="variable">--kill-long-query-type=</span>all <span class="variable">--parallel=</span><span class="number">8</span> <span class="variable">--tmpdir=</span>/data/dbbackup --backup /data/dbbackup/</div><div class="line">	<span class="variable">tool_version =</span> <span class="number">2.4</span>.<span class="number">12</span></div><div class="line">	<span class="variable">ibbackup_version =</span> <span class="number">2.4</span>.<span class="number">12</span></div><div class="line">	<span class="variable">server_version =</span> <span class="number">5.7</span>.<span class="number">21</span>-log</div><div class="line">	<span class="variable">start_time =</span> <span class="number">2018</span>-<span class="number">11</span>-<span class="number">26</span> <span class="number">20</span>:<span class="number">14</span>:<span class="number">34</span></div><div class="line">	<span class="variable">end_time =</span> <span class="number">2018</span>-<span class="number">11</span>-<span class="number">26</span> <span class="number">20</span>:<span class="number">14</span>:<span class="number">46</span></div><div class="line">	<span class="variable">lock_time =</span> <span class="number">0</span></div><div class="line">	<span class="variable">binlog_pos =</span> filename 'xx.bin.<span class="number">000001</span>', position '<span class="number">18667</span>', GTID of the last change 'f085ef25-dbf5-<span class="number">11</span>e8-<span class="number">8813</span>-ecf4bbf1f518:<span class="number">1</span>-<span class="number">51</span>'</div><div class="line">	<span class="variable">innodb_from_lsn =</span> <span class="number">0</span></div><div class="line">	<span class="variable">innodb_to_lsn =</span> <span class="number">74398957203</span></div><div class="line">	<span class="variable">partial =</span> N</div><div class="line">	<span class="variable">incremental =</span> N</div><div class="line">	<span class="variable">format =</span> file</div><div class="line">	<span class="variable">compact =</span> N</div><div class="line">	<span class="variable">compressed =</span> N</div><div class="line">	<span class="variable">encrypted =</span> N</div><div class="line"></div><div class="line">* xtrabackup_binlog_info</div><div class="line">    包含了备份时刻的binlog位置，主要用于在master上的备份，这个位置可以用来搭建new slave</div><div class="line">    xx.bin.<span class="number">000818</span>       <span class="number">3465069</span>  f085ef25-dbf5-<span class="number">11</span>e8-<span class="number">8813</span>-ecf4bbf1f518:<span class="number">1</span>-<span class="number">51</span></div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">* xtrabackup_slave_info</div><div class="line">	包含了show slave 的信息，可用于未来的搭建新的slave，change master用  </div><div class="line">	SET GLOBAL <span class="variable">gtid_purged=</span>'f085ef25-dbf5-<span class="number">11</span>e8-<span class="number">8813</span>-ecf4bbf1f518:<span class="number">1</span>-<span class="number">1531</span>';</div><div class="line">	CHANGE MASTER TO <span class="variable">MASTER_AUTO_POSITION=</span><span class="number">1</span>;</div><div class="line"></div><div class="line">* xtrabackup_logfile</div><div class="line">	就是在备份的过程中，拷贝的redo log日志  </div><div class="line">	这个日志会用在后面的 --apply-log中</div></pre></td></tr></table></figure>
+
+<ul>
+<li>local</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* non-gtid</div><div class="line"></div><div class="line"> <span class="variable">$innobackupex</span> --defaults-file=<span class="variable">$defaultFile</span> --<span class="literal">user</span>=<span class="variable">$backupUser</span> --password=<span class="variable">$backupPwd</span> --socket=<span class="variable">$socket</span> --ibbackup=<span class="variable">$ibbackup</span> <span class="variable">$backupOptions</span> <span class="variable">$dataDIR</span> &gt;&gt;<span class="variable">$logFile</span> <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span></div><div class="line"></div><div class="line"></div><div class="line">* gtid</div><div class="line"></div><div class="line"><span class="variable">$innobackupex24</span> --defaults-file=<span class="variable">$defaultFile</span> --<span class="literal">user</span>=<span class="variable">$backupUser</span> --password=<span class="variable">$backupPwd</span> --socket=<span class="variable">$socket</span> --ibbackup=<span class="variable">$ibbackup24</span> <span class="variable">$backupOptions</span> <span class="variable">$dataDIR</span> &gt;&gt;<span class="variable">$logFile</span> <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>remote</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">* non-gtid</div><div class="line"></div><div class="line"><span class="variable">$innobackupex</span> --defaults-file=<span class="variable">$defaultFile</span> --<span class="literal">user</span>=<span class="variable">$backupUser</span> --password=<span class="variable">$backupPwd</span> --socket=<span class="variable">$socket</span> --ibbackup=<span class="variable">$ibbackup</span> <span class="variable">$backupOptions</span> --stream=xbstream --tmpdir=<span class="variable">$tmpDIR</span> <span class="variable">$tmpDIR</span>  <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span> | ssh root@<span class="constant">${destIP}</span> <span class="string">"<span class="variable">$xtrabackupDIR</span>/xbstream -x -C <span class="constant">${dataDIR}</span>"</span>  &gt;&gt;<span class="variable">$logFile</span> <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span></div><div class="line"></div><div class="line"></div><div class="line">* gtid</div><div class="line"></div><div class="line"><span class="variable">$innobackupex24</span> --defaults-file=<span class="variable">$defaultFile</span> --<span class="literal">user</span>=<span class="variable">$backupUser</span> --password=<span class="variable">$backupPwd</span> --socket=<span class="variable">$socket</span> --ibbackup=<span class="variable">$ibbackup24</span> <span class="variable">$backupOptions</span> --stream=xbstream --tmpdir=<span class="variable">$tmpDIR</span> <span class="variable">$tmpDIR</span>  <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span> | ssh root@<span class="constant">${destIP}</span> <span class="string">"<span class="variable">$xtrabackupDIR24</span>/xbstream -x -C <span class="constant">${dataDIR}</span>"</span>  &gt;&gt;<span class="variable">$logFile</span> <span class="number">2</span>&gt;&gt;<span class="variable">$xtrabackupLogFile</span></div></pre></td></tr></table></figure>
+
+<h2 id="二、各种场景实战">二、各种场景实战</h2>
+<h3 id="2-1_gtid和non-gtid">2.1 gtid和non-gtid</h3>
+<p>gtid和non-gtid的备份都差不多，唯一的区别就在还原上</p>
+<p>non-gtid，是change master file，position<br>gtid，是set globa gtid_purged=’’, 然后再change master而已。</p>
+<p>接下来的案例全部以GTID为例，因为GTID是未来趋势  </p>
+<h3 id="2-2_生产环境常用">2.2 生产环境常用</h3>
+<h3 id="2-2-1_备份">2.2.1 备份</h3>
+<ul>
+<li>gtid： 如何再master进行local备份 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/data/Keithlan/pt_backup/bin/innobackupex</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">defaults</span><span class="literal">-</span><span class="comment">file=/etc/my</span><span class="string">.</span><span class="comment">cnf</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">user=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">password=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">socket=/tmp/mysql</span><span class="string">.</span><span class="comment">sock</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">rsync</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">queries</span><span class="literal">-</span><span class="comment">timeout=30</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">query</span><span class="literal">-</span><span class="comment">type=all</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">parallel=8</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">tmpdir=/data/dbbackup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">backup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">slave</span><span class="literal">-</span><span class="comment">info</span>   <span class="comment">/data/dbbackup</span></div><div class="line"></div><div class="line"><span class="comment">/data/dbbackup</span> <span class="comment">生成一个timestamp(2018</span><span class="literal">-</span><span class="comment">11</span><span class="literal">-</span><span class="comment">27_13</span><span class="literal">-</span><span class="comment">40</span><span class="literal">-</span><span class="comment">33)的备份</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid： 如何再master进行local + compress备份  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">/data/Keithlan/pt_backup/bin/innobackupex</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">defaults</span><span class="literal">-</span><span class="comment">file=/etc/my</span><span class="string">.</span><span class="comment">cnf</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">user=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">password=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">socket=/tmp/mysql</span><span class="string">.</span><span class="comment">sock</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">rsync</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">queries</span><span class="literal">-</span><span class="comment">timeout=30</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">query</span><span class="literal">-</span><span class="comment">type=all</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">parallel=8</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">tmpdir=/data/dbbackup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">backup</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">compress</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">compress</span><span class="literal">-</span><span class="comment">threads=8</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">slave</span><span class="literal">-</span><span class="comment">info</span>   <span class="comment">/data/dbbackup</span></div><div class="line"></div><div class="line"><span class="comment">/data/dbbackup</span> <span class="comment">生成一个timestamp(2018</span><span class="literal">-</span><span class="comment">11</span><span class="literal">-</span><span class="comment">27_13</span><span class="literal">-</span><span class="comment">40</span><span class="literal">-</span><span class="comment">33)的压缩过后的备份</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid:  如何再master进行remote备份</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/data/Keithlan/pt_backup/bin/innobackupex</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">defaults</span><span class="literal">-</span><span class="comment">file=/etc/my</span><span class="string">.</span><span class="comment">cnf</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">user=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">password=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">socket=/tmp/mysql</span><span class="string">.</span><span class="comment">sock</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">stream=xbstream</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">queries</span><span class="literal">-</span><span class="comment">timeout=30</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">query</span><span class="literal">-</span><span class="comment">type=all</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">parallel=8</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">tmpdir=/data/dbbackup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">backup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">slave</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">/data/dbbackup</span> <span class="comment">|</span> <span class="comment">ssh</span> <span class="comment">root@${destIP}</span> <span class="comment">"/data/Keithlan/pt_backup/bin/xbstream</span> <span class="literal">-</span><span class="comment">x</span> <span class="literal">-</span><span class="comment">C</span> <span class="comment">/data/dbbackup/remote_backup"</span></div><div class="line"></div><div class="line"><span class="comment">/data/dbbackup/remote_backup</span> <span class="comment">目录必须在目标机器上存在，否则报错</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid： 如果再master进行remote + compress 备份 —推荐</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">/data/Keithlan/pt_backup/bin/innobackupex</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">defaults</span><span class="literal">-</span><span class="comment">file=/etc/my</span><span class="string">.</span><span class="comment">cnf</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">user=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">password=pt_kill</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">socket=/tmp/mysql</span><span class="string">.</span><span class="comment">sock</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">stream=xbstream</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">queries</span><span class="literal">-</span><span class="comment">timeout=30</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">kill</span><span class="literal">-</span><span class="comment">long</span><span class="literal">-</span><span class="comment">query</span><span class="literal">-</span><span class="comment">type=all</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">parallel=8</span>   <span class="literal">-</span><span class="literal">-</span><span class="comment">tmpdir=/data/dbbackup</span>  <span class="literal">-</span><span class="literal">-</span><span class="comment">backup</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">compress</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">compress</span><span class="literal">-</span><span class="comment">threads=8</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">slave</span><span class="literal">-</span><span class="comment">info</span> <span class="comment">/data/dbbackup</span> <span class="comment">|</span> <span class="comment">ssh</span> <span class="comment">root@xx</span><span class="string">.</span><span class="comment">xx</span><span class="string">.</span><span class="comment">126</span><span class="string">.</span><span class="comment">166</span> <span class="comment">"/data/Keithlan/pt_backup/bin/xbstream</span> <span class="literal">-</span><span class="comment">x</span> <span class="literal">-</span><span class="comment">C</span> <span class="comment">/data/dbbackup/remote_compress_backup"</span></div><div class="line"></div><div class="line"><span class="comment">/data/dbbackup/remote_compress_backup</span> <span class="comment">目录必须在目标机器上存在，否则报错</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid：如何再slave上进行local备份</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">跟再master进行<span class="keyword">local</span>备份一致，请参考</div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid： 如何再slave上进行remote备份</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">跟在master上进行<span class="comment">remote备份一样，请参考</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid： 如何再slave上进行local + compress备份  —推荐 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">跟在master上进行<span class="built_in">local</span>+<span class="built_in">compress</span>备份一致，请参考</div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid： 如何再slave上进行remote + compress备份  —推荐</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">跟在master上进行remote+<span class="built_in">compress</span>备份一致，请参考</div></pre></td></tr></table></figure>
+
+<h3 id="2-2-2_还原备份">2.2.2 还原备份</h3>
+<ul>
+<li>gtid：有一个完整的全备，如何快速还原整个实例</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">重点： /etc/my.cnf 要存在，这个需要自己备份  </div><div class="line">innobackupex <span class="comment">--defaults-file=/etc/my.cnf --apply-log 2018-11-26_20-20-21</span></div><div class="line">innobackupex <span class="comment">--defaults-file=/etc/my.cnf --copy-back 2018-11-26_20-20-21</span></div><div class="line">chown -R mysql:mysql /data/mysql_data</div><div class="line">mysqld_safe <span class="comment">--user=mysql &</span></div><div class="line">     cat xtrabackup_binlog_info : 如果是再master进行备份的话</div><div class="line">     cat xtrabackup_slave_info  : 如果是在slave进行备份的话</div><div class="line"><span class="operator"><span class="keyword">reset</span> <span class="keyword">slave</span> <span class="keyword">all</span></span></div><div class="line"><span class="keyword">reset</span> <span class="keyword">master</span></div><div class="line"><span class="keyword">set</span> <span class="keyword">global</span> gtid_purged=<span class="string">'$gtid_xtrabackup_$binlog_$slave_info'</span></div><div class="line"><span class="keyword">CHANGE</span> <span class="keyword">MASTER</span> <span class="keyword">TO</span> MASTER_HOST = <span class="string">'$master_ip'</span>  ,MASTER_PORT = <span class="number">3306</span> , MASTER_USER = <span class="string">'repl'</span>,MASTER_PASSWORD = <span class="string">'xx'</span> ,MASTER_AUTO_POSITION = <span class="number">1</span></div><div class="line"><span class="keyword">start</span> <span class="keyword">slave</span>;</div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid：有一个完整的压缩全备，如何快速还原整个实例</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">重点： /etc/my.cnf 要存在，这个需要自己备份</div><div class="line"></div><div class="line"></div><div class="line">innobackupex <span class="comment">--decompress --parallel=16 --remove-original  remote_compress_backup</span></div><div class="line">innobackupex <span class="comment">--defaults-file=/etc/my.cnf --apply-log remote_compress_backup</span></div><div class="line">innobackupex <span class="comment">--defaults-file=/etc/my.cnf --copy-back remote_compress_backup</span></div><div class="line">chown -R mysql:mysql /data/mysql_data</div><div class="line">mysqld_safe <span class="comment">--user=mysql &</span></div><div class="line">     cat xtrabackup_binlog_info : 如果是再master进行备份的话</div><div class="line">     cat xtrabackup_slave_info  : 如果是在slave进行备份的话</div><div class="line"><span class="operator"><span class="keyword">reset</span> <span class="keyword">slave</span> <span class="keyword">all</span></span></div><div class="line"><span class="keyword">reset</span> <span class="keyword">master</span></div><div class="line"><span class="keyword">set</span> <span class="keyword">global</span> gtid_purged=<span class="string">'$gtid_xtrabackup_$binlog_$slave_info'</span></div><div class="line"><span class="keyword">CHANGE</span> <span class="keyword">MASTER</span> <span class="keyword">TO</span> MASTER_HOST = <span class="string">'$master_ip'</span>  ,MASTER_PORT = <span class="number">3306</span> , MASTER_USER = <span class="string">'repl'</span>,MASTER_PASSWORD = <span class="string">'xx'</span> ,MASTER_AUTO_POSITION = <span class="number">1</span></div><div class="line"><span class="keyword">start</span> <span class="keyword">slave</span>;</div></pre></td></tr></table></figure>
+
+<ul>
+<li>gtid：有一个完整的压缩全备，如何快速还原单个表  </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line">* step1 创建一个部分表目录，用来存放未来需要恢复的表</div><div class="line"><span class="title">mkdir</span> partial_backup/</div><div class="line"></div><div class="line">* step2 拷贝需要恢复的库、表到刚刚新建的目录中</div><div class="line"><span class="title">cp</span> -pr remote_compress_backup/*.qp  partial_backup/ <span class="comment">--xtrabackup恢复需要的基本表</span></div><div class="line"><span class="title">cp</span> -pr remote_compress_backup/xtrabackup_checkpoints  partial_backup/   <span class="comment">--xtrabackup恢复需要的基本表 </span></div><div class="line"><span class="title">cp</span> -pr remote_compress_backup/mysql partial_backup/  <span class="comment">--MySQL系统表</span></div><div class="line"><span class="title">cp</span> -pr remote_compress_backup/sys   partial_backup/  <span class="comment">--MySQL系统表</span></div><div class="line"><span class="title">cp</span> -pr remote_compress_backup/lc    partial_backup/  <span class="comment">--用户需要恢复的表，我这里lc库就是要恢复的单库  </span></div><div class="line"></div><div class="line">* step3 解压缩，并行<span class="number">16</span>个线程  </div><div class="line">/<span class="typedef"><span class="keyword">data</span>/<span class="type">Keithlan</span>/pt_backup/bin/innobackupex   <span class="comment">--decompress --parallel=16 --remove-original partial_backup</span></span></div><div class="line"></div><div class="line">* step4 prepare阶段，应用差异redo日志，让备份恢复到<span class="type">FTWRL</span>的点</div><div class="line">/<span class="typedef"><span class="keyword">data</span>/<span class="type">Keithlan</span>/pt_backup/bin/innobackupex <span class="comment">--defaults-file=/etc/my.cnf --apply-log partial_backup</span></span></div><div class="line"></div><div class="line">* step5 restore阶段，copy_back 将数据拷贝到配置文件所指定的目录  </div><div class="line">/<span class="typedef"><span class="keyword">data</span>/<span class="type">Keithlan</span>/pt_backup/bin/innobackupex <span class="comment">--defaults-file=/etc/my.cnf --copy-back partial_backup</span></span></div><div class="line"></div><div class="line"></div><div class="line">* step6 赋予权限</div><div class="line"><span class="title">chown</span> -<span class="type">R</span> mysql:mysql /<span class="typedef"><span class="keyword">data</span>/mysql_data</span></div><div class="line"></div><div class="line">* step7 启动<span class="type">MySQL</span></div><div class="line"><span class="title">mysqld_safe</span> <span class="comment">--user=mysql &</span></div><div class="line"></div><div class="line"></div><div class="line">* last</div><div class="line">如果需要恢复到指定的点位，还需要change master to $position</div><div class="line">	xtrabackup_binlog_info : 如果是再master进行备份的话</div><div class="line">	xtrabackup_slave_info  : 如果是在slave进行备份的话</div></pre></td></tr></table></figure>
+
+<h2 id="三、已知的限制和不足">三、已知的限制和不足</h2>
+<ul>
+<li>known issues：</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> <span class="number">5.1</span> , <span class="number">5.5</span> 版本有一些已知的还没修复的bug，比如：redo-logging on  压缩表上，有有很多问题。 bug <span class="comment">#16267120  ， 5.6.12 修复</span></div><div class="line"></div><div class="line"><span class="number">2.</span> <span class="number">5.6</span> 版本，对于compress的innodb表，不推荐使用innodb_log_compressed_pages=OFF，这样会导致backup失败由于压缩算法的原因  </div><div class="line"></div><div class="line"><span class="number">3.</span> 如果backup和OPTIMIZE TABLE or ALTER TABLE <span class="keyword">...</span> TABLESPACE 同时发生，那么备份将还原失败    </div><div class="line"></div><div class="line"><span class="number">4.</span> Compact Backups 目前不支持，有bug <span class="comment">#1192834. </span></div><div class="line"></div><div class="line"><span class="number">5.</span> Error <span class="number">24</span>: <span class="string">'Too many open files'</span> 如果表很多，可能发生这样的错误，所以需要调整/etc/security/limits.conf ， 目前最大为<span class="number">1048576</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>limitation</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. xtrabackup_logfile 如果超过<span class="number">4</span>GB，那么--prepare在<span class="number">32</span>位操作系统会失败</div><div class="line"></div><div class="line"><span class="number">2</span>. xtrabackup 将不明白--<span class="keyword">set</span>-variable my.<span class="keyword">cnf</span> 这样古老的语法，所以最好不要这样使用它</div></pre></td></tr></table></figure>
+
+<h2 id="四、频繁问到的问题">四、频繁问到的问题</h2>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-tools/">MySQL tools</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/11/27/xtrabackup_practise/" data-title="pt-tools系列：xtrabackup 最佳实践 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/11/24/gtid_dba_part2/"  title="DBA都应该知道的GTID（下）">
+ <strong>NEXT:</strong><br/> 
+ <span>DBA都应该知道的GTID（下）
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/11/27/xtrabackup_practise/" data-title="pt-tools系列：xtrabackup 最佳实践" data-url="https://Keithlan.github.io/2018/11/27/xtrabackup_practise/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#安装xtrabackup"><span class="toc-number">1.</span> <span class="toc-text">安装xtrabackup</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#安装qpress"><span class="toc-number">2.</span> <span class="toc-text">安装qpress</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#一、生产环境默认参数"><span class="toc-number">3.</span> <span class="toc-text">一、生产环境默认参数</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、各种场景实战"><span class="toc-number">4.</span> <span class="toc-text">二、各种场景实战</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#2-1_gtid和non-gtid"><span class="toc-number">4.1.</span> <span class="toc-text">2.1 gtid和non-gtid</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2_生产环境常用"><span class="toc-number">4.2.</span> <span class="toc-text">2.2 生产环境常用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-1_备份"><span class="toc-number">4.3.</span> <span class="toc-text">2.2.1 备份</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#2-2-2_还原备份"><span class="toc-number">4.4.</span> <span class="toc-text">2.2.2 还原备份</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、已知的限制和不足"><span class="toc-number">5.</span> <span class="toc-text">三、已知的限制和不足</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、频繁问到的问题"><span class="toc-number">6.</span> <span class="toc-text">四、频繁问到的问题</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>36</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">7</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>36</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
