@@ -1,0 +1,431 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维实战系列：MySQL5.7 Group By 问题 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="一、环境
+123456789101112131415161718192021MySQL版本：MySQL5.7.22表结构： CREATE TABLE `crm_report_accounting_income` (  `id` int(10) NOT NULL AUTO_INCREMENT,  `c">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2018/11/29/group_by_error/" title="MySQL运维实战系列：MySQL5.7 Group By 问题" itemprop="url">MySQL运维实战系列：MySQL5.7 Group By 问题</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2018-11-29T02:32:24.000Z" itemprop="datePublished">Nov 29 2018</time>
+    Updated:<time datetime="2018-11-29T02:54:15.000Z" itemprop="dateModified">Nov 29 2018</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、环境"><span class="toc-number">1.</span> <span class="toc-text">一、环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、业务问题"><span class="toc-number">2.</span> <span class="toc-text">二、业务问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、总结"><span class="toc-number">3.</span> <span class="toc-text">三、总结</span></a></li></ol>
+		</div>
+		
+		<h2 id="一、环境">一、环境</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line">MySQL版本：MySQL5.7.22</div><div class="line"></div><div class="line">表结构： </div><div class="line"></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> <span class="string">`crm_report_accounting_income`</span> (</span></div><div class="line">  <span class="string">`id`</span> <span class="built_in">int</span>(<span class="number">10</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> AUTO_INCREMENT,</div><div class="line">  <span class="string">`contract_id`</span> <span class="built_in">int</span>(<span class="number">10</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`contract_no`</span> <span class="built_in">varchar</span>(<span class="number">50</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`date`</span> <span class="built_in">int</span>(<span class="number">8</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`city_id`</span> <span class="built_in">int</span>(<span class="number">11</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0'</span> COMMENT <span class="string">'城市id'</span>,</div><div class="line">  <span class="string">`city_name`</span> <span class="built_in">varchar</span>(<span class="number">50</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`adviser_id`</span> <span class="built_in">int</span>(<span class="number">10</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`adviser_name`</span> <span class="built_in">varchar</span>(<span class="number">50</span>) <span class="keyword">DEFAULT</span> <span class="literal">NULL</span>,</div><div class="line">  <span class="string">`accounting`</span> <span class="built_in">decimal</span>(<span class="number">15</span>,<span class="number">2</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> COMMENT <span class="string">'xx'</span>,</div><div class="line">  <span class="string">`receivable`</span> <span class="built_in">decimal</span>(<span class="number">15</span>,<span class="number">2</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'0.00'</span> COMMENT <span class="string">'当xx'</span>,</div><div class="line">  <span class="string">`contract_type`</span> tinyint(<span class="number">1</span>) <span class="keyword">NOT</span> <span class="literal">NULL</span> <span class="keyword">DEFAULT</span> <span class="string">'1'</span> COMMENT <span class="string">'1:xx合同;2:xx合同;3:xx合同'</span>,</div><div class="line">  <span class="keyword">PRIMARY</span> <span class="keyword">KEY</span> (<span class="string">`id`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`contract_id`</span> (<span class="string">`contract_id`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`date`</span> (<span class="string">`date`</span>),</div><div class="line">  <span class="keyword">KEY</span> <span class="string">`city_id`</span> (<span class="string">`city_id`</span>)</div><div class="line">) <span class="keyword">ENGINE</span>=<span class="keyword">InnoDB</span> AUTO_INCREMENT=<span class="number">734525</span> <span class="keyword">DEFAULT</span> <span class="keyword">CHARSET</span>=utf8</div></pre></td></tr></table></figure>
+
+<h2 id="二、业务问题">二、业务问题</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="bullet">*  </span>基本信息，由于合同号太多，所以这边就以一个有重复数据的合同id为例</div><div class="line"></div><div class="line"><span class="header">dba:aif_db&gt; select contract_id,contract_no,receivable,date from crm_report_accounting_income_2015_online where contract_id = 27310;</span></div><div class="line">+-------------+----------------------------+------------+----------+</div><div class="line"><span class="header">| contract_id | contract_no                | receivable | date     |</span></div><div class="line">+-------------+----------------------------+------------+----------+</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |    2941.18 | 20180628 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |    5882.36 | 20180629 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |    8823.54 | 20180630 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   11764.72 | 20180701 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   14705.90 | 20180702 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   17647.08 | 20180703 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   20588.26 | 20180704 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   23529.44 | 20180705 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   26470.62 | 20180706 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   29411.80 | 20180707 |</div><div class="line">|       27310 | A00-SHEN-05-2018-06-004613 |   32352.98 | 20180708 |</div><div class="line"><span class="header">|       27310 | A00-SHEN-05-2018-06-004613 |   35294.16 | 20180709 |</span></div><div class="line">+-------------+----------------------------+------------+----------+</div><div class="line">12 rows in set (0.00 sec)</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line"><span class="bullet">* </span>查询每个最新合同的信息，由于合同号太多，所以这边就以一个有重复数据的合同id为例</div><div class="line"></div><div class="line">select contract<span class="emphasis">_no, contract_</span>id, city<span class="emphasis">_name, receivable,date from</span></div><div class="line">(select * from crm_report<span class="emphasis">_accounting_</span>income<span class="emphasis">_2015_</span>online  where contract<span class="emphasis">_id = 27310 ORDER BY `date` desc) p GROUP BY contract_</span>id </div><div class="line"></div><div class="line"><span class="code">+----------------------------+</span>-------------<span class="code">+-----------+</span>------------<span class="code">+----------+</span></div><div class="line"><span class="header">| contract_no                | contract_id | city_name | receivable | date     |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line"><span class="header">| A00-xxxx-05-2018-06-xxxxxx |       xxxxx | 沈阳      |    2941.18 | 20180628 |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>以上看到的写法，是通过子查询写的，5.6查询没问题，5.7就变成了以上的结果，很明显得到的答案不是业务想要的   </p>
+<p>究其原因还是因为，MySQL5.7 sql mode更加严格了，如果设置sql_mode = ONLY_FULL_GROUP_BY, 那么以上SQL就会报错     </p>
+<p>因为sql_mode = ONLY_FULL_GROUP_BY 要求符合SQL 92标准，即：select列表里只能出现分组列（即group by后面的列）和聚合函数（max，min等等）    </p>
+<p>然而为了兼容5.6，我们设置sql_mode=’’, 所以我们的Group by 在子查询中就跟5.6就不一致了     </p>
+<p>当然，我们应该避免不标准的SQL写法，这样的问题，我们的解法就是调整业务的SQL语句，改写成SQL 92标准的语法   </p>
+<p>那么以上SQL语句应该调整为：    </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">select </div><div class="line"><span class="code">	contract_no, </span></div><div class="line"><span class="code">	e.contract_id,</span></div><div class="line"><span class="code">	city_name, </span></div><div class="line"><span class="code">	receivable,</span></div><div class="line"><span class="code">	date</span></div><div class="line">from</div><div class="line"><span class="code">	crm_report_accounting_income_2015_online e,</span></div><div class="line"><span class="code">	( select contract_id , max(date) max_date from  crm_report_accounting_income_2015_online where contract_id = 27310 group by contract_id  ) t	</span></div><div class="line">where</div><div class="line"><span class="code">	e.contract_id = t.contract_id</span></div><div class="line"><span class="code">	and e.date = t.max_date</span></div><div class="line"><span class="header">	</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line"><span class="header">| contract_no                | contract_id | city_name | receivable | date     |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line"><span class="header">| A00-xxxx-05-2018-06-004613 |       27310 | xxxx      |   35294.16 | 20180709 |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>以上都还是需要业务代码修改，这样如果没有提前发现问题，岂不是会导致业务出错了？有没有更好的办法？  </p>
+<p>MySQL方面其实还是可以配置相关的参数的：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">dba:aif<span class="emphasis">_db&gt; set optimizer_</span>switch=<span class="emphasis">'derived_merge=off'</span>;</div><div class="line">Query OK, 0 rows affected (0.00 sec)</div><div class="line"></div><div class="line">dbadmin:aifangcrm<span class="emphasis">_db&gt; select contract_</span>no, contract<span class="emphasis">_id, city_</span>name, receivable,date from</div><div class="line"><span class="code">    -&gt; (select * from crm_report_accounting_income_2015_online  where contract_id = 27310 ORDER BY `date` desc) p GROUP BY contract_id</span></div><div class="line"><span class="header">    -&gt; ;</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line"><span class="header">| contract_no                | contract_id | city_name | receivable | date     |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line"><span class="header">| A00-xxxx-05-2018-06-004613 |       27310 | xxxx      |   35294.16 | 20180709 |</span></div><div class="line">+----------------------------+-------------+-----------+------------+----------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<h2 id="三、总结">三、总结</h2>
+<ul>
+<li><p>SQL语法应该要按照标准的SQL92来写  </p>
+</li>
+<li><p>数据库升级到5.7之后，应该提前监控处group by + 子查询的情况，提前告知业务修改业务代码  </p>
+</li>
+<li><p>设置参数也能解决问题，但是这个参数毕竟是5.7新增的，如果关闭后，以后会不会导致其他的bug就不知晓了  </p>
+</li>
+</ul>
+<p>最后，还是希望能够修改query 语句到标准语法，如果出现业务问题，可以让业务修改参数快速解决问题，然后再修改语句比较与时俱进  </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-tools/">MySQL tools</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2018/11/29/group_by_error/" data-title="MySQL运维实战系列：MySQL5.7 Group By 问题 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2018/11/27/xtrabackup_practise/"  title="pt-tools系列：xtrabackup 最佳实践">
+ <strong>NEXT:</strong><br/> 
+ <span>pt-tools系列：xtrabackup 最佳实践
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2018/11/29/group_by_error/" data-title="MySQL运维实战系列：MySQL5.7 Group By 问题" data-url="https://Keithlan.github.io/2018/11/29/group_by_error/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、环境"><span class="toc-number">1.</span> <span class="toc-text">一、环境</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、业务问题"><span class="toc-number">2.</span> <span class="toc-text">二、业务问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、总结"><span class="toc-number">3.</span> <span class="toc-text">三、总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>37</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>36</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>3</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
