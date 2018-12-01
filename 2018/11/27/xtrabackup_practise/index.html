@@ -84,7 +84,7 @@
     </p>
   <p class="article-time">
     <time datetime="2018-11-27T08:32:24.000Z" itemprop="datePublished">Nov 27 2018</time>
-    Updated:<time datetime="2018-12-01T03:23:59.000Z" itemprop="dateModified">Dec 1 2018</time>
+    Updated:<time datetime="2018-12-01T06:32:54.000Z" itemprop="dateModified">Dec 1 2018</time>
     
   </p>
 </header>
@@ -209,7 +209,7 @@
 <ul>
 <li>known issues：</li>
 </ul>
-<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> <span class="number">5.1</span> , <span class="number">5.5</span> 版本有一些已知的还没修复的bug，比如：redo-logging on  压缩表上，有有很多问题。 bug <span class="comment">#16267120  ， 5.6.12 修复</span></div><div class="line"></div><div class="line"><span class="number">2.</span> <span class="number">5.6</span> 版本，对于compress的innodb表，不推荐使用innodb_log_compressed_pages=OFF，这样会导致backup失败由于压缩算法的原因  </div><div class="line"></div><div class="line"><span class="number">3.</span> 如果backup和OPTIMIZE TABLE or ALTER TABLE <span class="keyword">...</span> TABLESPACE 同时发生，那么备份将还原失败    </div><div class="line"></div><div class="line"><span class="number">4.</span> Compact Backups 目前不支持，有bug <span class="comment">#1192834. </span></div><div class="line"></div><div class="line"><span class="number">5.</span> Error <span class="number">24</span>: <span class="string">'Too many open files'</span> 如果表很多，可能发生这样的错误，所以需要调整/etc/security/limits.conf ， 目前最大为<span class="number">1048576</span></div></pre></td></tr></table></figure>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="number">1.</span> <span class="number">5.1</span> , <span class="number">5.5</span> 版本有一些已知的还没修复的bug，比如：redo-logging on  压缩表上，有有很多问题。 bug <span class="comment">#16267120  ， 5.6.12 修复</span></div><div class="line"></div><div class="line"><span class="number">2.</span> <span class="number">5.6</span> 版本，对于compress的innodb表，不推荐使用innodb_log_compressed_pages=OFF，这样会导致backup失败由于压缩算法的原因  </div><div class="line"></div><div class="line"><span class="number">3.</span> 如果backup和OPTIMIZE TABLE or ALTER TABLE <span class="keyword">...</span> TABLESPACE 同时发生，那么备份将还原失败    </div><div class="line"></div><div class="line"><span class="number">4.</span> Compact Backups 目前不支持，有bug <span class="comment">#1192834. </span></div><div class="line"></div><div class="line"><span class="number">5.</span> Error <span class="number">24</span>: <span class="string">'Too many open files'</span> 如果表很多，可能发生这样的错误，所以需要调整/etc/security/limits.conf ， 目前最大为<span class="number">1048576</span>  </div><div class="line"></div><div class="line"><span class="number">6.</span> --throttle 参数建议不要使用</div><div class="line"></div><div class="line">https://zhuanlan.zhihu.com/p/<span class="number">43913304</span></div></pre></td></tr></table></figure>
 
 <ul>
 <li>limitation</li>
