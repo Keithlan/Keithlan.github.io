@@ -68,6 +68,352 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2017/08/29/innodb_locks_long_trx/" title="MySQL锁系列（九）之 long transaction" itemprop="url">
+      
+        MySQL锁系列（九）之 long transaction
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、背景
+最近凌晨05:00总是接到来自SQL防火墙的告警：
+
+
+
+group_name
+id
+user
+host
+db
+command
+time
+info
+state
+
+
+
+
+BASE
+1059712468
+xx
+xx.xx.xx.xx
+aea
+Query
+34
+UPDATE </p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-08-29T07:32:24.000Z" itemprop="datePublished">Aug 29 2017</time>
+      
+          <a href="/2017/08/29/innodb_locks_long_trx/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/08/17/innodb_locks_deadlock/" title="MySQL锁系列（八）之 死锁" itemprop="url">
+      
+        MySQL锁系列（八）之 死锁
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >能学到什么
+
+什么是死锁
+死锁有什么危害
+典型的死锁案例剖析
+如何避免死锁
+
+一、什么是死锁
+
+1.必须满足的条件
+
+121. 必须有两个或者两个以上的事务2. 不同事务之间都持有对方需要的锁资源。 A事务需要B的资源，B事务需要A的资源，这就是典型的AB-BA死锁
+
+
+2.死锁</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-08-16T22:32:24.000Z" itemprop="datePublished">Aug 17 2017</time>
+      
+          <a href="/2017/08/17/innodb_locks_deadlock/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/08/07/mysql_system_variable/" title="MySQL运维实战（一）之 系统变量潜规则" itemprop="url">
+      
+        MySQL运维实战（一）之 系统变量潜规则
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >Agenda
+
+踩坑经历
+测试用例
+结论
+实战用途
+
+一、踩坑经历
+
+设置了slow log 的时间，但是抓不到正确的sql  
+设置了read_only ，为啥还有写入进来
+设置了sql_safe_update , 为啥还能全表删除  
+测试方法的不对，导致设置了read_on</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-08-07T10:03:24.000Z" itemprop="datePublished">Aug 7 2017</time>
+      
+          <a href="/2017/08/07/mysql_system_variable/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/30/sql_safe_updates_practise/" title="MySQL运维之神奇的参数(终结篇)" itemprop="url">
+      
+        MySQL运维之神奇的参数(终结篇)
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、主要内容
+
+
+生产前的测试方案
+
+
+
+生产环境如何平滑实施
+
+
+
+生产坏境中遇到哪些困难  
+
+
+
+我们的解决方案    
+
+
+
+价值与意义  
+
+
+
+二、背景
+这个项目的起源，来源于生产环境中的N次误删数据，所以才有他的姊妹篇文章，一个神奇的参数前传  
+三、生产前的测试方</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-30T12:00:00.000Z" itemprop="datePublished">Jun 30 2017</time>
+      
+          <a href="/2017/06/30/sql_safe_updates_practise/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/21/innodb_locks_algorithms/" title="MySQL锁系列（七）之 锁算法详解" itemprop="url">
+      
+        MySQL锁系列（七）之 锁算法详解
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >能学到什么
+
+隔离级别和锁的关系    
+重点讲解在RR隔离级别下的加锁算法逻辑   
+重点罗列了比较典型的几种加锁逻辑案例  
+对insert的加锁逻辑进行了深度剖析  
+实战中剖析加锁的全过程  
+InnoDB为什么要这样加锁  
+
+隔离级别和算法
+
+repeatable-r</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-21T07:32:24.000Z" itemprop="datePublished">Jun 21 2017</time>
+      
+          <a href="/2017/06/21/innodb_locks_algorithms/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/16/innodb_locks_MVCC/" title="MySQL锁系列（六）之 MVCC" itemprop="url">
+      
+        MySQL锁系列（六）之 MVCC
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >agenda
+
+我们能学到什么    
+
+
+什么是MVCC
+
+MVCC能解决什么问题
+
+MVCC的实现原理  
+
+
+一、什么是MVCC
+
+名词解释
+
+12英文名：Multi Version Concurrency Control中文名：多版本一致性控制
+
+
+
+
+应用场景
+
+
+大家</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-16T07:32:24.000Z" itemprop="datePublished">Jun 16 2017</time>
+      
+          <a href="/2017/06/16/innodb_locks_MVCC/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/14/innodb_locks_mvcc_isolation/" title="MySQL锁系列（五）之 隔离级别" itemprop="url">
+      
+        MySQL锁系列（五）之 隔离级别
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、隔离级别
+
+事务的隔离级别有4种: SQL-1992 ，但是我只想介绍其中两种，因为其他的两个根本就用不上  
+
+1.1 什么叫一致性锁定读 和 一致性非锁定读
+
+一致性锁定读
+
+1231. 读数据的时候，会去加S-lock、x-lock2. eg：select ... fo</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-14T07:32:24.000Z" itemprop="datePublished">Jun 14 2017</time>
+      
+          <a href="/2017/06/14/innodb_locks_mvcc_isolation/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/13/innodb_locks_undo/" title="MySQL锁系列（四）之 undo log" itemprop="url">
+      
+        MySQL锁系列（四）之 undo log
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >什么是undo
+121) redo 记录的是对页的重做日志，undo 记录的是对事务的逆向操作  2) undo 会产生redo，undo的产生也会伴随这redo的产生，因为重启恢复的时候，可以通过redo还原这些undo的操作,以达到回滚的目的
+
+undo有什么用
+121) 用</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-13T07:32:24.000Z" itemprop="datePublished">Jun 13 2017</time>
+      
+          <a href="/2017/06/13/innodb_locks_undo/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/12/innodb_locks_redo/" title="MySQL锁系列（三）之 redo log" itemprop="url">
+      
+        MySQL锁系列（三）之 redo log
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >WHY
+
+1）锁和事务是分不开的，事务和redo又是傻傻分不清楚的   
+
+2）事务最重要的是什么？ACID 又是如何实现的？   
+
+
+1234567891011* A 原子性	通过redo实现* C 一致性	通过undo实现  	* I 隔离性	通过lock实现* D 持久性</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-12T07:32:24.000Z" itemprop="datePublished">Jun 12 2017</time>
+      
+          <a href="/2017/06/12/innodb_locks_redo/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2017/06/09/util100/" title="util 100% 怪异问题分析" itemprop="url">
       
         util 100% 怪异问题分析
@@ -95,284 +441,9 @@
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/06/05/innodb_locks_show_engine/" title="MySQL锁系列（二）之 锁解读" itemprop="url">
-      
-        MySQL锁系列（二）之 锁解读
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-
-锁系列第一期的时候介绍的锁，我们要如何去解读呢？  
-在哪里能够看到这些锁？  
-
-锁信息解读
-
-工欲善其事必先利其器show engine innodb status 关于锁的信息是最详细的  
-
-案例一（有索引的情况）
-
-前期准备
-
-12345678910111213</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-06-05T09:32:24.000Z" itemprop="datePublished">Jun 5 2017</time>
-      
-          <a href="/2017/06/05/innodb_locks_show_engine/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/06/05/innodb_locks_1/" title="MySQL锁系列（一）之锁的种类和概念" itemprop="url">
-      
-        MySQL锁系列（一）之锁的种类和概念
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-
-锁是MySQL里面最难理解的知识，但是又无处不在。一开始接触锁的时候，感觉被各种锁类型和名词弄得晕头转向，就别说其他了。本文是通过DBA的视角（非InnoDB内核开发）来分析和窥探锁的奥秘，并解决实际工作当中遇到的问题  
-锁的种类&amp;amp;概念
-
-想要啃掉这块最难的大骨</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-06-05T07:32:24.000Z" itemprop="datePublished">Jun 5 2017</time>
-      
-          <a href="/2017/06/05/innodb_locks_1/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/04/06/omega_connection/" title="omega监控系列之connection" itemprop="url">
-      
-        omega监控系列之connection
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-
-什么是omega
-
-12345简单说就是一个平台， 运维和运营为一体的智能DB管理平台所有DB相关的事情都能通过此平台 完成-&amp;gt;自助完成-&amp;gt;智能完成目前知道这个就够了，其他的以后慢慢介绍
-
-
-
-
-为什么要介绍omega系统里面的connection
-
-1234</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-04-06T02:32:24.000Z" itemprop="datePublished">Apr 6 2017</time>
-      
-          <a href="/2017/04/06/omega_connection/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/03/04/wrong_sql_plan/" title="MySQL5.6：一个神奇的执行计划" itemprop="url">
-      
-        MySQL5.6：一个神奇的执行计划
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >今天遇到一个非常神奇的sql执行计划时好时坏，我们一起来领略一下吧
-废话不多说，直接进入实战
-环境
-12345678910111213141516171819202122232425262728* version：MySQL5.6.27 社区版* 表结构CREATE TABLE </p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-03-04T02:32:24.000Z" itemprop="datePublished">Mar 4 2017</time>
-      
-          <a href="/2017/03/04/wrong_sql_plan/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/03/03/auto_increment_lock/" title="自增锁引发的悲剧" itemprop="url">
-      
-        自增锁引发的悲剧
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-
-先描述下故障吧
-
-
-step0: 环境介绍
-
-123456789101112131415161718191. MySQL5.6.272. InnoDB3. Centos基本介绍完毕，应该跟大部分公司的实例一样CREATE TABLE `new_table` (  `id`</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-03-03T02:32:24.000Z" itemprop="datePublished">Mar 3 2017</time>
-      
-          <a href="/2017/03/03/auto_increment_lock/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/02/15/gtid_practice/" title="MySQL5.7 GTID 运维实战" itemprop="url">
-      
-        MySQL5.7 GTID 运维实战
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >GTID 和 START SLAVE
-
-START SLAVE 语法
-
-1234567891011121314151617181920212223242526START SLAVE [thread_types] [until_option] [connection_options</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-02-15T09:54:24.000Z" itemprop="datePublished">Feb 15 2017</time>
-      
-          <a href="/2017/02/15/gtid_practice/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/02/07/umount/" title="device is busy" itemprop="url">
-      
-        device is busy
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >环境
-
-CentOS release 6.6 (Final)Linux tjtx135-2-90.58os.org 2.6.32-504.23.4.el6.x86_64 #1 SMP Tue Jun 9 20:57:37 UTC 2015 x86_64 x86_64 x86_64</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-02-07T02:04:24.000Z" itemprop="datePublished">Feb 7 2017</time>
-      
-          <a href="/2017/02/07/umount/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/12/20/sql_safe_updates/" title="MySQL运维之神奇的参数" itemprop="url">
-      
-        MySQL运维之神奇的参数
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >sql_safe_updateshttp://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_safe_updates  
-
-背景(why)
-主要是针对大表的误操作。
-如果只是更改了几</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-12-20T07:32:24.000Z" itemprop="datePublished">Dec 20 2016</time>
-      
-          <a href="/2016/12/20/sql_safe_updates/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/12/16/sysbench_mysql/" title="使用sysbench对MySQL进行测试" itemprop="url">
-      
-        使用sysbench对MySQL进行测试
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >为什么要测试，测什么东西？
-测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  
-
-测试MySQL的极限IO
-
-对比不同版本MySQL，不同参数, 不同硬件，不同系统对MySQL的性能影响
-
-
-为什么选择sysbench
-
-因为MySQL官方的测试就是用sysbenc</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-12-16T03:32:24.000Z" itemprop="datePublished">Dec 16 2016</time>
-      
-          <a href="/2016/12/16/sysbench_mysql/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
-    <a class="extend prev" rel="prev" href="/page/3/">&laquo; Prev</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><a class="page-number" href="/page/6/">6</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" href="/page/5/">Next &raquo;</a>
+    <a class="extend prev" rel="prev" href="/page/3/">&laquo; Prev</a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><a class="page-number" href="/page/3/">3</a><span class="page-number current">4</span><a class="page-number" href="/page/5/">5</a><a class="page-number" href="/page/6/">6</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/5/">Next &raquo;</a>
   </nav>
 
 </div>
@@ -411,7 +482,7 @@ CentOS release 6.6 (Final)Linux tjtx135-2-90.58os.org 2.6.32-504.23.4.el6.x86_64
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>38</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
@@ -424,7 +495,7 @@ CentOS release 6.6 (Final)Linux tjtx135-2-90.58os.org 2.6.32-504.23.4.el6.x86_64
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -449,7 +520,7 @@ CentOS release 6.6 (Final)Linux tjtx135-2-90.58os.org 2.6.32-504.23.4.el6.x86_64
 		
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>36</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
 		
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
 		

@@ -1,0 +1,479 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>组复制官方翻译八、Frequently Asked Questions | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/8.0/en/group-replication-frequently-asked-questions.html  
+
+一、MGR的成员数量最大是多少
+最大9个  
+二、group中的成员是如何连接的
+他们直接是通过peer-to-p">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/01/15/18_7_group_replication/" title="组复制官方翻译八、Frequently Asked Questions" itemprop="url">组复制官方翻译八、Frequently Asked Questions</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-01-15T02:39:24.000Z" itemprop="datePublished">Jan 15 2019</time>
+    Updated:<time datetime="2019-01-15T06:45:12.000Z" itemprop="dateModified">Jan 15 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、MGR的成员数量最大是多少"><span class="toc-number">1.</span> <span class="toc-text">一、MGR的成员数量最大是多少</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、group中的成员是如何连接的"><span class="toc-number">2.</span> <span class="toc-text">二、group中的成员是如何连接的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、group_replication_bootstrap_group主要用作什么用途"><span class="toc-number">3.</span> <span class="toc-text">三、group_replication_bootstrap_group主要用作什么用途</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、为了恢复，如何设置credentials"><span class="toc-number">4.</span> <span class="toc-text">四、为了恢复，如何设置credentials</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、可以使用MGR来scale-out我的写压力么"><span class="toc-number">5.</span> <span class="toc-text">五、可以使用MGR来scale-out我的写压力么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗"><span class="toc-number">6.</span> <span class="toc-text">六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、可以在广域网部署MGR吗"><span class="toc-number">7.</span> <span class="toc-text">七、可以在广域网部署MGR吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、如果网络临时有问题，组成员会自动重新加入group吗"><span class="toc-number">8.</span> <span class="toc-text">八、如果网络临时有问题，组成员会自动重新加入group吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、什么时候成员会被排除（excluded）在外"><span class="toc-number">9.</span> <span class="toc-text">九、什么时候成员会被排除（excluded）在外</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、如果一个节点严重延迟，会产生什么问题"><span class="toc-number">10.</span> <span class="toc-text">十、如果一个节点严重延迟，会产生什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member"><span class="toc-number">11.</span> <span class="toc-text">十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、是否可以用MGR来sharding"><span class="toc-number">12.</span> <span class="toc-text">十二、是否可以用MGR来sharding</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、是否可以在selinux和iptables环境下使用MGR"><span class="toc-number">13.</span> <span class="toc-text">十三、是否可以在selinux和iptables环境下使用MGR</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十四、作为组成员，如何恢复relay-log_in_replication_channel"><span class="toc-number">14.</span> <span class="toc-text">十四、作为组成员，如何恢复relay-log in replication channel</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十五、为什么MGR使用2个绑定地址"><span class="toc-number">15.</span> <span class="toc-text">十五、为什么MGR使用2个绑定地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十六、如何找到primary"><span class="toc-number">16.</span> <span class="toc-text">十六、如何找到primary</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/group-replication-frequently-asked-questions.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/8.0/en/group-replication-frequently-asked-questions.html</a>  </p>
+</blockquote>
+<h2 id="一、MGR的成员数量最大是多少">一、MGR的成员数量最大是多少</h2>
+<p>最大9个  </p>
+<h2 id="二、group中的成员是如何连接的">二、group中的成员是如何连接的</h2>
+<p>他们直接是通过peer-to-peer TCP连接，主要用作内部交流和信息传递<br>通过group_replication_local_address 可以设置相关的地址  </p>
+<h2 id="三、group_replication_bootstrap_group主要用作什么用途">三、group_replication_bootstrap_group主要用作什么用途</h2>
+<p>bootstrap flag，主要用作创建一个group，然后扮演一个初始化server的角色<br>第二个成员加入到组，需要问bootstrap server来动态调整配置，以便自己能够顺利加入该组  </p>
+<p>一个成员bootstrap一个组的场景大概2个：  </p>
+<ol>
+<li>第一次初始化创建group  </li>
+<li>shutdown，然后重启整个group  </li>
+</ol>
+<h2 id="四、为了恢复，如何设置credentials">四、为了恢复，如何设置credentials</h2>
+<p>提前配置一个GR的恢复通道credentials，使用CHANGE MASTER TO 语句  </p>
+<h2 id="五、可以使用MGR来scale-out我的写压力么">五、可以使用MGR来scale-out我的写压力么</h2>
+<p>a）并不是直接的扩展方式，因为MGR的每一个成员都有完整的数据copy  </p>
+<p>b）但是，其他server并不是做完全一样的写动作，因为MGR通过ROW模式复制，其他server只需要apply row即可，并不是re-executed事务了，因此会快且压力小很多  </p>
+<p>c）更进一步讲，row-based应用都是经过压缩过的，可以减少很多IO动作，相比master上的执行压力会小很多的  </p>
+<p>d）总结，你可以scale-out写，在没有写冲突事务的时候在多台服务器上执行事务是可以做到scale-out的。  </p>
+<h2 id="六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗">六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗</h2>
+<p>是会有一些额外的压力产生，因为MGR需要不断的沟通协作来保证同步的目的，但是很难计算出高出多少资源  </p>
+<h2 id="七、可以在广域网部署MGR吗">七、可以在广域网部署MGR吗</h2>
+<p>可以，但是要保证他们的可靠和合适的网络性能<br>低延迟、高吞吐是MGR的基本配备条件  </p>
+<p>如果网络带宽是问题，可以使用 Section 18.10.7.2, “Message Compression” 方法来降低带宽的所需<br>但是如果网络丢包，导致的数据重传会严重影响性能  </p>
+<h2 id="八、如果网络临时有问题，组成员会自动重新加入group吗">八、如果网络临时有问题，组成员会自动重新加入group吗</h2>
+<p>这取决于是什么网络问题<br>如果网络问题是短暂的，瞬间的，那么MGR的错误检测机制根本还没来得及探测到此问题，那么该成员是不会被移除出组的<br>如果是长时间的问题，那么错误检测机制最终会认为它除了问题，会将此server移除出组  </p>
+<p>一旦移除出组，你就需要让他重新加入一次，换句话说，你需要手工来处理，或用脚本来自动处理  </p>
+<h2 id="九、什么时候成员会被排除（excluded）在外">九、什么时候成员会被排除（excluded）在外</h2>
+<p>如果一个server变成了孤岛，其他成员会从组配置中将其移除出组<br>一般这种情况发生在 server挂了，或网络disconnect了  </p>
+<p>在指定的timeout后，这个错误被检测出来，然后一个新的没有该成员的配置会重新生成  </p>
+<h2 id="十、如果一个节点严重延迟，会产生什么问题">十、如果一个节点严重延迟，会产生什么问题</h2>
+<p>没有一个很好的策略来自动判断什么时候去驱逐一个成员<br>你需要找到为什么它会延迟，并解决它，或移除它<br>否则，当一个server慢到触发流控，然后整个group都会变的慢下来<br>流控可以根据你喜好来配置    </p>
+<h2 id="十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member">十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member</h2>
+<p>没有。<br>每个member都是一样的，你无法控制和设置  </p>
+<h2 id="十二、是否可以用MGR来sharding">十二、是否可以用MGR来sharding</h2>
+<p>无法对MRG成员进行sharding，但是你可以设计，以MGR作为sharding的一个分片，即： MGR1 是一个分片，MGR2是另外一个分片  </p>
+<h2 id="十三、是否可以在selinux和iptables环境下使用MGR">十三、是否可以在selinux和iptables环境下使用MGR</h2>
+<p>可以，需要额外配置和过滤  </p>
+<h2 id="十四、作为组成员，如何恢复relay-log_in_replication_channel">十四、作为组成员，如何恢复relay-log in replication channel</h2>
+<p> STOP GROUP_REPLICATION, START GROUP_REPLICATION,这样MGR会再次创建一个group_replication_applier 通道  </p>
+<h2 id="十五、为什么MGR使用2个绑定地址">十五、为什么MGR使用2个绑定地址</h2>
+<p>MGR使用两个绑定地址，主要是为了区分 SQL地址（业务应用ip来连接server） 和 group_replication_local_address （成员内部通信）<br>主要是为了隔离和安全  </p>
+<h2 id="十六、如何找到primary">十六、如何找到primary</h2>
+<p>如果是single-primary，你可以使用Section 18.4.1.3, “Finding the Primary”的方法，轻松找到primary  </p>
+<ul>
+<li>方法一、</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="header">sql&gt; SELECT MEMBER_HOST, MEMBER_ROLE FROM performance_schema.replication_group_members;</span></div><div class="line">+-------------------------+-------------+</div><div class="line"><span class="header">| MEMBER_HOST             | MEMBER_ROLE |</span></div><div class="line">+-------------------------+-------------+</div><div class="line">| remote1.example.com     | PRIMARY     |</div><div class="line">| remote2.example.com     | SECONDARY   |</div><div class="line"><span class="header">| remote3.example.com     | SECONDARY   |</span></div><div class="line">+-------------------------+-------------+</div></pre></td></tr></table></figure>
+
+<ul>
+<li>方法二、</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">mysql&gt;</span> <span class="constant">SHOW</span> <span class="constant">STATUS</span> <span class="constant">LIKE</span> <span class="string">'group_replication_primary_member'</span></span></div></pre></td></tr></table></figure>
+
+
+
+
+
+
+
+
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/01/15/18_7_group_replication/" data-title="组复制官方翻译八、Frequently Asked Questions | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2019/01/15/18_8_group_replication/" title="组复制官方翻译九、Group Replication Technical Details">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  组复制官方翻译九、Group Replication Technical Details</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2019/01/15/18_6_group_replication/"  title="组复制官方翻译七、Requirements and Limitations">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译七、Requirements and Limitations
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/01/15/18_7_group_replication/" data-title="组复制官方翻译八、Frequently Asked Questions" data-url="https://Keithlan.github.io/2019/01/15/18_7_group_replication/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、MGR的成员数量最大是多少"><span class="toc-number">1.</span> <span class="toc-text">一、MGR的成员数量最大是多少</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、group中的成员是如何连接的"><span class="toc-number">2.</span> <span class="toc-text">二、group中的成员是如何连接的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#三、group_replication_bootstrap_group主要用作什么用途"><span class="toc-number">3.</span> <span class="toc-text">三、group_replication_bootstrap_group主要用作什么用途</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#四、为了恢复，如何设置credentials"><span class="toc-number">4.</span> <span class="toc-text">四、为了恢复，如何设置credentials</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#五、可以使用MGR来scale-out我的写压力么"><span class="toc-number">5.</span> <span class="toc-text">五、可以使用MGR来scale-out我的写压力么</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗"><span class="toc-number">6.</span> <span class="toc-text">六、相比普通复制，在相同的负载下，MGR需要更多的网络带宽和cpu计算资源吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#七、可以在广域网部署MGR吗"><span class="toc-number">7.</span> <span class="toc-text">七、可以在广域网部署MGR吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#八、如果网络临时有问题，组成员会自动重新加入group吗"><span class="toc-number">8.</span> <span class="toc-text">八、如果网络临时有问题，组成员会自动重新加入group吗</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#九、什么时候成员会被排除（excluded）在外"><span class="toc-number">9.</span> <span class="toc-text">九、什么时候成员会被排除（excluded）在外</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十、如果一个节点严重延迟，会产生什么问题"><span class="toc-number">10.</span> <span class="toc-text">十、如果一个节点严重延迟，会产生什么问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member"><span class="toc-number">11.</span> <span class="toc-text">十一、有没有一个特殊的成员来负责触发重新更新配置来踢出某个member</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十二、是否可以用MGR来sharding"><span class="toc-number">12.</span> <span class="toc-text">十二、是否可以用MGR来sharding</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十三、是否可以在selinux和iptables环境下使用MGR"><span class="toc-number">13.</span> <span class="toc-text">十三、是否可以在selinux和iptables环境下使用MGR</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十四、作为组成员，如何恢复relay-log_in_replication_channel"><span class="toc-number">14.</span> <span class="toc-text">十四、作为组成员，如何恢复relay-log in replication channel</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十五、为什么MGR使用2个绑定地址"><span class="toc-number">15.</span> <span class="toc-text">十五、为什么MGR使用2个绑定地址</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#十六、如何找到primary"><span class="toc-number">16.</span> <span class="toc-text">十六、如何找到primary</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

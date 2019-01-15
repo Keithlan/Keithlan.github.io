@@ -68,6 +68,253 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2018/11/29/group_by_error/" title="MySQL运维实战系列：MySQL5.7 Group By 问题" itemprop="url">
+      
+        MySQL运维实战系列：MySQL5.7 Group By 问题
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、环境
+123456789101112131415161718192021MySQL版本：MySQL5.7.22表结构： CREATE TABLE `crm_report_accounting_income` (  `id` int(10) NOT NULL AUTO_INCR</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-29T02:32:24.000Z" itemprop="datePublished">Nov 29 2018</time>
+      
+          <a href="/2018/11/29/group_by_error/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/27/xtrabackup_practise/" title="pt-tools系列：xtrabackup 最佳实践" itemprop="url">
+      
+        pt-tools系列：xtrabackup 最佳实践
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >安装xtrabackup
+
+下载2.4版本即可
+
+运行报错
+
+
+1234567891011121314151617181920212223242526272829303132333435363738/data/Keithlan/pt_backup/bin/innobackupex</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-27T08:32:24.000Z" itemprop="datePublished">Nov 27 2018</time>
+      
+          <a href="/2018/11/27/xtrabackup_practise/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/24/gtid_dba_part2/" title="DBA都应该知道的GTID（下）" itemprop="url">
+      
+        DBA都应该知道的GTID（下）
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" ></p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-24T01:03:24.000Z" itemprop="datePublished">Nov 24 2018</time>
+      
+          <a href="/2018/11/24/gtid_dba_part2/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/24/gtid_dba_part1/" title="DBA都应该知道的GTID（上）" itemprop="url">
+      
+        DBA都应该知道的GTID（上）
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" ></p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-24T00:03:24.000Z" itemprop="datePublished">Nov 24 2018</time>
+      
+          <a href="/2018/11/24/gtid_dba_part1/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/23/mysql_online_ddl_inside/" title="MySQL Online DDL 方案剖析" itemprop="url">
+      
+        MySQL Online DDL 方案剖析
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、常见的几种方案
+
+1.1 MySQL源生的IN-PLACE ONLINE DDL
+
+12345.5，5.6 开始支持5.7 支持的更好，有更多ddl操作支持online8.0 支持快速加列功能
+
+
+1.2 第三方工具
+
+121. pt-online-schema-change</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-22T21:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+      
+          <a href="/2018/11/23/mysql_online_ddl_inside/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/23/pt-online-schema-change_practise/" title="pt-online-schema-change 最佳实践" itemprop="url">
+      
+        pt-online-schema-change 最佳实践
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >pt的详细步骤
+12345678910111213Step 1: Create the new table.Step 2: Alter the new, empty table.  		This should be very quick, or die if the user s</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-22T18:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+      
+          <a href="/2018/11/23/pt-online-schema-change_practise/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/23/pt_kill_practise/" title="pt-tools系统：pt-kill 实战" itemprop="url">
+      
+        pt-tools系统：pt-kill 实战
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >列出几种常用场景，并进行分析实战测试  
+
+前提
+1234* pt-kill必须获得的权限  1. PROCESS ,  SUPER  2. 否则，你只能看到打印出kill id，但是实际上并没有被kill掉
+
+特殊、 打印出执行时间超过3秒的connection，仅仅打印，不k</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-22T17:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+      
+          <a href="/2018/11/23/pt_kill_practise/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/11/23/pt_kill_doc/" title="pt-tools系列：pt-kill 官方使用文档" itemprop="url">
+      
+        pt-tools系列：pt-kill 官方使用文档
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >https://www.percona.com/doc/percona-toolkit/LATEST/pt-kill.html  
+
+一、NAME
+pt-kill字面意思就是： kill掉MySQL满足某些特征的query语句
+二、大纲：使用方法
+1pt-kill [OPTION</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-11-22T16:32:24.000Z" itemprop="datePublished">Nov 23 2018</time>
+      
+          <a href="/2018/11/23/pt_kill_doc/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2018/08/01/mysql_replication_lag_ideas/" title="MySQL复制延迟优化的方法论" itemprop="url">
+      
+        MySQL复制延迟优化的方法论
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >一、MySQL为什么会延迟
+数据延迟： 是指master执行了N个事务，slave却只执行了N-M个事务，说明master和slave之间产生了延迟  
+延迟原因：延迟的原因很多种，大部分情况下是 slave的处理能力跟不上master导致  
+接下来，我们从各种角度分析下延迟的</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2018-08-01T10:03:24.000Z" itemprop="datePublished">Aug 1 2018</time>
+      
+          <a href="/2018/08/01/mysql_replication_lag_ideas/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2018/07/31/mysql_mts_detail/" title="MySQL并行复制的深入浅出" itemprop="url">
       
         MySQL并行复制的深入浅出
@@ -92,282 +339,9 @@
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/07/25/sys_high_cpu_mysql/" title="MySQL运维系列 之 CPU瓶颈故障案例分析" itemprop="url">
-      
-        MySQL运维系列 之 CPU瓶颈故障案例分析
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >很久没发布文章了，并不是春哥不爱学习了，而是最近我们碰到了一些瓶颈没有解决，心有不甘的苦苦探索着  
-现在容我给大家分析一起新鲜出炉热乎乎滚烫烫的故障案例   
-在分析案例前，据我们故障报告得到的数据分析显示，最近2年出现的故障  
-
-80%来自硬件，20%来自压力瓶颈（因为瓶颈</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-07-25T00:03:24.000Z" itemprop="datePublished">Jul 25 2018</time>
-      
-          <a href="/2018/07/25/sys_high_cpu_mysql/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/07/24/mysql_group_commit/" title="MySQL5.7 核心技术揭秘：MySQL Group commit" itemprop="url">
-      
-        MySQL5.7 核心技术揭秘：MySQL Group commit
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >一、大纲
-
-一阶段提交
-
-二阶段提交
-
-三阶段提交
-
-组提交总结
-
-
-二、一阶段提交
-2.1 什么是一阶段提交
-先了解下含义，其实官方并没有定义啥是一阶段，这里只是我为了上下文和好理解，自己定义的一阶段commit流程。  
-好了，这里的一阶段，其实是针对MySQL没有开启bin</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-07-24T10:03:24.000Z" itemprop="datePublished">Jul 24 2018</time>
-      
-          <a href="/2018/07/24/mysql_group_commit/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/06/26/mysql_iotop/" title="MySQL运维系列 之 如何快速定位IO瓶颈" itemprop="url">
-      
-        MySQL运维系列 之 如何快速定位IO瓶颈
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >MySQL的瓶颈，一般分为IO密集型和CPU密集型  
-CPU出问题的情况比较少，最近就遇到过一次比较大的故障，这个话题后面会有一篇专题介绍   
-今天主要聊聊IO密集型的应用中，我们应该如何快速定位到是谁占用了IO资源比较多  
-背景
-
-环境
-
-12341. MySQL 5.7</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-06-26T08:32:24.000Z" itemprop="datePublished">Jun 26 2018</time>
-      
-          <a href="/2018/06/26/mysql_iotop/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/06/26/long_transaction/" title="MySQL运维系列 之 如何监控大事务" itemprop="url">
-      
-        MySQL运维系列 之 如何监控大事务
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >long transaction  
-
-背景
-大家有没有遇到这样的情况
-
-某个SQL执行特别慢，导致整个transaction一直处于running阶段  
-某个Session的SQL已经执行完了，但是迟迟没有commit，一直处于sleep阶段  
-某个Session处于loc</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-06-26T02:32:24.000Z" itemprop="datePublished">Jun 26 2018</time>
-      
-          <a href="/2018/06/26/long_transaction/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/05/03/gtid_binlog_gtid_simple_recovery/" title="MySQL运维之 binlog_gtid_simple_recovery(GTID)" itemprop="url">
-      
-        MySQL运维之 binlog_gtid_simple_recovery(GTID)
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >binlog_gtid_simple_recovery 是什么
-
-官方解释
-
-12345678910111213141516171819202122This variable controls how binary log files are iterated during th</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-05-03T07:32:24.000Z" itemprop="datePublished">May 3 2018</time>
-      
-          <a href="/2018/05/03/gtid_binlog_gtid_simple_recovery/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2018/03/27/truncate_drop/" title="truncate table 和 drop table 的一点坑" itemprop="url">
-      
-        truncate table 和 drop table 的一点坑
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >网上一搜这个关键字，得到的结果大多都是delete、truncate、drop之间的区别
-但是今天我们要讲的内容，是我们在生产环境中遇到的真实案例
-互联网公司一般对大表，都会采用分区表或者物理分表吧，这里主要描述的是分表的删除过程中的问题
-案例一
-
-环境
-
-12345MySQL5</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2018-03-27T02:32:24.000Z" itemprop="datePublished">Mar 27 2018</time>
-      
-          <a href="/2018/03/27/truncate_drop/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/11/22/mha_by_hand_non_gtid/" title="MHA failover NON-GTID 专题" itemprop="url">
-      
-        MHA failover NON-GTID 专题
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >MHA failover NON-GTID 专题
-
-这里以masterha_master_switch为背景详解各种可能遇到的场景
-
-假定环境(经典三节点)
-123host_1(host_1:3306) (current master) +--host_2(host_2:3306</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-11-22T07:32:24.000Z" itemprop="datePublished">Nov 22 2017</time>
-      
-          <a href="/2017/11/22/mha_by_hand_non_gtid/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/11/10/mha_by_hand/" title="MHA failover GTID 专题" itemprop="url">
-      
-        MHA failover GTID 专题
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >这里以masterha_master_switch为背景详解各种可能遇到的场景
-
-假定环境(经典三节点)
-123host_1(host_1:3306) (current master) +--host_2(host_2:3306 slave[candidate master]) </p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-11-10T07:32:24.000Z" itemprop="datePublished">Nov 10 2017</time>
-      
-          <a href="/2017/11/10/mha_by_hand/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2017/10/25/too_many_connection_1/" title="MySQL运维实战（三）之 too many connection" itemprop="url">
-      
-        MySQL运维实战（三）之 too many connection
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >too many connection 我们简称：TMC
-
-一、什么是too many connection
-
-重要参数
-
-1234567891011121314max_connections : The maximum permitted number of simultane</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2017-10-25T07:32:24.000Z" itemprop="datePublished">Oct 25 2017</time>
-      
-          <a href="/2017/10/25/too_many_connection_1/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
-    <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
+    <a class="extend prev" rel="prev" href="/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/3/">Next &raquo;</a>
   </nav>
 
 </div>
@@ -406,7 +380,7 @@ CPU出问题的情况比较少，最近就遇到过一次比较大的故障，�
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>38</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
@@ -419,7 +393,7 @@ CPU出问题的情况比较少，最近就遇到过一次比较大的故障，�
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -444,7 +418,7 @@ CPU出问题的情况比较少，最近就遇到过一次比较大的故障，�
 		
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>36</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
 		
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
 		

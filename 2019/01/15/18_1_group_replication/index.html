@@ -1,0 +1,506 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>组复制官方翻译二、Group Replication Background | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/8.0/en/group-replication-background.html  
+
+这一章主要描述一些组复制的背景  
+构建一个容错系统最常用的方法就是让组件冗余，换句话说就是组件即便被移除掉，整个系统还是能够正常对外提供服务这无">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/01/15/18_1_group_replication/" title="组复制官方翻译二、Group Replication Background" itemprop="url">组复制官方翻译二、Group Replication Background</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-01-15T02:33:24.000Z" itemprop="datePublished">Jan 15 2019</time>
+    Updated:<time datetime="2019-01-15T06:55:29.000Z" itemprop="dateModified">Jan 15 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-1_Replication_Technologies"><span class="toc-number">1.</span> <span class="toc-text">18.1.1 Replication Technologies</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-1-1_Primary-Secondary_Replication"><span class="toc-number">1.1.</span> <span class="toc-text">18.1.1.1 Primary-Secondary Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-1-2_Group_Replication"><span class="toc-number">1.2.</span> <span class="toc-text">18.1.1.2 Group Replication</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-2_Group_Replication_Use_Cases"><span class="toc-number">2.</span> <span class="toc-text">18.1.2 Group Replication Use Cases</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-2-1_Examples_of_Use_Case_Scenarios"><span class="toc-number">2.1.</span> <span class="toc-text">18.1.2.1 Examples of Use Case Scenarios</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-3_Group_Replication_Details"><span class="toc-number">3.</span> <span class="toc-text">18.1.3 Group Replication Details</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-1_Failure_Detection"><span class="toc-number">3.1.</span> <span class="toc-text">18.1.3.1 Failure Detection</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-2_Group_Membership"><span class="toc-number">3.2.</span> <span class="toc-text">18.1.3.2 Group Membership</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-3_Fault-tolerance"><span class="toc-number">3.3.</span> <span class="toc-text">18.1.3.3 Fault-tolerance</span></a></li></ol></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/group-replication-background.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/8.0/en/group-replication-background.html</a>  </p>
+</blockquote>
+<p>这一章主要描述一些组复制的背景  </p>
+<p>构建一个容错系统最常用的方法就是让组件冗余，换句话说就是组件即便被移除掉，整个系统还是能够正常对外提供服务<br>这无疑在不同层面上提出了更多的挑战<br>需要注意的是，复制结构的数据库系统必须思考的一个事实就是：他们需要维护和管理一堆不同的sever<br>此外，他们还必须解决分布式系统所面临的问题：比如 脑裂、网络分区等等  </p>
+<p>因此，最大的挑战就是去融合这种逻辑数据库，保证数据复制的一致性<br>换句话说，为了让不同server都同意这个系统的状态，他们每一台server的数据修改都必须验证一致<br>这就意味着他们需要运作的想一个状态机一样（分布式）</p>
+<p>MySQL Group Replication提供了一套分布式状态机制复制管理方法   </p>
+<p>对于要提交的事务，这个group采取大部分原则来投票，让事务全局有序<br>决定commit还是拒绝这个事务都是由server自行判断，但是所有servers都会做出一样的决定<br>如果网络产生了分区，脑裂产生导致成员之间无法达成一致投票决定，那么这个系统会停止运行直到这个问题被解决<br>所以，他有一个内置、自动的脑裂包含机制在运行  </p>
+<p>以上所有的功能都是由Group Communication System (GCS) 协议来保证<br>它有错误检测机制、组成员通信服务、安全可靠的顺序一致消息分发<br>所有这些特性是搭建一个 数据完全一致性的系统 的关键要素<br>在一些非常核心重要的技术点上 罗列了Paxos 算法的实现，它扮演着组复制通信引擎的角色，至关重要  </p>
+<h2 id="18-1-1_Replication_Technologies">18.1.1 Replication Technologies</h2>
+<p>在了解MGR内幕之前，这里先主要介绍下相关的背景概念、以及概述<br>这章主要告诉我们，MGR需要什么，以及传统的异步复制和MGR直接的一些区别  </p>
+<h3 id="18-1-1-1_Primary-Secondary_Replication">18.1.1.1 Primary-Secondary Replication</h3>
+<p>传统的复制提供了一个简单的主从复制架构（Primary-Secondary）<br>primary就是master，secondary就是slaves，可以有多个slaves<br>master执行事务、commit事务，然后异步的将这些事务发送到slaves，让他们re-executed一遍（statement模式）或者 重新applied （ROW模式）<br>它是share-nothing架构，即所有server都有一份完整的数据copy  </p>
+<p><img src="/image/MGR/MGR_1.png" alt="MGR" title="MGR"></p>
+<p>还有一种传统复制叫：半同步复制<br>它意味着：在commit的之前，master等待，直到slaves给master一个确认接收到事务的ack，master才恢复commit的操作  </p>
+<p><img src="/image/MGR/MGR_2.png" alt="MGR" title="MGR"></p>
+<p>在上面的两幅图中，你能看到异步传统复制协议的基本架构，箭头代表client消息的流动和转变  </p>
+<h3 id="18-1-1-2_Group_Replication">18.1.1.2 Group Replication</h3>
+<p>组复制是一个实现了容错系统的技术<br>组复制集群就是一堆机器，他们之间通过消息进行沟通<br>communication 层：提供了一系列的保障机制，atomic message（原子广播） ， total order message delivery（全局序列消息分发机制）  </p>
+<p>MGR在此基础上构建并实现了一个multi-master的复制协议，它可以在任何server上写数据<br>集群的本质就是多server，每个server可以独立的处理事务<br>但是所有的读写（RW）事务都必须经过集群的审核<br>所有的只读（RO）事务不受任何影响<br>换句话说，对于RW事务，group只需要决定它应该commit还是拒绝commit，因此事务操作并不是单方面（origi server）的决定<br>确切的说，当origin server准备进行事务commit的时候，这个server会自动广播这个写集<br>然后，一个全局排序的事务产生了<br>这意味着，所有的server都接收同样顺序的事务集<br>由于是有序的，所有server应用相同顺序，相同数据的写集，因此他们的数据也是一致的  </p>
+<p>然而，如果是并发写在不同server的场景会遇到冲突<br>因此，对应这种情况需要进行冲突检测，这个过程叫做认证 certification<br>如果两个并发事务在不同server同时执行，并且更新了相同的row，那么他们就是冲突的<br>那么它的解决方案就是，排在前面的事务会被标记commit，排在后面的会被拒绝（这个事务在origin server会回滚，其他server会被丢弃）  </p>
+<p><img src="/image/MGR/MGR_3.png" alt="MGR" title="MGR"></p>
+<p>最后，MGR也是一种share-nothing架构，每个server都有一份完整的数据copy  </p>
+<h2 id="18-1-2_Group_Replication_Use_Cases">18.1.2 Group Replication Use Cases</h2>
+<p>组复制提供了一个高容错性的系统，即使一些机器宕机，只要不是所有或者大多数机器不可用，那么整个系统还是可用状态<br>总结下来，MGR保证数据库持续可用  </p>
+<h3 id="18-1-2-1_Examples_of_Use_Case_Scenarios">18.1.2.1 Examples of Use Case Scenarios</h3>
+<p>以下就是典型的MGR使用案例 </p>
+<ul>
+<li><p>Elastic Replication 可伸缩的复制</p>
+</li>
+<li><p>Highly Available Shards 高可用的分片</p>
+</li>
+<li><p>Alternative to Master-Slave replication  可选择master-slave架构</p>
+</li>
+<li><p>Autonomic Systems 完全自动化的系统  </p>
+</li>
+</ul>
+<h2 id="18-1-3_Group_Replication_Details">18.1.3 Group Replication Details</h2>
+<h3 id="18-1-3-1_Failure_Detection">18.1.3.1 Failure Detection</h3>
+<p>它提供一个错误检测机制，可以找到或报告出哪些servers没有回应，哪些server挂了<br>在高一层次来将，错误检测机制就是一个分布式服务，用于提供哪些server挂掉或可能挂掉的情报信息<br>之后，如果组成员通过某种协议认证了这个嫌疑犯（可能挂掉的家伙）已经真的挂了，那么集群就会决定这个嫌疑犯真的的确挂了<br>这意味着，组的其他成员一致决定将这个嫌疑犯踢出集群   </p>
+<p>当Server A 在指定time-out时间内没有收到来自server B的回应，那么B就会被提升为嫌疑犯<br>如果一个Server被其他group成员隔离，那么它就会怀疑所有其他的成员都挂了<br>由于它不能达成投票的一致性认可（没有达到法定人数的确认），所以它认为的嫌疑犯就不能被确认为failed<br>如果一个Server在这种情况下被隔离，那么他是不能执行local事务的  </p>
+<h3 id="18-1-3-2_Group_Membership">18.1.3.2 Group Membership</h3>
+<p>MGR依赖组会员服务（Group Membership Service，简称GMS），它是内置的<br>它定义了哪些servers是online并加入了这个group,这些online servers经常被称为view<br>因此，这个组里面的任一online成员都有一个一致的view    </p>
+<p>如果servers同意让一个新server加入到这个group中来，那么这个group就好重新自动将其配置上，且重新触发形成一个新的view<br>如果一个server非自愿的离开了group，那么错误检测机制就开始识别，也会重新配置上一个新的view<br>上面提到的这些都需要一个协议，并且需要大多数人参与并认可的协议<br>如果这个group没有满足达到这个协议认可的要求，那么自动配置将不会起作用，并且该系统会被阻塞来防止脑裂的产生<br>最后，这意味着管理员需要手动介入来解决这个问题  </p>
+<h3 id="18-1-3-3_Fault-tolerance">18.1.3.3 Fault-tolerance</h3>
+<p>MGR 是在Paxos分布式算法构建实现的，以此它需要满足大多数活跃成员进行投票选举的策略。<br>有一个公式：n = 2 x f + 1  ， n代表group的成员数，f代表允许挂掉的成员数  ，在这个公式下，整个集群是安全的  </p>
+<p>如果n=3，那么允许挂掉的server是1，也能满足要求，但是如果再挂一个呢， 其实就问题非常大了  </p>
+<table>
+<thead>
+<tr>
+<th>集群成员数量n</th>
+<th>majority</th>
+<th>可允许挂掉的server数量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2</td>
+<td>0</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2</td>
+<td>1</td>
+</tr>
+<tr>
+<td>4</td>
+<td>3</td>
+<td>1</td>
+</tr>
+<tr>
+<td>5</td>
+<td>3</td>
+<td>2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>4</td>
+<td>2</td>
+</tr>
+<tr>
+<td>7</td>
+<td>4</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/01/15/18_1_group_replication/" data-title="组复制官方翻译二、Group Replication Background | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2019/01/15/18_2_group_replication/" title="组复制官方翻译三、Getting Started">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  组复制官方翻译三、Getting Started</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2019/01/15/18_group_replication/"  title="组复制官方翻译一、Group Replication">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译一、Group Replication
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/01/15/18_1_group_replication/" data-title="组复制官方翻译二、Group Replication Background" data-url="https://Keithlan.github.io/2019/01/15/18_1_group_replication/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-1_Replication_Technologies"><span class="toc-number">1.</span> <span class="toc-text">18.1.1 Replication Technologies</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-1-1_Primary-Secondary_Replication"><span class="toc-number">1.1.</span> <span class="toc-text">18.1.1.1 Primary-Secondary Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-1-2_Group_Replication"><span class="toc-number">1.2.</span> <span class="toc-text">18.1.1.2 Group Replication</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-2_Group_Replication_Use_Cases"><span class="toc-number">2.</span> <span class="toc-text">18.1.2 Group Replication Use Cases</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-2-1_Examples_of_Use_Case_Scenarios"><span class="toc-number">2.1.</span> <span class="toc-text">18.1.2.1 Examples of Use Case Scenarios</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-1-3_Group_Replication_Details"><span class="toc-number">3.</span> <span class="toc-text">18.1.3 Group Replication Details</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-1_Failure_Detection"><span class="toc-number">3.1.</span> <span class="toc-text">18.1.3.1 Failure Detection</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-2_Group_Membership"><span class="toc-number">3.2.</span> <span class="toc-text">18.1.3.2 Group Membership</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-1-3-3_Fault-tolerance"><span class="toc-number">3.3.</span> <span class="toc-text">18.1.3.3 Fault-tolerance</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

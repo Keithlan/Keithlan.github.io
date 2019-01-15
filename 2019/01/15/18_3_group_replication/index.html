@@ -1,0 +1,557 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>组复制官方翻译四、Monitoring Group Replication | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/8.0/en/group-replication-monitoring.html  
+
+使用Perfomance Schema来监控MGR    
+MGR主要添加了这两个表  
+
+performance_schema.replicat">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/01/15/18_3_group_replication/" title="组复制官方翻译四、Monitoring Group Replication" itemprop="url">组复制官方翻译四、Monitoring Group Replication</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-01-15T02:35:24.000Z" itemprop="datePublished">Jan 15 2019</time>
+    Updated:<time datetime="2019-01-15T06:43:14.000Z" itemprop="dateModified">Jan 15 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-1_Group_Replication_Server_States"><span class="toc-number">1.</span> <span class="toc-text">18.3.1 Group Replication Server States</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-2_The_replication_group_members_Table"><span class="toc-number">2.</span> <span class="toc-text">18.3.2 The replication_group_members Table</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-3_Replication_group_member_stats"><span class="toc-number">3.</span> <span class="toc-text">18.3.3 Replication_group_member_stats</span></a></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/group-replication-monitoring.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/8.0/en/group-replication-monitoring.html</a>  </p>
+</blockquote>
+<p>使用Perfomance Schema来监控MGR    </p>
+<p>MGR主要添加了这两个表  </p>
+<ul>
+<li><p>performance_schema.replication_group_member_stats</p>
+</li>
+<li><p>performance_schema.replication_group_members</p>
+</li>
+</ul>
+<p>关于MGR复制相关的表  </p>
+<ul>
+<li><p>performance_schema.replication_connection_status  </p>
+</li>
+<li><p>performance_schema.replication_applier_status  </p>
+</li>
+</ul>
+<p>MGR创建了两个复制通道  </p>
+<ul>
+<li><p>group_replication_recovery: 主要是分布式恢复阶段的replication changes</p>
+</li>
+<li><p>group_replication_applier：主要用作来组group的 incoming changes  </p>
+</li>
+</ul>
+<h2 id="18-3-1_Group_Replication_Server_States">18.3.1 Group Replication Server States</h2>
+<p>如果servers之间协作正常，那么看到的state都是一样的<br>但是，一旦发生网络分区，或者有server挂掉并脱离group，那么不同信息就会被报告出来<br>如果一个server离开了这个group，那么它就不能上报其他server的状态信息<br>如果发生了网络分区，那么仲裁法定人数就缺少，servers之间就不能很好的协作，他们只能猜测其他server的状态并报告为unreachable  </p>
+<ul>
+<li>Table 18.1 Server State  </li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>描述</th>
+<th>组同步</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ONLINE</td>
+<td>用户可正常连接和执行事务</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>RECOVERING</td>
+<td>正在从donar服务器同步数据</td>
+<td>no</td>
+</tr>
+<tr>
+<td>OFFLINE</td>
+<td>插件已经装载，但是该成员不属于任何组</td>
+<td>no</td>
+</tr>
+<tr>
+<td>ERROR</td>
+<td>无论是recovery阶段，还是应用事务更新，表示遇到错误了</td>
+<td>no</td>
+</tr>
+<tr>
+<td>UNREACHABLE</td>
+<td>失联了</td>
+<td>no  </td>
+</tr>
+</tbody>
+</table>
+<p>重要：一旦实例的状态变成了ERROR，super_read_only 会被设置成on<br>如果ERROR状态消失，需要人工介入调整super_read_only=OFF  </p>
+<p>注意：MGR不是强同步的，但是最终会一致的<br>确切的说：事务会按照相同的顺序发送给这个group的所有成员，但是事务的执行、commit完全由成员自行处理，并不是同步进行的  </p>
+<h2 id="18-3-2_The_replication_group_members_Table">18.3.2 The replication_group_members Table</h2>
+<p>performance_schema.replication_group_members 这个表主要用来监控不同成员的状态<br>表里面的信息会自动更新，如果有新成员的加入或离开<br>每个成员的元数据信息都是共享的，可以被其他成员随时查到<br>这个表主要是在比较高的层面来看复制group的一些状态信息，比如：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="header">SELECT * FROM performance_schema.replication_group_members;</span></div><div class="line">+---------------------------+--------------------------------------+--------------+-------------+--------------+-------------+----------------+</div><div class="line"><span class="header">| CHANNEL_NAME              | MEMBER_ID	                           | MEMBER_HOST  | MEMBER_PORT | MEMBER_STATE | MEMBER_ROLE | MEMBER_VERSION |</span></div><div class="line">+---------------------------+--------------------------------------+--------------+-------------+--------------+-------------+----------------+</div><div class="line">| group<span class="emphasis">_replication_</span>applier | 041f26d8-f3f3-11e8-adff-080027337932 | example1     |      3306   | ONLINE       | SECONDARY   | 8.0.13         |</div><div class="line">| group<span class="emphasis">_replication_</span>applier | f60a3e10-f3f2-11e8-8258-080027337932 | example2     |      3306   | ONLINE       | PRIMARY     | 8.0.13         |</div><div class="line"><span class="header">| group_replication_applier | fc890014-f3f2-11e8-a9fd-080027337932 | example3     |      3306   | ONLINE       | SECONDARY   | 8.0.13         |</span></div><div class="line">+---------------------------+--------------------------------------+--------------+-------------+--------------+-------------+----------------+</div></pre></td></tr></table></figure>
+
+<p>从上面的输出可以看出：  这个组由3个成员组成，每个成员的host、port、server-uuid一清二楚<br>MEMBER_STATE显示他们都是online状态<br>MEMBER_ROLE这列显示 有2个secondaries，1个primary，因此这个group是一个single-primary 模式的GR<br>MEMBER_VERSION这列在某些场景对你非常重要，比如：你需要升级一个group，或者将不同mysql版本的server组合在一起的时候  </p>
+<h2 id="18-3-3_Replication_group_member_stats">18.3.3 Replication_group_member_stats</h2>
+<p>每个组的成员认证和执行事务两步<br>关于认证和执行事务的一些统计信息对明白applier queue（有多少冲突被发现了，多少事务被check了，哪些事务被commit了 等等）的增长非常有用    </p>
+<p>performance_schema.replication_group_member_stats 提供了group-level 级别的认证、统计等很多信息<br>这里面的信息是所有成员共享的，任何成员都能查得到<br>值得注意的是：刷新远程成员的统计信息是根据 group_replication_flow_control_period选项，所以在本地查的信息可能互相有点延迟，有点差异是正常现象  </p>
+<ul>
+<li>Table 18.2 replication_group_member_stats</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Channel_name</td>
+<td>GR通道的名称</td>
+</tr>
+<tr>
+<td>View_id</td>
+<td>group的当前view id</td>
+</tr>
+<tr>
+<td>Member_id</td>
+<td>成员的uuid</td>
+</tr>
+<tr>
+<td>Count_transactions_in_queue</td>
+<td>需要被检测的冲突事务数量  </td>
+</tr>
+<tr>
+<td>Count_transactions_checked</td>
+<td>已经被检测为冲突的事务数量</td>
+</tr>
+<tr>
+<td>Count_conflicts_detected</td>
+<td>没有通过冲突检测的事务数量</td>
+</tr>
+<tr>
+<td>Count_transactions_rows_validating</td>
+<td>冲突检测数据库的大小</td>
+</tr>
+<tr>
+<td>Transactions_committed_all_members</td>
+<td>所有成员都commit成功的事务集  </td>
+</tr>
+<tr>
+<td>Last_conflict_free_transaction</td>
+<td>The transaction identifier of the last conflict free transaction checked.</td>
+</tr>
+<tr>
+<td>Count_transactions_remote_in_applier_queue</td>
+<td>有多少远程事务在队列里面需要被执行</td>
+</tr>
+<tr>
+<td>Count_transactions_remote_applied</td>
+<td>已经被执行过的远程事务数量</td>
+</tr>
+<tr>
+<td>Count_transactions_local_proposed</td>
+<td>本地产生的需要被其他远程成员执行的事务数量</td>
+</tr>
+<tr>
+<td>Count_transactions_local_rollback</td>
+<td>本地产生的事务，有多少是发送给其他成员，后面又被自己rollback的事务数量  </td>
+</tr>
+</tbody>
+</table>
+<p>这些信息对监控MGR非常重要<br>举个例子：假设这个group中的一个成员延迟了，无法跟上其他成员，那么你会看到queue里面有很多事务<br>通过以上信息，你可以决定是要移除这个成员，还是延迟在其他成员中处理这些事务来减少这个队列中的事务数量<br>通过以上信息，也能帮助你决定是否需要开启MGR的流控措施   </p>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/01/15/18_3_group_replication/" data-title="组复制官方翻译四、Monitoring Group Replication | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2019/01/15/18_4_group_replication/" title="组复制官方翻译五、Group Replication Security">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  组复制官方翻译五、Group Replication Security</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2019/01/15/18_2_group_replication/"  title="组复制官方翻译三、Getting Started">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译三、Getting Started
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/01/15/18_3_group_replication/" data-title="组复制官方翻译四、Monitoring Group Replication" data-url="https://Keithlan.github.io/2019/01/15/18_3_group_replication/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-1_Group_Replication_Server_States"><span class="toc-number">1.</span> <span class="toc-text">18.3.1 Group Replication Server States</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-2_The_replication_group_members_Table"><span class="toc-number">2.</span> <span class="toc-text">18.3.2 The replication_group_members Table</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-3-3_Replication_group_member_stats"><span class="toc-number">3.</span> <span class="toc-text">18.3.3 Replication_group_member_stats</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

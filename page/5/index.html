@@ -68,6 +68,281 @@
   <article>
     <h1 itemprop="name">
       
+        <a href="/2017/06/05/innodb_locks_show_engine/" title="MySQL锁系列（二）之 锁解读" itemprop="url">
+      
+        MySQL锁系列（二）之 锁解读
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >背景
+
+锁系列第一期的时候介绍的锁，我们要如何去解读呢？  
+在哪里能够看到这些锁？  
+
+锁信息解读
+
+工欲善其事必先利其器show engine innodb status 关于锁的信息是最详细的  
+
+案例一（有索引的情况）
+
+前期准备
+
+12345678910111213</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-05T09:32:24.000Z" itemprop="datePublished">Jun 5 2017</time>
+      
+          <a href="/2017/06/05/innodb_locks_show_engine/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/06/05/innodb_locks_1/" title="MySQL锁系列（一）之锁的种类和概念" itemprop="url">
+      
+        MySQL锁系列（一）之锁的种类和概念
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >背景
+
+锁是MySQL里面最难理解的知识，但是又无处不在。一开始接触锁的时候，感觉被各种锁类型和名词弄得晕头转向，就别说其他了。本文是通过DBA的视角（非InnoDB内核开发）来分析和窥探锁的奥秘，并解决实际工作当中遇到的问题  
+锁的种类&amp;amp;概念
+
+想要啃掉这块最难的大骨</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-06-05T07:32:24.000Z" itemprop="datePublished">Jun 5 2017</time>
+      
+          <a href="/2017/06/05/innodb_locks_1/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/04/06/omega_connection/" title="omega监控系列之connection" itemprop="url">
+      
+        omega监控系列之connection
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >背景
+
+什么是omega
+
+12345简单说就是一个平台， 运维和运营为一体的智能DB管理平台所有DB相关的事情都能通过此平台 完成-&amp;gt;自助完成-&amp;gt;智能完成目前知道这个就够了，其他的以后慢慢介绍
+
+
+
+
+为什么要介绍omega系统里面的connection
+
+1234</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-04-06T02:32:24.000Z" itemprop="datePublished">Apr 6 2017</time>
+      
+          <a href="/2017/04/06/omega_connection/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/03/04/wrong_sql_plan/" title="MySQL5.6：一个神奇的执行计划" itemprop="url">
+      
+        MySQL5.6：一个神奇的执行计划
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >今天遇到一个非常神奇的sql执行计划时好时坏，我们一起来领略一下吧
+废话不多说，直接进入实战
+环境
+12345678910111213141516171819202122232425262728* version：MySQL5.6.27 社区版* 表结构CREATE TABLE </p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-03-04T02:32:24.000Z" itemprop="datePublished">Mar 4 2017</time>
+      
+          <a href="/2017/03/04/wrong_sql_plan/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/03/03/auto_increment_lock/" title="自增锁引发的悲剧" itemprop="url">
+      
+        自增锁引发的悲剧
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >背景
+
+先描述下故障吧
+
+
+step0: 环境介绍
+
+123456789101112131415161718191. MySQL5.6.272. InnoDB3. Centos基本介绍完毕，应该跟大部分公司的实例一样CREATE TABLE `new_table` (  `id`</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-03-03T02:32:24.000Z" itemprop="datePublished">Mar 3 2017</time>
+      
+          <a href="/2017/03/03/auto_increment_lock/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/02/15/gtid_practice/" title="MySQL5.7 GTID 运维实战" itemprop="url">
+      
+        MySQL5.7 GTID 运维实战
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >GTID 和 START SLAVE
+
+START SLAVE 语法
+
+1234567891011121314151617181920212223242526START SLAVE [thread_types] [until_option] [connection_options</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-02-15T09:54:24.000Z" itemprop="datePublished">Feb 15 2017</time>
+      
+          <a href="/2017/02/15/gtid_practice/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2017/02/07/umount/" title="device is busy" itemprop="url">
+      
+        device is busy
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >环境
+
+CentOS release 6.6 (Final)Linux tjtx135-2-90.58os.org 2.6.32-504.23.4.el6.x86_64 #1 SMP Tue Jun 9 20:57:37 UTC 2015 x86_64 x86_64 x86_64</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2017-02-07T02:04:24.000Z" itemprop="datePublished">Feb 7 2017</time>
+      
+          <a href="/2017/02/07/umount/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2016/12/20/sql_safe_updates/" title="MySQL运维之神奇的参数" itemprop="url">
+      
+        MySQL运维之神奇的参数
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >sql_safe_updateshttp://dev.mysql.com/doc/refman/5.7/en/server-system-variables.html#sysvar_sql_safe_updates  
+
+背景(why)
+主要是针对大表的误操作。
+如果只是更改了几</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2016-12-20T07:32:24.000Z" itemprop="datePublished">Dec 20 2016</time>
+      
+          <a href="/2016/12/20/sql_safe_updates/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
+        <a href="/2016/12/16/sysbench_mysql/" title="使用sysbench对MySQL进行测试" itemprop="url">
+      
+        使用sysbench对MySQL进行测试
+      </a>
+    </h1>
+    
+     
+           <p itemprop="description" >为什么要测试，测什么东西？
+测试的种类非常多，测试的目的也非常多，我这里主要的目的就两个  
+
+测试MySQL的极限IO
+
+对比不同版本MySQL，不同参数, 不同硬件，不同系统对MySQL的性能影响
+
+
+为什么选择sysbench
+
+因为MySQL官方的测试就是用sysbenc</p>
+        
+    
+    <p class="article-more-link">
+      <time datetime="2016-12-16T03:32:24.000Z" itemprop="datePublished">Dec 16 2016</time>
+      
+          <a href="/2016/12/16/sysbench_mysql/">阅读更多&raquo;</a>
+      
+    </p>
+
+  </article>
+</section>
+
+  <section class="post" itemscope itemprop="blogPost">
+  <article>
+    <h1 itemprop="name">
+      
         <a href="/2016/08/18/mha_source/" title="MySQL Master High Available 源码篇" itemprop="url">
       
         MySQL Master High Available 源码篇
@@ -97,279 +372,9 @@ init_config(): 初始化配置
   </article>
 </section>
 
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/08/05/mha_practice/" title="MySQL Master High Available 实战篇" itemprop="url">
-      
-        MySQL Master High Available 实战篇
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >测试背景
-
-以下所有测试，全部基于以下复制结构完成
-
-123host_1(host_1:3306) (current master) +--host_2(host_2:3306) +--host_3(host_3:3306)
-
-一、MHA安装
-
-mha node 所有服务器节点都</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-08-05T05:50:24.000Z" itemprop="datePublished">Aug 5 2016</time>
-      
-          <a href="/2016/08/05/mha_practice/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/07/29/life_think/" title="对人生的一些思考" itemprop="url">
-      
-        对人生的一些思考
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-也许某个阶段，你会感觉迷茫，可是人为什么会感觉迷茫呢？思考了下，迷茫，80%是因为你根本就没有人生的目标吧？活了那么多年，在你身边肯定有很多人过着品质的生活，有的人却总是对生活充满了抱怨，这又是为什么呢？对于你，你觉得自己现在的生活是怎样的呢？又或者，你是否会羡慕别人的生活</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-07-29T02:32:24.000Z" itemprop="datePublished">Jul 29 2016</time>
-      
-          <a href="/2016/07/29/life_think/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/07/25/mha/" title="MySQL Master High Available 理论篇" itemprop="url">
-      
-        MySQL Master High Available 理论篇
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >一、概况
-MHA 提供自动master故障转移以及在最短的时间内（10~30秒）提升slave为new masterMHA 解决了切换后的数据不一致问题所有的这些操作都是没有任何负载和影响的，并且对存在的环境不需要做任何改动，简单易用  
-除了failover之外，MHA还支持在</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-07-25T10:01:24.000Z" itemprop="datePublished">Jul 25 2016</time>
-      
-          <a href="/2016/07/25/mha/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/07/20/replace_into/" title="MySQL replace into 错误案例" itemprop="url">
-      
-        MySQL replace into 错误案例
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >背景
-1234567891011121314* MySQL5.7* ROW模式* 表结构CREATE TABLE `test` (  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,  `col_1` varchar(100) DEFA</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-07-20T08:50:24.000Z" itemprop="datePublished">Jul 20 2016</time>
-      
-          <a href="/2016/07/20/replace_into/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/07/14/MySQL57_new_feature/" title="How MySQL5.7 new feature rocks your heart" itemprop="url">
-      
-        How MySQL5.7 new feature rocks your heart
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >新增特性
-
-
-
-种类
-特性名称
-备注
-相关链接
-
-
-
-
-Performance&amp;amp;Scalability
-online rename index
-inplace方式，针对所有引擎
-alter index
-
-
-Performance&amp;amp;Scalability
-onlin</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-07-14T13:55:24.000Z" itemprop="datePublished">Jul 14 2016</time>
-      
-          <a href="/2016/07/14/MySQL57_new_feature/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/07/01/mysqlrpladmin/" title="MySQL5.7新特性：mysqlrpladmin + GTID" itemprop="url">
-      
-        MySQL5.7新特性：mysqlrpladmin + GTID
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >http://dev.mysql.com/doc/mysql-utilities/1.6/en/mysqlrpladmin.html传统的复制切换，由于是base file和position的，切换非常复杂，是个技术活MHA最大的优点就是日志补偿机制，现在有了GTID，日志补偿分</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-07-01T09:00:24.000Z" itemprop="datePublished">Jul 1 2016</time>
-      
-          <a href="/2016/07/01/mysqlrpladmin/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/06/29/lossless_repl/" title="MySQL5.7新特性：lossless replication 无损复制" itemprop="url">
-      
-        MySQL5.7新特性：lossless replication 无损复制
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >https://dev.mysql.com/doc/refman/5.7/en/replication-semisync.html  
-
-MySQL的三种复制方式
-
-
-asynchronous 异步复制  
-fully synchronous 全同步复制  
-Semisynchr</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-06-29T10:30:24.000Z" itemprop="datePublished">Jun 29 2016</time>
-      
-          <a href="/2016/06/29/lossless_repl/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/06/28/MTS/" title="MySQL5.7 新特性： Multi-threaded Slave 多线程复制" itemprop="url">
-      
-        MySQL5.7 新特性： Multi-threaded Slave 多线程复制
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >https://dev.mysql.com/doc/refman/5.7/en/replication-options-slave.html  
-
-什么是MTS
-
-一句话概括：通过组提交的方式 master怎么并行，slave就怎么并行。  
-
-
-关键因素：组提交  
-
-1234</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-06-28T09:04:24.000Z" itemprop="datePublished">Jun 28 2016</time>
-      
-          <a href="/2016/06/28/MTS/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
-  <section class="post" itemscope itemprop="blogPost">
-  <article>
-    <h1 itemprop="name">
-      
-        <a href="/2016/06/23/gtid/" title="MySQL5.7杀手级新特性：GTID原理与实战" itemprop="url">
-      
-        MySQL5.7杀手级新特性：GTID原理与实战
-      </a>
-    </h1>
-    
-     
-           <p itemprop="description" >一、理论篇
-1.1 GTID是什么(what)
-1.1.1 GTID组成和架构
-
-GTID 架构
-
-a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: 在一组复制中，全局唯一    
-1</p>
-        
-    
-    <p class="article-more-link">
-      <time datetime="2016-06-23T09:54:24.000Z" itemprop="datePublished">Jun 23 2016</time>
-      
-          <a href="/2016/06/23/gtid/">阅读更多&raquo;</a>
-      
-    </p>
-
-  </article>
-</section>
-
 
   <nav id="page-nav" class="clearfix">
-    <a class="extend prev" rel="prev" href="/page/4/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><a class="page-number" href="/page/7/">7</a><a class="page-number" href="/page/8/">8</a><a class="extend next" rel="next" href="/page/6/">Next &raquo;</a>
+    <a class="extend prev" rel="prev" href="/page/4/">&laquo; Prev</a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/3/">3</a><a class="page-number" href="/page/4/">4</a><span class="page-number current">5</span><a class="page-number" href="/page/6/">6</a><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/6/">Next &raquo;</a>
   </nav>
 
 </div>
@@ -408,7 +413,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 	<p class="asidetitle">Categories</p>
 		<ul>
 		
-			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>38</sup></a></li>
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
 		
 			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
 		
@@ -421,7 +426,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
   
   <div class="archiveslist">
     <p class="asidetitle"><a href="/archives">Archives</a></p>
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
   </div>
 
 
@@ -446,7 +451,7 @@ a) GTID =  server_uuid:transaction_idb) server_uuid 来源于 auto.cnfc) GTID: �
 		
 			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
 		
-			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>36</sup></a></li>
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
 		
 			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
 		

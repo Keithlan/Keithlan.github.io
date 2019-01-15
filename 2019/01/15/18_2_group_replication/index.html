@@ -1,0 +1,546 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>组复制官方翻译三、Getting Started | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/8.0/en/group-replication-getting-started.html  
+
+MGR 作为一个Server插件提供支持的，每个group的server都需要配置和加载这个插件这一章主要教大家在三节点的MGR环境下，">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/01/15/18_2_group_replication/" title="组复制官方翻译三、Getting Started" itemprop="url">组复制官方翻译三、Getting Started</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-01-15T02:34:24.000Z" itemprop="datePublished">Jan 15 2019</time>
+    Updated:<time datetime="2019-01-15T06:55:56.000Z" itemprop="dateModified">Jan 15 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-2-1_Deploying_Group_Replication_in_Single-Primary_Mode"><span class="toc-number">1.</span> <span class="toc-text">18.2.1 Deploying Group Replication in Single-Primary Mode</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-1_Deploying_Instances_for_Group_Replication"><span class="toc-number">1.1.</span> <span class="toc-text">18.2.1.1 Deploying Instances for Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-2_Configuring_an_Instance_for_Group_Replication"><span class="toc-number">1.2.</span> <span class="toc-text">18.2.1.2 Configuring an Instance for Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-3_User_Credentials"><span class="toc-number">1.3.</span> <span class="toc-text">18.2.1.3 User Credentials</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-4_Launching_Group_Replication"><span class="toc-number">1.4.</span> <span class="toc-text">18.2.1.4 Launching Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-5_Adding_Instances_to_the_Group"><span class="toc-number">1.5.</span> <span class="toc-text">18.2.1.5 Adding Instances to the Group</span></a></li></ol></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/group-replication-getting-started.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/8.0/en/group-replication-getting-started.html</a>  </p>
+</blockquote>
+<p>MGR 作为一个Server插件提供支持的，每个group的server都需要配置和加载这个插件<br>这一章主要教大家在三节点的MGR环境下，怎么一步步搭建起来的  </p>
+<h2 id="18-2-1_Deploying_Group_Replication_in_Single-Primary_Mode">18.2.1 Deploying Group Replication in Single-Primary Mode</h2>
+<p>每个group中的实例既可以是在单独的物理机部署，也可以在同一台物理机部署<br>这一节主要描述怎么在同一个物理机部署MGR  </p>
+<ul>
+<li>Figure 18.4 Group Architecture</li>
+</ul>
+<p><img src="/image/MGR/MGR_4.png" alt="MGR" title="MGR"></p>
+<p>这个教程主要描述如何部署MGR，在构建MGR前如何配置每个实例，以及如何使用Performance Schema 来监控MGR正确运行  </p>
+<h3 id="18-2-1-1_Deploying_Instances_for_Group_Replication">18.2.1.1 Deploying Instances for Group Replication</h3>
+<p>第一步：部署三个MySQL实例<br>由于接下来的步骤是在同一台物理机搭建多个实例的，因此每个MySQL实例都必须要指定一个特定的数据目录  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">mkdir <span class="built_in">data</span>  </div><div class="line">mysql<span class="subst">-</span><span class="number">8.0</span>/bin/mysqld <span class="subst">--</span>initialize<span class="attribute">-insecure</span> <span class="subst">--</span>basedir<span class="subst">=</span><span class="variable">$PWD</span>/mysql<span class="subst">-</span><span class="number">8.0</span> <span class="subst">--</span>datadir<span class="subst">=</span><span class="variable">$PWD</span>/<span class="built_in">data</span>/s1  </div><div class="line">mysql<span class="subst">-</span><span class="number">8.0</span>/bin/mysqld <span class="subst">--</span>initialize<span class="attribute">-insecure</span> <span class="subst">--</span>basedir<span class="subst">=</span><span class="variable">$PWD</span>/mysql<span class="subst">-</span><span class="number">8.0</span> <span class="subst">--</span>datadir<span class="subst">=</span><span class="variable">$PWD</span>/<span class="built_in">data</span>/s2  </div><div class="line">mysql<span class="subst">-</span><span class="number">8.0</span>/bin/mysqld <span class="subst">--</span>initialize<span class="attribute">-insecure</span> <span class="subst">--</span>basedir<span class="subst">=</span><span class="variable">$PWD</span>/mysql<span class="subst">-</span><span class="number">8.0</span> <span class="subst">--</span>datadir<span class="subst">=</span><span class="variable">$PWD</span>/<span class="built_in">data</span>/s3</div></pre></td></tr></table></figure>
+
+<p>在data/s1，data/s2，data/s3 里面都是初始化好的数据目录，里面有mysql 系统库等等  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">warnings:</div><div class="line"></div><div class="line">不要在生产环境使用--initialize-insecure ，这里只是用来简化教程的，详情请看：</div><div class="line"></div><div class="line"><span class="function"><span class="keyword">Section</span> 18.5, “Group Replication Security”.</span></div></pre></td></tr></table></figure>
+
+<h3 id="18-2-1-2_Configuring_an_Instance_for_Group_Replication">18.2.1.2 Configuring an Instance for Group Replication</h3>
+<ul>
+<li>Group Replication Server Settings</li>
+</ul>
+<p>安装和使用MGR插件，你必须正确配置MySQL Server才行<br>下面的配置将是你的MGR第一个实例的配置S1  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">[mysqld]</div><div class="line"></div><div class="line"><span class="comment"># server configuration</span></div><div class="line"><span class="variable">datadir=</span>&lt;full_path_to_data&gt;/data/s1</div><div class="line"><span class="variable">basedir=</span>&lt;full_path_to_bin&gt;/mysql-<span class="number">8.0</span>/</div><div class="line"></div><div class="line"><span class="variable">port=</span><span class="number">24801</span></div><div class="line"><span class="variable">socket=</span>&lt;full_path_to_sock_dir&gt;/s1.sock</div></pre></td></tr></table></figure>
+
+<p>如果你的三个实例都在一个机器上，那么你应该配置report_host=127.0.0.1 ， 让其互相可联系  </p>
+<ul>
+<li>Replication Framework</li>
+</ul>
+<p>接下来的配置就是复制 所需要的  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="setting">server_id=<span class="value"><span class="number">1</span></span></span></div><div class="line"><span class="setting">gtid_mode=<span class="value"><span class="keyword">ON</span></span></span></div><div class="line"><span class="setting">enforce_gtid_consistency=<span class="value"><span class="keyword">ON</span></span></span></div><div class="line"><span class="setting">binlog_checksum=<span class="value">NONE</span></span></div></pre></td></tr></table></figure>
+
+<p>如果你使用的版本低于8.0.3（8.0.3默认配置可以满足复制要求），那么需要在配置如下选项</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="setting">log_bin=<span class="value">binlog</span></span></div><div class="line"><span class="setting">log_slave_updates=<span class="value"><span class="keyword">ON</span></span></span></div><div class="line"><span class="setting">binlog_format=<span class="value">ROW</span></span></div><div class="line"><span class="setting">master_info_repository=<span class="value">TABLE</span></span></div><div class="line"><span class="setting">relay_log_info_repository=<span class="value">TABLE</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>Group Replication Settings</li>
+</ul>
+<p>接下来的配置，就是组复制所需要的了  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="setting">transaction_write_set_extraction=<span class="value">XXHASH64</span></span></div><div class="line"><span class="setting">group_replication_group_name=<span class="value"><span class="string">"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"</span></span></span></div><div class="line"><span class="setting">group_replication_start_on_boot=<span class="value"><span class="keyword">off</span></span></span></div><div class="line"><span class="setting">group_replication_local_address= <span class="value"><span class="string">"127.0.0.1:24901"</span></span></span></div><div class="line"><span class="setting">group_replication_group_seeds= <span class="value"><span class="string">"127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903"</span></span></span></div><div class="line"><span class="setting">group_replication_bootstrap_group=<span class="value"><span class="keyword">off</span></span></span></div></pre></td></tr></table></figure>
+
+<p>a) transaction_write_set_extraction=XXHASH64 ： 表示使用XXHASH64算法来编码write set    </p>
+<p>b) group_replication_group_name=”aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa”  ：     告诉插件这个组已经创建了，它的名字是aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa<br>    group_replication_group_name 的值必须是UUID，可以使用select UUID（）来生产  </p>
+<p>c) group_replication_start_on_boot=off ：表示当server开启的时候，并不自动开启MGR。  </p>
+<p>d）group_replication_local_address= “127.0.0.1:24901” ： 告诉插件用127.0.0.1：24901进行内部通信，不是用来给业务查询的哦<br>    推荐的端口是：33061 ，教程中是24901，因为是部署在同一台机器上  </p>
+<p>e）group_replication_group_seeds= “127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903”： 这里面列的ip，port是给该组新成员使用的，叫做种子成员。<br>    在performance_schema.replication_group_members能查到<br>    当开启组复制的时候，它是不会使用group_replication_group_seeds选项的，因为该机器是负责引导这个组的<br>    换句话说，任何引导server的数据都是给其他加入成员的server服务的<br>    第二个加入到组成员的server都必须询问，只有组成员列表的成员才能加入，任何缺少的数据都可以问负责引导的成员server获取，随后就加入到了这组group<br>    第三个server可以询问前两个server成员中的任意一个询问、并同步数据<br>    随后的server都是以同样的步骤来加入组  </p>
+<pre><code>一个即将加入的成员必须跟种子成员（group_replication_group_seeds）进行通信      
+</code></pre><p>f）group_replication_bootstrap_group=off： 说明插件是否进行引导<br>    重要： 这个选项只能使用一次，否则会出现脑裂的可能。当第一个server引导成online后，应该讲其从on变为off  </p>
+<p>配置这个group的其他server实例跟以上的方法非常相似，需要改变下特殊的选项如（server_id, datadir, group_replication_local_address）  </p>
+<h3 id="18-2-1-3_User_Credentials">18.2.1.3 User Credentials</h3>
+<p>MGR需要一个group_replication_recovery的复制通道来完成节点之间的数据恢复以及补偿<br>所以，这一节主要讲group_replication_recovery  </p>
+<p>开启server使用这个配置文件：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mysql-<span class="number">8.0</span><span class="regexp">/bin/m</span>ysqld --defaults-<span class="keyword">file</span>=data<span class="regexp">/s1/</span>s1.cnf</div></pre></td></tr></table></figure>
+
+<p>创建一个mysql用户，具有 REPLICATION-SLAVE 权限<br>如果你想避免这个grant操作在其他server也发生，可以如下配置  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">mysql&gt;</span> <span class="constant">SET</span> <span class="constant">SQL_LOG_BIN</span>=<span class="number">0</span>;</span></div></pre></td></tr></table></figure>
+
+<p>相关创建用户的命令：  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">mysql&gt; <span class="keyword">CREATE</span> USER rpl_user@<span class="string">'%'</span> IDENTIFIED <span class="keyword">BY</span> <span class="string">'password'</span>;</div><div class="line">mysql&gt; GRANT REPLICATION SLAVE <span class="keyword">ON</span> *.* <span class="keyword">TO</span> rpl_user@<span class="string">'%'</span>;</div><div class="line">mysql&gt; FLUSH PRIVILEGES;</div></pre></td></tr></table></figure>
+
+<p>如果之前这是了sql-log-bin,那么现在需要恢复原状  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">mysql&gt;</span> <span class="constant">SET</span> <span class="constant">SQL_LOG_BIN</span>=<span class="number">1</span>;</span></div></pre></td></tr></table></figure>
+
+<p>使用change master命令来配置group_replication_recovery  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">mysql&gt;</span> <span class="constant">CHANGE</span> <span class="constant">MASTER</span> <span class="constant">TO</span> <span class="constant">MASTER_USER</span>=<span class="string">'rpl_user'</span>, <span class="constant">MASTER_PASSWORD</span>=<span class="string">'password'</span> \\</span></div><div class="line">		      <span class="constant">FOR</span> <span class="constant">CHANNEL</span> <span class="string">'group_replication_recovery'</span>;</div></pre></td></tr></table></figure>
+
+<p>分布式recovery是加入一个组的第一步，用来获取自己没有的事务<br>如果这个group_replication_recovery通道没有配置正确，那么此server将不能从donar member中获取事务来进行数据同步恢复，因此就加入组失败  </p>
+<h3 id="18-2-1-4_Launching_Group_Replication">18.2.1.4 Launching Group Replication</h3>
+<p>s1配置正确后，接下来在sever执行如下命令  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">INSTALL</span> <span class="keyword">PLUGIN</span> group_replication <span class="keyword">SONAME</span> <span class="string">'group_replication.so'</span>;</span></div></pre></td></tr></table></figure>
+
+<p>重要：在你load MGR前，mysql.session（8.0.2引入）用户必须要存在，如果你的数据字典表是老版本，那么需要mysql_upgrade，否则会报错  </p>
+<p>There was an error when trying to access the server with user: mysql.session@localhost. Make sure the user is present in the server and that mysql_upgrade was ran after a server update..   </p>
+<p>可以通过如下命令来检测pugin是否正确  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="header">mysql&gt; SHOW PLUGINS;</span></div><div class="line">+----------------------------+----------+--------------------+----------------------+-------------+</div><div class="line"><span class="header">| Name                       | Status   | Type               | Library              | License     |</span></div><div class="line">+----------------------------+----------+--------------------+----------------------+-------------+</div><div class="line">| binlog                     | ACTIVE   | STORAGE ENGINE     | NULL                 | PROPRIETARY |</div><div class="line"></div><div class="line">(...)</div><div class="line"></div><div class="line"><span class="header">| group_replication          | ACTIVE   | GROUP REPLICATION  | group_replication.so | PROPRIETARY |</span></div><div class="line">+----------------------------+----------+--------------------+----------------------+-------------+</div></pre></td></tr></table></figure>
+
+<p>开启group，在s1作为引导server，并开启MGR<br>引导过程，只能在一个server上设置，而且只能一次<br>这就是为什么配置文件中设置为off的原因  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> group_replication_bootstrap_group=<span class="keyword">ON</span>;</span></div><div class="line"><span class="operator"><span class="keyword">START</span> GROUP_REPLICATION;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> group_replication_bootstrap_group=OFF;</span></div></pre></td></tr></table></figure>
+
+<p>一旦START GROUP_REPLICATION;成功，这个group就算启动成功了  ， 你可以这样来check  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="header">mysql&gt; SELECT * FROM performance_schema.replication_group_members;</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line"><span class="header">| CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST | MEMBER_PORT | MEMBER_STATE  |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line"><span class="header">| group_replication_applier | ce9be252-2b71-11e6-b8f4-00212844f856 | myhost      |       24801 | ONLINE        |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div></pre></td></tr></table></figure>
+
+<p>为了论证它确实OK了，可以如下：</p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div></pre></td><td class="code"><pre><div class="line">mysql&gt; CREATE DATABASE test;</div><div class="line">mysql&gt; USE test;</div><div class="line">mysql&gt; CREATE TABLE t1 (c1 INT PRIMARY KEY, c2 TEXT NOT NULL);</div><div class="line">mysql&gt; INSERT INTO t1 VALUES (1, <span class="emphasis">'Luis'</span>);</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SELECT * FROM t1;</span></div><div class="line">+----+------+</div><div class="line"><span class="header">| c1 | c2   |</span></div><div class="line">+----+------+</div><div class="line"><span class="header">|  1 | Luis |</span></div><div class="line">+----+------+</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SHOW BINLOG EVENTS;</span></div><div class="line">+---------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line"><span class="header">| Log_name      | Pos | Event_type     | Server_id | End_log_pos | Info                                                               |</span></div><div class="line">+---------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line">| binlog.000001 |   4 | Format<span class="emphasis">_desc    |         1 |         123 | Server ver: 8.0.2-gr080-log, Binlog ver: 4                        |</span></div><div class="line">| binlog.000001 | 123 | Previous_gtids |         1 |         150 |                                                                    |</div><div class="line">| binlog.000001 | 150 | Gtid           |         1 |         211 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1'  |</span></div><div class="line">| binlog.000001 | 211 | Query          |         1 |         270 | BEGIN                                                              |</div><div class="line">| binlog.000001 | 270 | View_change    |         1 |         369 | view<span class="emphasis">_id=14724817264259180:1                                        |</span></div><div class="line">| binlog.000001 | 369 | Query          |         1 |         434 | COMMIT                                                             |</div><div class="line">| binlog.000001 | 434 | Gtid           |         1 |         495 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:2'</span>  |</div><div class="line">| binlog.000001 | 495 | Query          |         1 |         585 | CREATE DATABASE test                                               |</div><div class="line">| binlog.000001 | 585 | Gtid           |         1 |         646 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:3'  |</span></div><div class="line">| binlog.000001 | 646 | Query          |         1 |         770 | use `test`; CREATE TABLE t1 (c1 INT PRIMARY KEY, c2 TEXT NOT NULL) |</div><div class="line">| binlog.000001 | 770 | Gtid           |         1 |         831 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:4'</span>  |</div><div class="line">| binlog.000001 | 831 | Query          |         1 |         899 | BEGIN                                                              |</div><div class="line">| binlog.000001 | 899 | Table<span class="emphasis">_map      |         1 |         942 | table_</span>id: 108 (test.t1)                                            |</div><div class="line">| binlog.000001 | 942 | Write<span class="emphasis">_rows     |         1 |         984 | table_</span>id: 108 flags: STMT<span class="emphasis">_END_</span>F                                    |</div><div class="line"><span class="header">| binlog.000001 | 984 | Xid            |         1 |        1011 | COMMIT /* xid=38 */                                                |</span></div><div class="line">+---------------+-----+----------------+-----------+-------------+--------------------------------------------------------------------+</div></pre></td></tr></table></figure>
+
+<h3 id="18-2-1-5_Adding_Instances_to_the_Group">18.2.1.5 Adding Instances to the Group</h3>
+<p>现在，group已经有一个成员s1了，也有一些数据在里面。<br>现在是时候在给这个group扩展之前配置的server了  </p>
+<ul>
+<li>18.2.1.5.1 Adding a Second Instance 添加第二个实例</li>
+</ul>
+<p>为了给这个group添加第二个实例S2，首先要创建一个配置文件<br>这个配置文件跟s1类似，除了一些位置和目录信息、port、serverid 之外  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line">[mysqld]</div><div class="line"></div><div class="line"><span class="comment"># server configuration</span></div><div class="line"><span class="variable">datadir=</span>&lt;full_path_to_data&gt;/data/s2</div><div class="line"><span class="variable">basedir=</span>&lt;full_path_to_bin&gt;/mysql-<span class="number">8.0</span>/</div><div class="line"></div><div class="line"><span class="variable">port=</span><span class="number">24802</span></div><div class="line"><span class="variable">socket=</span>&lt;full_path_to_sock_dir&gt;/s2.sock</div><div class="line"></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment"># Replication configuration parameters</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="variable">server_id=</span><span class="number">2</span></div><div class="line"><span class="variable">gtid_mode=</span>ON</div><div class="line"><span class="variable">enforce_gtid_consistency=</span>ON</div><div class="line"><span class="variable">binlog_checksum=</span>NONE</div><div class="line"></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment"># Group Replication configuration</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="variable">transaction_write_set_extraction=</span>XXHASH64</div><div class="line"><span class="variable">group_replication_group_name=</span><span class="string">"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"</span></div><div class="line"><span class="variable">group_replication_start_on_boot=</span>off</div><div class="line"><span class="variable">group_replication_local_address=</span> <span class="string">"127.0.0.1:24902"</span></div><div class="line"><span class="variable">group_replication_group_seeds=</span> <span class="string">"127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903"</span></div><div class="line"><span class="variable">group_replication_bootstrap_group=</span> off</div></pre></td></tr></table></figure>
+
+<p>开启server  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">mysql-<span class="number">8.0</span><span class="regexp">/bin/m</span>ysqld --defaults-<span class="keyword">file</span>=data<span class="regexp">/s2/</span>s2.cnf</div></pre></td></tr></table></figure>
+
+<p>给group_replication_recovery 配置 recovery credentials  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SET</span> SQL_LOG_BIN=<span class="number">0</span>;</span></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">USER</span> rpl_user@<span class="string">'%'</span> <span class="keyword">IDENTIFIED</span> <span class="keyword">BY</span> <span class="string">'password'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">GRANT</span> REPLICATION <span class="keyword">SLAVE</span> <span class="keyword">ON</span> *.* <span class="keyword">TO</span> rpl_user@<span class="string">'%'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> SQL_LOG_BIN=<span class="number">1</span>;</span></div><div class="line"><span class="operator"><span class="keyword">CHANGE</span> <span class="keyword">MASTER</span> <span class="keyword">TO</span> MASTER_USER=<span class="string">'rpl_user'</span>, MASTER_PASSWORD=<span class="string">'password'</span> \\</span></div><div class="line">	<span class="keyword">FOR</span> CHANNEL <span class="string">'group_replication_recovery'</span>;</div></pre></td></tr></table></figure>
+
+<p>安装MGR 插件  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt"></span></span></div><div class="line">mysql&gt; <span class="constant">INSTALL</span> <span class="constant">PLUGIN</span> group_replication <span class="constant">SONAME</span> <span class="string">'group_replication.so'</span>;</div></pre></td></tr></table></figure>
+
+<p>将s2加入到group  , 跟之前不一样的是：s2不需要设置group_replication_bootstrap_group=on了，因为s1已经引导过一次了  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt"></span></span></div><div class="line">mysql&gt; <span class="constant">START</span> <span class="constant">GROUP_REPLICATION</span>;</div></pre></td></tr></table></figure>
+
+<p>检测MGR是否加入了s2  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="header">mysql&gt; SELECT * FROM performance_schema.replication_group_members;</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line"><span class="header">| CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST | MEMBER_PORT | MEMBER_STATE  |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line">| group<span class="emphasis">_replication_</span>applier | 395409e1-6dfa-11e6-970b-00212844f856 | myhost      |       24801 | ONLINE        |</div><div class="line"><span class="header">| group_replication_applier | ac39f1e6-6dfa-11e6-a69d-00212844f856 | myhost      |       24802 | ONLINE        |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div></pre></td></tr></table></figure>
+
+<p>如果s2标记为online，那么它必须要跟s1的数据自动保持一致。 请如下确认下  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="header">mysql&gt; SHOW DATABASES LIKE 'test';</span></div><div class="line">+-----------------+</div><div class="line"><span class="header">| Database (test) |</span></div><div class="line">+-----------------+</div><div class="line"><span class="header">| test            |</span></div><div class="line">+-----------------+</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SELECT * FROM test.t1;</span></div><div class="line">+----+------+</div><div class="line"><span class="header">| c1 | c2   |</span></div><div class="line">+----+------+</div><div class="line"><span class="header">|  1 | Luis |</span></div><div class="line">+----+------+</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SHOW BINLOG EVENTS;</span></div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line"><span class="header">| Log_name      | Pos  | Event_type     | Server_id | End_log_pos | Info                                                               |</span></div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line">| binlog.000001 |    4 | Format<span class="emphasis">_desc    |         2 |         123 | Server ver: 8.0.3-log, Binlog ver: 4                              |</span></div><div class="line">| binlog.000001 |  123 | Previous_gtids |         2 |         150 |                                                                    |</div><div class="line">| binlog.000001 |  150 | Gtid           |         1 |         211 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1'  |</span></div><div class="line">| binlog.000001 |  211 | Query          |         1 |         270 | BEGIN                                                              |</div><div class="line">| binlog.000001 |  270 | View_change    |         1 |         369 | view<span class="emphasis">_id=14724832985483517:1                                        |</span></div><div class="line">| binlog.000001 |  369 | Query          |         1 |         434 | COMMIT                                                             |</div><div class="line">| binlog.000001 |  434 | Gtid           |         1 |         495 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:2'</span>  |</div><div class="line">| binlog.000001 |  495 | Query          |         1 |         585 | CREATE DATABASE test                                               |</div><div class="line">| binlog.000001 |  585 | Gtid           |         1 |         646 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:3'  |</span></div><div class="line">| binlog.000001 |  646 | Query          |         1 |         770 | use `test`; CREATE TABLE t1 (c1 INT PRIMARY KEY, c2 TEXT NOT NULL) |</div><div class="line">| binlog.000001 |  770 | Gtid           |         1 |         831 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:4'</span>  |</div><div class="line">| binlog.000001 |  831 | Query          |         1 |         890 | BEGIN                                                              |</div><div class="line">| binlog.000001 |  890 | Table<span class="emphasis">_map      |         1 |         933 | table_</span>id: 108 (test.t1)                                            |</div><div class="line">| binlog.000001 |  933 | Write<span class="emphasis">_rows     |         1 |         975 | table_</span>id: 108 flags: STMT<span class="emphasis">_END_</span>F                                    |</div><div class="line">| binlog.000001 |  975 | Xid            |         1 |        1002 | COMMIT /* xid=30 <span class="strong">*/                                                |</span></div><div class="line">| binlog.000001 | 1002 | Gtid           |         1 |        1063 | SET @@SESSION.GTID_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:5'  |</div><div class="line">| binlog.000001 | 1063 | Query          |         1 |        1122 | BEGIN                                                              |</div><div class="line">| binlog.000001 | 1122 | View_change    |         1 |        1261 | view_id=14724832985483517:2                                        |</div><div class="line">| binlog.000001 | 1261 | Query          |         1 |        1326 | COMMIT                                                             |</div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div></pre></td></tr></table></figure>
+
+<p>如果s2的数据和s1的数据一样，那么说明s2真的加入成功了  </p>
+<ul>
+<li>18.2.1.5.2 Adding Additional Instances 添加其他的实例  </li>
+</ul>
+<p>添加第三个和其他的server加入到group的步骤跟添加s2是一模一样的，除了一些变量之外<br>下面罗列下步骤  </p>
+<p>1） Create the configuration file     </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">[mysqld]</div><div class="line"></div><div class="line"><span class="comment"># server configuration</span></div><div class="line"><span class="variable">datadir=</span>&lt;full_path_to_data&gt;/data/s3</div><div class="line"><span class="variable">basedir=</span>&lt;full_path_to_bin&gt;/mysql-<span class="number">8.0</span>/</div><div class="line"></div><div class="line"><span class="variable">port=</span><span class="number">24803</span></div><div class="line"><span class="variable">socket=</span>&lt;full_path_to_sock_dir&gt;/s3.sock</div><div class="line"></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment"># Replication configuration parameters</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="variable">server_id=</span><span class="number">3</span></div><div class="line"><span class="variable">gtid_mode=</span>ON</div><div class="line"><span class="variable">enforce_gtid_consistency=</span>ON</div><div class="line"><span class="variable">binlog_checksum=</span>NONE</div><div class="line"></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="comment"># Group Replication configuration</span></div><div class="line"><span class="comment">#</span></div><div class="line"><span class="variable">group_replication_group_name=</span><span class="string">"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"</span></div><div class="line"><span class="variable">group_replication_start_on_boot=</span>off</div><div class="line"><span class="variable">group_replication_local_address=</span> <span class="string">"127.0.0.1:24903"</span></div><div class="line"><span class="variable">group_replication_group_seeds=</span> <span class="string">"127.0.0.1:24901,127.0.0.1:24902,127.0.0.1:24903"</span></div><div class="line"><span class="variable">group_replication_bootstrap_group=</span> off</div></pre></td></tr></table></figure>
+
+<p>2) Start the server  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mysql-<span class="number">8.0</span><span class="regexp">/bin/m</span>ysqld --defaults-<span class="keyword">file</span>=data<span class="regexp">/s3/</span>s3.cnf</div></pre></td></tr></table></figure>
+
+<p>3) Configure the recovery credentials for the group_replication_recovery channel.  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="operator"><span class="keyword">SET</span> SQL_LOG_BIN=<span class="number">0</span>;</span></div><div class="line"><span class="operator"><span class="keyword">CREATE</span> <span class="keyword">USER</span> rpl_user@<span class="string">'%'</span> <span class="keyword">IDENTIFIED</span> <span class="keyword">BY</span> <span class="string">'password'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">GRANT</span> REPLICATION <span class="keyword">SLAVE</span> <span class="keyword">ON</span> *.* <span class="keyword">TO</span> rpl_user@<span class="string">'%'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">FLUSH</span> <span class="keyword">PRIVILEGES</span>;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> SQL_LOG_BIN=<span class="number">1</span>;</span></div><div class="line"><span class="operator"><span class="keyword">CHANGE</span> <span class="keyword">MASTER</span> <span class="keyword">TO</span> MASTER_USER=<span class="string">'rpl_user'</span>, MASTER_PASSWORD=<span class="string">'password'</span>  \\</span></div><div class="line"><span class="keyword">FOR</span> CHANNEL <span class="string">'group_replication_recovery'</span>;</div></pre></td></tr></table></figure>
+
+<p>4) Install the Group Replication plugin and start it.  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">INSTALL</span> <span class="keyword">PLUGIN</span> group_replication <span class="keyword">SONAME</span> <span class="string">'group_replication.so'</span>;</span></div><div class="line"><span class="operator"><span class="keyword">START</span> GROUP_REPLICATION;</span></div></pre></td></tr></table></figure>
+
+<p>5) 检查  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="header">mysql&gt; SELECT * FROM performance_schema.replication_group_members;</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line"><span class="header">| CHANNEL_NAME              | MEMBER_ID                            | MEMBER_HOST | MEMBER_PORT | MEMBER_STATE  |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div><div class="line">| group<span class="emphasis">_replication_</span>applier | 395409e1-6dfa-11e6-970b-00212844f856 | myhost      |       24801 | ONLINE        |</div><div class="line">| group<span class="emphasis">_replication_</span>applier | 7eb217ff-6df3-11e6-966c-00212844f856 | myhost      |       24803 | ONLINE        |</div><div class="line"><span class="header">| group_replication_applier | ac39f1e6-6dfa-11e6-a69d-00212844f856 | myhost      |       24802 | ONLINE        |</span></div><div class="line">+---------------------------+--------------------------------------+-------------+-------------+---------------+</div></pre></td></tr></table></figure>
+
+<p>6) 确认数据是否ok  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div></pre></td><td class="code"><pre><div class="line"><span class="header">mysql&gt; SHOW DATABASES LIKE 'test';</span></div><div class="line">+-----------------+</div><div class="line"><span class="header">| Database (test) |</span></div><div class="line">+-----------------+</div><div class="line"><span class="header">| test            |</span></div><div class="line">+-----------------+</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SELECT * FROM test.t1;</span></div><div class="line">+----+------+</div><div class="line"><span class="header">| c1 | c2   |</span></div><div class="line">+----+------+</div><div class="line"><span class="header">|  1 | Luis |</span></div><div class="line">+----+------+</div><div class="line"></div><div class="line"><span class="header">mysql&gt; SHOW BINLOG EVENTS;</span></div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line"><span class="header">| Log_name      | Pos  | Event_type     | Server_id | End_log_pos | Info                                                               |</span></div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div><div class="line">| binlog.000001 |    4 | Format<span class="emphasis">_desc    |         3 |         123 | Server ver: 8.0.3-log, Binlog ver: 4                              |</span></div><div class="line">| binlog.000001 |  123 | Previous_gtids |         3 |         150 |                                                                    |</div><div class="line">| binlog.000001 |  150 | Gtid           |         1 |         211 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:1'  |</span></div><div class="line">| binlog.000001 |  211 | Query          |         1 |         270 | BEGIN                                                              |</div><div class="line">| binlog.000001 |  270 | View_change    |         1 |         369 | view<span class="emphasis">_id=14724832985483517:1                                        |</span></div><div class="line">| binlog.000001 |  369 | Query          |         1 |         434 | COMMIT                                                             |</div><div class="line">| binlog.000001 |  434 | Gtid           |         1 |         495 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:2'</span>  |</div><div class="line">| binlog.000001 |  495 | Query          |         1 |         585 | CREATE DATABASE test                                               |</div><div class="line">| binlog.000001 |  585 | Gtid           |         1 |         646 | SET @@SESSION.GTID<span class="emphasis">_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:3'  |</span></div><div class="line">| binlog.000001 |  646 | Query          |         1 |         770 | use `test`; CREATE TABLE t1 (c1 INT PRIMARY KEY, c2 TEXT NOT NULL) |</div><div class="line">| binlog.000001 |  770 | Gtid           |         1 |         831 | SET @@SESSION.GTID_NEXT= <span class="emphasis">'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:4'</span>  |</div><div class="line">| binlog.000001 |  831 | Query          |         1 |         890 | BEGIN                                                              |</div><div class="line">| binlog.000001 |  890 | Table<span class="emphasis">_map      |         1 |         933 | table_</span>id: 108 (test.t1)                                            |</div><div class="line">| binlog.000001 |  933 | Write<span class="emphasis">_rows     |         1 |         975 | table_</span>id: 108 flags: STMT<span class="emphasis">_END_</span>F                                    |</div><div class="line">| binlog.000001 |  975 | Xid            |         1 |        1002 | COMMIT /* xid=29 <span class="strong">*/                                                |</span></div><div class="line">| binlog.000001 | 1002 | Gtid           |         1 |        1063 | SET @@SESSION.GTID_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:5'  |</div><div class="line">| binlog.000001 | 1063 | Query          |         1 |        1122 | BEGIN                                                              |</div><div class="line">| binlog.000001 | 1122 | View_change    |         1 |        1261 | view_id=14724832985483517:2                                        |</div><div class="line">| binlog.000001 | 1261 | Query          |         1 |        1326 | COMMIT                                                             |</div><div class="line">| binlog.000001 | 1326 | Gtid           |         1 |        1387 | SET @@SESSION.GTID_NEXT= 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:6'  |</div><div class="line">| binlog.000001 | 1387 | Query          |         1 |        1446 | BEGIN                                                              |</div><div class="line">| binlog.000001 | 1446 | View_change    |         1 |        1585 | view_id=14724832985483517:3                                        |</div><div class="line">| binlog.000001 | 1585 | Query          |         1 |        1650 | COMMIT                                                             |</div><div class="line">+---------------+------+----------------+-----------+-------------+--------------------------------------------------------------------+</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/01/15/18_2_group_replication/" data-title="组复制官方翻译三、Getting Started | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2019/01/15/18_3_group_replication/" title="组复制官方翻译四、Monitoring Group Replication">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  组复制官方翻译四、Monitoring Group Replication</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2019/01/15/18_1_group_replication/"  title="组复制官方翻译二、Group Replication Background">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译二、Group Replication Background
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/01/15/18_2_group_replication/" data-title="组复制官方翻译三、Getting Started" data-url="https://Keithlan.github.io/2019/01/15/18_2_group_replication/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-2-1_Deploying_Group_Replication_in_Single-Primary_Mode"><span class="toc-number">1.</span> <span class="toc-text">18.2.1 Deploying Group Replication in Single-Primary Mode</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-1_Deploying_Instances_for_Group_Replication"><span class="toc-number">1.1.</span> <span class="toc-text">18.2.1.1 Deploying Instances for Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-2_Configuring_an_Instance_for_Group_Replication"><span class="toc-number">1.2.</span> <span class="toc-text">18.2.1.2 Configuring an Instance for Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-3_User_Credentials"><span class="toc-number">1.3.</span> <span class="toc-text">18.2.1.3 User Credentials</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-4_Launching_Group_Replication"><span class="toc-number">1.4.</span> <span class="toc-text">18.2.1.4 Launching Group Replication</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-2-1-5_Adding_Instances_to_the_Group"><span class="toc-number">1.5.</span> <span class="toc-text">18.2.1.5 Adding Instances to the Group</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>

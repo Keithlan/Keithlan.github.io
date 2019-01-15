@@ -1,0 +1,511 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>组复制官方翻译六、Upgrading Group Replication | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="https://dev.mysql.com/doc/refman/8.0/en/group-replication-upgrade.html  
+
+这个章节主要描述升级MGR的计划基本的升级MGR成员的方法基本跟单独的实例升级一样（可参考 Section 2.11.1, “Upgrading MyS">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/01/15/18_5_group_replication/" title="组复制官方翻译六、Upgrading Group Replication" itemprop="url">组复制官方翻译六、Upgrading Group Replication</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-01-15T02:37:24.000Z" itemprop="datePublished">Jan 15 2019</time>
+    Updated:<time datetime="2019-01-15T06:44:11.000Z" itemprop="dateModified">Jan 15 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-6-1_Group_Replication_Offline_Upgrade"><span class="toc-number">1.</span> <span class="toc-text">18.6.1 Group Replication Offline Upgrade</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-6-2_Group_Replication_Online_Upgrade"><span class="toc-number">2.</span> <span class="toc-text">18.6.2 Group Replication Online Upgrade</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-1_Online_Upgrade_Considerations"><span class="toc-number">2.1.</span> <span class="toc-text">18.6.2.1 Online Upgrade Considerations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-2_Combining_Group_Replication_Versions"><span class="toc-number">2.2.</span> <span class="toc-text">18.6.2.2 Combining Group Replication Versions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-3_Upgrading_a_Group_Replication_Member"><span class="toc-number">2.3.</span> <span class="toc-text">18.6.2.3 Upgrading a Group Replication Member</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-4_Group_Replication_Online_Upgrade_Methods"><span class="toc-number">2.4.</span> <span class="toc-text">18.6.2.4 Group Replication Online Upgrade Methods</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-5_Group_Replication_Upgrade_with_mysqlbackup"><span class="toc-number">2.5.</span> <span class="toc-text">18.6.2.5 Group Replication Upgrade with mysqlbackup</span></a></li></ol></li></ol>
+		</div>
+		
+		<blockquote>
+<p><a href="https://dev.mysql.com/doc/refman/8.0/en/group-replication-upgrade.html" target="_blank" rel="external">https://dev.mysql.com/doc/refman/8.0/en/group-replication-upgrade.html</a>  </p>
+</blockquote>
+<p>这个章节主要描述升级MGR的计划<br>基本的升级MGR成员的方法基本跟单独的实例升级一样（可参考 Section 2.11.1, “Upgrading MySQL”）<br>选择in-place，还是logical方式升级取决于数据量大小<br>通常in-place升级会非常的快速，因此也是官方最推荐的<br>由于MGR是分布式的环境，所以在升级的时候有一些考虑，比如：成员升级的顺序问题等  </p>
+<p>如果你的MGR环境可以允许offline，那么就参考下列的Group Replication Offline Upgrade 方法<br>如果你的MGR环境需要在online进行，参考Group Replication Online Upgrade方法（极小的downtime）  </p>
+<h2 id="18-6-1_Group_Replication_Offline_Upgrade">18.6.1 Group Replication Offline Upgrade</h2>
+<p>对一个MGR进行offline升级的时候，你需要将成员从group中分别移除掉，然后升级成员，然后重启这个group<br>在 multi-primary环境下，你可以按照任何顺序shutdown组成员<br>在 single-primary环境下，先shutdown secondary成员节点，最后shutdown primary节点<br>如何移除成员节点，你可以参考  Section 18.6.2.3, “Upgrading a Group Replication Member”  </p>
+<p>一点group变成offline，你可以就想升级单独的实例一样升级他们，参考 Section 2.11.1, “Upgrading MySQL”<br>所有成员升级完毕后，在重启成员  </p>
+<h2 id="18-6-2_Group_Replication_Online_Upgrade">18.6.2 Group Replication Online Upgrade</h2>
+<p>当你需要在线升级MGR，且不影响你的application，那么你就需要考虑下自己的方法了<br>这一节主要描述online升级的一些考虑，方法，和步骤   </p>
+<h3 id="18-6-2-1_Online_Upgrade_Considerations">18.6.2.1 Online Upgrade Considerations</h3>
+<p>当你需要online升级的时候，需要考虑如下几个点：  </p>
+<ul>
+<li><p>不管哪种升级group的方法，对组成员停写是至关重要的一步，直到它重新加入group  </p>
+</li>
+<li><p>当一个组成员stop的时候，super_read_only 会自动设置成on，但是这个改变不会被写入配置文件，并不持久  </p>
+</li>
+<li><p>当5.7.22或者8.0.11想要加入5.7.21或更低版本的group的时候会失败，因为5.7.21不会发送lower_case_table_names变量的值  </p>
+</li>
+</ul>
+<h3 id="18-6-2-2_Combining_Group_Replication_Versions">18.6.2.2 Combining Group Replication Versions</h3>
+<p>不同版本的MySQL组合的GROUP可能会存在着不兼容性，这一章主要描述不同组合的最佳实践  </p>
+<p>如何查看版本  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="header">SELECT MEMBER_HOST,MEMBER_PORT,MEMBER_VERSION FROM performance_schema.replication_group_members;</span></div><div class="line">+-------------+-------------+----------------+</div><div class="line"><span class="header">| member_host | member_port | member_version |</span></div><div class="line">+-------------+-------------+----------------+</div><div class="line"><span class="header">| example.com |	   3306     |   8.0.13	     |</span></div><div class="line">+-------------+-------------+----------------+</div></pre></td></tr></table></figure>
+
+<p>不同大版本group中的组合成员的规则如下：  </p>
+<ul>
+<li><p>如果你跑着一个8.0版本的GR，你需要添加一个成员为5.7的，这样就不行  </p>
+</li>
+<li><p>如果你跑着一个5.7版本的GR，你需要添加一个8.0的成员是可以的，它必须保持read-only模式    </p>
+</li>
+</ul>
+<p>不同小版本group中的组合成员的规则如下：</p>
+<ul>
+<li>如果是小版本的之间的差异，是可以的随时加入进来的,且可读可写。如果是single-primary group，添加的成员默认是read-only模式     </li>
+</ul>
+<h3 id="18-6-2-3_Upgrading_a_Group_Replication_Member">18.6.2.3 Upgrading a Group Replication Member</h3>
+<p>这一小节主要描述升级组成员版本的基本步骤<br>这里面的步骤是Section 18.6.2.4, “Group Replication Online Upgrade Methods”. 提到步骤的一部分  </p>
+<p>升级组成员版本的步骤包括：将成员移除组，接下来选择你要升级的方法，然后重新加入升级过成员的group<br>single-primary模式下的推荐升级方法是： 先升级所有的secondaries，然后再primary节点  </p>
+<p>升级一个组成员的方法：  </p>
+<ul>
+<li>连接一个成员，然后敲 STOP GROUP_REPLICATION.  在此之前，要确认下该成员状态是offline 通过 replication_group_members 表  </li>
+<li>设置group_replication_start_on_boot=0 防止成员已启动就自动加入，会有安全隐患（在你还没upgrade mysql之前就自动加入了 等等情况）    </li>
+<li>使用 mysqladmin shutdown关闭该成员，其他成员继续保持running  </li>
+<li>使用in-place方式升级该成员，由于你没有设置group_replication_start_on_boot=1，所以重新启动升级过的成员时，它不会自动加入MGR  </li>
+<li>一旦你使用mysql_upgrade升级成功后，再将 group_replication_start_on_boot 设置为1，这样可以确保之后重启服务器的时候可以自动加入进来  </li>
+<li>链接到升级成功过后的该成员，敲 START GROUP_REPLICATION.重新加入group。该server的元数据会自动重新配置，且开始追数据，一旦数据追完，它将变成online状态  </li>
+</ul>
+<p>当升级成功的成员加入到group中的时候，只要group中还有早期的的版本成员在，那么该成员都会自动被设置成 super_read_only=on,不管它是primary还是secondary<br>这样可以保证升级后的成员不会有写，直到所有的版本全部一致<br>但是如果是multi-primary模式的group，一旦确认升级成功，这个group就可以处理事务，所以该模式下人工配置哪个可以写，哪个不可以写是非常重要的步骤  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">GLOBAL</span> read_only=off;</span></div></pre></td></tr></table></figure>
+
+<h3 id="18-6-2-4_Group_Replication_Online_Upgrade_Methods">18.6.2.4 Group Replication Online Upgrade Methods</h3>
+<ul>
+<li>Rolling In-Group Upgrade</li>
+</ul>
+<p>对于single-primary的group，一旦所有secondary节点都升级了，然后primary节点从group中移除出去升级的时候，一个新的primary节点会自动被选择出来<br>对于multi-primary的group，直到所有成员都被升级了，你才需要手动的给所有成员设置 super_read_only=OFF<br>对于multi-primary的group，在上述过程中，所有primaries被降级，会降低可用性。但是在single-primary模式中，就不会有影响  </p>
+<ul>
+<li>Rolling Migration Upgrade</li>
+</ul>
+<p>这个方法就是：你从组成员中移除成员，然后升级，然后用他们创建第二个group<br>对于multi-primary的group，在上述过程中，所有primaries被降级，会降低可用性。但是在single-primary模式中，就不会有影响  </p>
+<p>升级过程中，由于新版本的group为了追上老版本group的数据，因此在新版本的group中需要配置成老版本group中的slave角色<br>对于single-primary的group，该slave的角色，也必须是新版本group的primary角色<br>对于multi-primary的group，该slave的橘色，可以是任何一个primary角色  </p>
+<p>方法基本如下：  </p>
+<ul>
+<li><p>在origin group中一个个的移除成员，参考 Section 18.6.2.3, “Upgrading a Group Replication Member”</p>
+</li>
+<li><p>升级成员的版本  ， 参考 Section 2.11.1, “Upgrading MySQL”.  </p>
+</li>
+<li><p>使用升级过的成员，创建一个新的group。你需要配置一个新的group name，因为老的name还在运行。  </p>
+</li>
+<li><p>创建一个异步复制通道在新老group中。老的group的priamry作为master，新的group成员作为GTID-based slave  </p>
+</li>
+</ul>
+<p>在你切换应用之前，你必须确保你的新的group有比较合适的成员数量<br>敲SELECT * FROM performance_schema.replication_group_members来比对新老成员数量大小<br>最后，如果数据都同步完了，那么就可以停止复制，切换应用了  </p>
+<ul>
+<li>Rolling Duplication Upgrade</li>
+</ul>
+<p>这个方法主要描述的是，如果在不减少原来group数量的同时，构建新group<br>因为很多时候，multi-primary都在提供业务，是不允许减少节点的  </p>
+<p>该处理方法是：  </p>
+<ul>
+<li><p>部署合适数量成员的新group  </p>
+</li>
+<li><p>对老group的成员进行备份  </p>
+</li>
+<li><p>使用这个备份进行升级，参考 Section 18.6.2.5, “Group Replication Upgrade with mysqlbackup” </p>
+</li>
+<li><p>使用升级好server进行构建一个新的group  </p>
+</li>
+<li><p>创建一个异步复制通道在新老group中。老的group的priamry作为master，新的group成员作为GTID-based slave  </p>
+</li>
+</ul>
+<p>一旦新老group直接的数据差异越来越小，小到很快就能追上，那么就可以重新指向业务application              </p>
+<h3 id="18-6-2-5_Group_Replication_Upgrade_with_mysqlbackup">18.6.2.5 Group Replication Upgrade with mysqlbackup</h3>
+<p>步骤如下：  </p>
+<ul>
+<li>使用mysqlbackup来备份老group的成员  </li>
+<li>部署一个跟备份一样版本的成员实例  </li>
+<li>使用mysqlbackup来恢复一个新成员实例  </li>
+<li>在新实例上升级  </li>
+</ul>
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/01/15/18_5_group_replication/" data-title="组复制官方翻译六、Upgrading Group Replication | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+ <div class="prev" >
+ <a href="/2019/01/15/18_6_group_replication/" title="组复制官方翻译七、Requirements and Limitations">
+  <strong>PREVIOUS:</strong><br/>
+  <span>
+  组复制官方翻译七、Requirements and Limitations</span>
+</a>
+</div>
+
+
+<div class="next">
+<a href="/2019/01/15/18_4_group_replication/"  title="组复制官方翻译五、Group Replication Security">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译五、Group Replication Security
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/01/15/18_5_group_replication/" data-title="组复制官方翻译六、Upgrading Group Replication" data-url="https://Keithlan.github.io/2019/01/15/18_5_group_replication/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#18-6-1_Group_Replication_Offline_Upgrade"><span class="toc-number">1.</span> <span class="toc-text">18.6.1 Group Replication Offline Upgrade</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#18-6-2_Group_Replication_Online_Upgrade"><span class="toc-number">2.</span> <span class="toc-text">18.6.2 Group Replication Online Upgrade</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-1_Online_Upgrade_Considerations"><span class="toc-number">2.1.</span> <span class="toc-text">18.6.2.1 Online Upgrade Considerations</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-2_Combining_Group_Replication_Versions"><span class="toc-number">2.2.</span> <span class="toc-text">18.6.2.2 Combining Group Replication Versions</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-3_Upgrading_a_Group_Replication_Member"><span class="toc-number">2.3.</span> <span class="toc-text">18.6.2.3 Upgrading a Group Replication Member</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-4_Group_Replication_Online_Upgrade_Methods"><span class="toc-number">2.4.</span> <span class="toc-text">18.6.2.4 Group Replication Online Upgrade Methods</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#18-6-2-5_Group_Replication_Upgrade_with_mysqlbackup"><span class="toc-number">2.5.</span> <span class="toc-text">18.6.2.5 Group Replication Upgrade with mysqlbackup</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>47</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>45</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
