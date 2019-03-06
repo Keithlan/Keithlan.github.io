@@ -1,0 +1,495 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL运维实战 之 PHP访问MySQL你使用对了吗 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="大家都知道，slow query系统做的好不好，直接决定了解决slow query的效率问题   
+一个数据库管理平台，拥有一个好的slow query系统，基本上就拥有了解锁性能问题的钥匙         
+但是今天主要分享的并不是平台，而是在平台中看到的奇葩指数五颗星的slow issue   ">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2019/03/06/prepare_slow/" title="MySQL运维实战 之 PHP访问MySQL你使用对了吗" itemprop="url">MySQL运维实战 之 PHP访问MySQL你使用对了吗</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2019-03-06T02:39:24.000Z" itemprop="datePublished">Mar 6 2019</time>
+    Updated:<time datetime="2019-03-06T08:52:41.000Z" itemprop="dateModified">Mar 6 2019</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、症状"><span class="toc-number">1.</span> <span class="toc-text">一、症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、排查"><span class="toc-number">2.</span> <span class="toc-text">二、排查</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL开启slow=0的抓包模式"><span class="toc-number">3.</span> <span class="toc-text">MySQL开启slow=0的抓包模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#php-pdo_两种prepare模式"><span class="toc-number">4.</span> <span class="toc-text">php-pdo 两种prepare模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#验证两种prepare模式"><span class="toc-number">5.</span> <span class="toc-text">验证两种prepare模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#调整和验证"><span class="toc-number">6.</span> <span class="toc-text">调整和验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">7.</span> <span class="toc-text">总结</span></a></li></ol>
+		</div>
+		
+		<p>大家都知道，slow query系统做的好不好，直接决定了解决slow query的效率问题   </p>
+<p>一个数据库管理平台，拥有一个好的slow query系统，基本上就拥有了解锁性能问题的钥匙         </p>
+<p>但是今天主要分享的并不是平台，而是在平台中看到的奇葩指数五颗星的slow issue      </p>
+<p>好了，关子卖完了，直接进入正题  </p>
+<h2 id="一、症状">一、症状</h2>
+<blockquote>
+<p>一堆如下慢查询  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="preprocessor"># User@Host: cra[cra] @  [xx]  Id: 3352884621</span></div><div class="line"><span class="preprocessor"># Query_time: 0.183673  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0</span></div><div class="line">use xx_db;</div><div class="line">SET timestamp=<span class="number">1549900927</span>;</div><div class="line"><span class="preprocessor"># administrator command: Prepare;</span></div><div class="line"></div><div class="line"><span class="preprocessor"># Time: 2019-02-12T00:02:07.516803+08:00</span></div><div class="line"><span class="preprocessor"># User@Host: cra[cra] @  [xx]  Id: 3351119968</span></div><div class="line"><span class="preprocessor"># Query_time: 0.294081  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0</span></div><div class="line">SET timestamp=<span class="number">1549900927</span>;</div><div class="line"><span class="preprocessor"># administrator command: Prepare;</span></div></pre></td></tr></table></figure>
+
+<p>从我们的监控图上可以看到，每天不定时间段的slow query 总数在攀升，但是却看不到任何query 语句  </p>
+<p>这是我接触到的slow query优化案例中从来没有过的情况，比较好奇，也比较兴奋，至此决心要好好看看这个问题  </p>
+<h2 id="二、排查">二、排查</h2>
+<p>要解决这个问题，首先想到的是，如何复现这个问题，如何模拟复现这个症状  </p>
+<ul>
+<li>MySQL客户端 模拟prepare</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">* 模拟</div><div class="line">root:xx&gt; prepare stmt1 <span class="keyword">from</span> 'select * <span class="keyword">from</span> xx_operation_log <span class="keyword">where</span> <span class="property">id</span> = ?';</div><div class="line">Query OK, <span class="number">0</span> rows affected (<span class="number">0.00</span> sec)</div><div class="line">Statement prepared</div><div class="line"></div><div class="line">* 结果</div><div class="line"></div><div class="line"><span class="comment"># Time: 2019-02-14T14:14:50.937462+08:00</span></div><div class="line"><span class="comment"># User@Host: root[root] @ localhost []  Id:   369</span></div><div class="line"><span class="comment"># Query_time: 0.000105  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 0</span></div><div class="line">SET timestamp=<span class="number">1550124890</span>;</div><div class="line">prepare stmt1 <span class="keyword">from</span> 'select * <span class="keyword">from</span> xx_operation_log <span class="keyword">where</span> <span class="property">id</span> = ?';</div></pre></td></tr></table></figure>
+
+<p>结论是： MySQL client 模拟出来的prepare 并不是我们期待的，并没有得到我们想要的 administrator command: Prepare  </p>
+<ul>
+<li>perl 模拟prepare</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#!/usr/bin/perl</span></div><div class="line"></div><div class="line"><span class="keyword">use</span> DBI;</div><div class="line"></div><div class="line"><span class="keyword">my</span> <span class="variable">$dsn</span> = <span class="string">"dbi:mysql:database=<span class="subst">${db_name}</span>;hostname=<span class="subst">${db_host}</span>;port=<span class="subst">${db_port}</span>"</span>;<span class="comment">#数据源</span></div><div class="line"></div><div class="line"><span class="comment">#获取数据库句柄</span></div><div class="line"><span class="keyword">my</span> <span class="variable">$dbh</span> = DBI-&gt;<span class="keyword">connect</span>(<span class="string">"DBI:mysql:database=xx;host=xx"</span>, <span class="string">"xx"</span>, <span class="string">"xx"</span>, {<span class="string">'RaiseError'</span> =&gt; <span class="number">1</span>});</div><div class="line"></div><div class="line"><span class="keyword">my</span> <span class="variable">$sql</span> = <span class="string">qq{select * from faia_operation_log where id in (?)}</span>;</div><div class="line"></div><div class="line"><span class="keyword">my</span> <span class="variable">$sth</span> = <span class="variable">$dbh</span>-&gt;prepare(<span class="variable">$sql</span>);</div><div class="line"><span class="variable">$sth</span>-&gt;bind_param (<span class="number">1</span>, <span class="string">'100'</span>);</div><div class="line"></div><div class="line"><span class="keyword">sleep</span> <span class="number">3</span>;</div><div class="line"><span class="variable">$sth</span>-&gt;execute();</div></pre></td></tr></table></figure>
+
+<p>结论是：跟MySQL客户端一样，同样是看不到administrator command: Prepare  </p>
+<ul>
+<li>php 模拟prepare</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">1. 官方网址：</div><div class="line"></div><div class="line">https://dev.mysql.com/doc/apis-php/en/apis-php-mysqli-stmt.prepare.html</div><div class="line"></div><div class="line"></div><div class="line"><span class="php"><span class="preprocessor">&lt;?php</span></span></div><div class="line"><span class="variable">$link</span> = mysqli_connect(<span class="string">"xx"</span>, <span class="string">"dba"</span>, <span class="string">"xx"</span>, <span class="string">"xx_db"</span>);</div><div class="line"></div><div class="line"><span class="comment">/* check connection */</span></div><div class="line"><span class="keyword">if</span> (mysqli_connect_errno()) {</div><div class="line">    printf(<span class="string">"Connect failed: %s\n"</span>, mysqli_connect_error());</div><div class="line">    <span class="keyword">exit</span>();</div><div class="line">}</div><div class="line"></div><div class="line"></div><div class="line"><span class="variable">$city</span> = <span class="string">'1'</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="comment">/* create a prepared statement */</span></div><div class="line"><span class="variable">$stmt</span> = mysqli_stmt_init(<span class="variable">$link</span>);</div><div class="line"></div><div class="line"><span class="keyword">if</span> (mysqli_stmt_prepare(<span class="variable">$stmt</span>, <span class="string">'select * from xx_operation_log where id in (1,2,3)'</span>){</div><div class="line"></div><div class="line">    <span class="comment">/* bind parameters for markers */</span></div><div class="line">    <span class="comment">/* mysqli_stmt_bind_param($stmt, "s", $city);</span></div><div class="line"></div><div class="line">    /* execute query */</div><div class="line">    mysqli_stmt_execute(<span class="variable">$stmt</span>);</div><div class="line"></div><div class="line">    <span class="comment">/* bind result variables */</span></div><div class="line">    mysqli_stmt_bind_result(<span class="variable">$stmt</span>, <span class="variable">$district</span>);</div><div class="line"></div><div class="line">    <span class="comment">/* fetch value */</span></div><div class="line">    mysqli_stmt_fetch(<span class="variable">$stmt</span>);</div><div class="line"></div><div class="line">    printf(<span class="string">"%s is in district %s\n"</span>, <span class="variable">$city</span>, <span class="variable">$district</span>);</div><div class="line"></div><div class="line">    <span class="comment">/* close statement */</span></div><div class="line">    mysqli_stmt_close(<span class="variable">$stmt</span>);</div><div class="line">}</div><div class="line"></div><div class="line"><span class="comment">/* close connection */</span></div><div class="line">mysqli_close(<span class="variable">$link</span>);</div><div class="line"><span class="preprocessor">?&gt;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>php模拟得到的slow 结果</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[root@xx <span class="number">20190211</span>]# <span class="keyword">cat</span> xx-slow.<span class="built_in">log</span> | <span class="keyword">grep</span> <span class="string">'administrator command: Prepare'</span> -B4  | <span class="keyword">grep</span> <span class="string">'User@Host'</span> | <span class="keyword">grep</span> <span class="string">'xx_rx'</span> | wc -<span class="keyword">l</span></div><div class="line"><span class="number">7891</span></div><div class="line"></div><div class="line">[root@xx <span class="number">20190211</span>]# <span class="keyword">cat</span> xx-slow.<span class="built_in">log</span> | <span class="keyword">grep</span> <span class="string">'administrator command: Prepare'</span> -B4  | <span class="keyword">grep</span> <span class="string">'User@Host'</span>  | wc -<span class="keyword">l</span></div><div class="line"><span class="number">7908</span></div></pre></td></tr></table></figure>
+
+<p>结论： 通过php代码，我们成功模拟出了想要的结果  </p>
+<p>那顺藤摸瓜，抓取下这段时间有相同session id的整个sql执行过程  </p>
+<h2 id="MySQL开启slow=0的抓包模式">MySQL开启slow=0的抓包模式</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">可以定位到同一个session id（3415357118） 的 <span class="operator"><span class="keyword">prepare</span> + <span class="keyword">execute</span> + <span class="keyword">close</span> stmt  </span></div><div class="line"></div><div class="line"></div><div class="line"># <span class="keyword">User</span>@Host: xx_rx[xx_rx] @  [xx.xxx.xxx<span class="number">.132</span>]  Id: <span class="number">3415357118</span></div><div class="line"># Query_time: <span class="number">0.401453</span>  Lock_time: <span class="number">0.000000</span> Rows_sent: <span class="number">0</span>  Rows_examined: <span class="number">0</span></div><div class="line"><span class="keyword">use</span> xx_db;</div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">timestamp</span>=<span class="number">1550017125</span>;</span></div><div class="line"># administrator command: <span class="operator"><span class="keyword">Prepare</span>;</span></div><div class="line"># Time: 2019-02-13T08:18:45.624671+08:00</div><div class="line"><span class="comment">--</span></div><div class="line"># User@Host: xx_rx[xx_rx] @  [xx.xxx.xxx.132]  Id: 3415357118</div><div class="line"># Query_time: 0.001650  Lock_time: 0.000102 Rows_sent: 0  Rows_examined: 1</div><div class="line"><span class="operator"><span class="keyword">use</span> xx_db;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">timestamp</span>=<span class="number">1550017125</span>;</span></div><div class="line"><span class="operator"><span class="keyword">update</span> <span class="string">`xx`</span> <span class="keyword">set</span> <span class="string">`updated_at`</span> = <span class="string">'2019-02-13 08:18:45'</span>, <span class="string">`has_sales_office_phone`</span> = <span class="number">1</span>, <span class="string">`has_presale_permit`</span> = <span class="number">1</span> <span class="keyword">where</span> <span class="string">`id`</span> = <span class="number">28886</span>;</span></div><div class="line"># Time: 2019-02-13T08:18:45.626138+08:00</div><div class="line"><span class="comment">--</span></div><div class="line"># User@Host: xx_rx[xx_rx] @  [xx.xxx.xxx.132]  Id: 3415357118</div><div class="line"># Query_time: 0.000029  Lock_time: 0.000000 Rows_sent: 0  Rows_examined: 1</div><div class="line"><span class="operator"><span class="keyword">use</span> xx_db;</span></div><div class="line"><span class="operator"><span class="keyword">SET</span> <span class="keyword">timestamp</span>=<span class="number">1550017125</span>;</span></div><div class="line"># administrator command: Close stmt;</div><div class="line"># Time: 2019-02-13T08:18:45.626430+08:00</div></pre></td></tr></table></figure>
+
+<p>结论：我们发现，prepare时间的确很长，但是sql语句却执行的很快，这就很尴尬了  </p>
+<p>本来是想通过抓包，看看是否能够验证我们的猜想： prepare的语句非常大，或者条件非常复杂，从而导致prepare在服务器端很慢<br>结果发现query语句也都非常简单  </p>
+<p>那么既然如此，我们就找了业务方，将对应业务的prepare方法一起看看<br>结果发现，业务使用的是php-pdo的方式，所以我们就又有了如下发现  </p>
+<h2 id="php-pdo_两种prepare模式">php-pdo 两种prepare模式</h2>
+<ul>
+<li><a href="http://php.net/manual/zh/pdo.prepare.php" target="_blank" rel="external">http://php.net/manual/zh/pdo.prepare.php</a> </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div><div class="line"><span class="lasso"><span class="number">1.</span> 本地prepare  <span class="variable">$dbh</span><span class="subst">-&gt;</span>setAttribute(PDO<span class="tag">::ATTR_EMULATE_PREPARES</span>,<span class="literal">true</span>); </span></div><div class="line">	不会发送给MySQL Server</div><div class="line"></div><div class="line"><span class="number">2.</span> 服务器端prepare  <span class="variable">$dbh</span><span class="subst">-&gt;</span>setAttribute(PDO<span class="tag">::ATTR_EMULATE_PREPARES</span>,<span class="literal">false</span>); </div><div class="line">	发送给MySQL Server</div></pre></td></tr></table></figure>
+
+<h2 id="验证两种prepare模式">验证两种prepare模式</h2>
+<ul>
+<li>服务端prepare模式( ATTR_EMULATE_PREPARES = false)</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="php"><span class="preprocessor">&lt;?php</span></span></div><div class="line"><span class="variable">$dbms</span>=<span class="string">'mysql'</span>;     <span class="comment">//数据库类型</span></div><div class="line"><span class="variable">$host</span>=<span class="string">'xxx'</span>; <span class="comment">//数据库主机名</span></div><div class="line"><span class="variable">$dbName</span>=<span class="string">'test'</span>;    <span class="comment">//使用的数据库</span></div><div class="line"><span class="variable">$user</span>=<span class="string">'xx'</span>;      <span class="comment">//数据库连接用户名</span></div><div class="line"><span class="variable">$pass</span>=<span class="string">'123456'</span>;          <span class="comment">//对应的密码</span></div><div class="line"><span class="variable">$dsn</span>=<span class="string">"$dbms:host=$host;dbname=$dbName"</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">try</span> {</div><div class="line">    <span class="variable">$pdo</span> = <span class="keyword">new</span> PDO(<span class="variable">$dsn</span>, <span class="variable">$user</span>, <span class="variable">$pass</span>); <span class="comment">//初始化一个PDO对象</span></div><div class="line">    <span class="variable">$pdo</span><span class="variable">-&gt;setAttribute</span>(PDO::ATTR_EMULATE_PREPARES,<span class="keyword">false</span>);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- prepare begin  -----\n"</span>;</div><div class="line">    <span class="variable">$stmt</span> = <span class="variable">$pdo</span><span class="variable">-&gt;prepare</span>(<span class="string">"select * from test.chanpin where id = ?"</span>);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- prepare after -----\n"</span>;</div><div class="line">    <span class="variable">$stmt</span><span class="variable">-&gt;execute</span>([<span class="number">333333</span>]);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- execute after -----\n"</span>;</div><div class="line">    <span class="variable">$rs</span> = <span class="variable">$stmt</span><span class="variable">-&gt;fetchAll</span>();</div><div class="line">} <span class="keyword">catch</span> (PDOException <span class="variable">$e</span>) {</div><div class="line">    <span class="keyword">die</span> (<span class="string">"Error!: "</span> . <span class="variable">$e</span><span class="variable">-&gt;getMessage</span>() . <span class="string">"&lt;br/&gt;"</span>);</div><div class="line">}</div></pre></td></tr></table></figure>
+
+<p>strace -s200 -f php mysql1.php  跟踪       </p>
+<p><img src="/image/MGR/pdo_prepare_remote_new.png" alt="MGR" title="pdo_prepare_remote_new"></p>
+<p>大家可以看到这个模式下，prepare的时候，是将query+占位符 发送给服务端的</p>
+<ul>
+<li>本地prepare模式 (ATTR_EMULATE_PREPARES = true )</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="php"><span class="preprocessor">&lt;?php</span></span></div><div class="line"><span class="variable">$dbms</span>=<span class="string">'mysql'</span>;     <span class="comment">//数据库类型</span></div><div class="line"><span class="variable">$host</span>=<span class="string">'xx'</span>; <span class="comment">//数据库主机名</span></div><div class="line"><span class="variable">$dbName</span>=<span class="string">'test'</span>;    <span class="comment">//使用的数据库</span></div><div class="line"><span class="variable">$user</span>=<span class="string">'xx'</span>;      <span class="comment">//数据库连接用户名</span></div><div class="line"><span class="variable">$pass</span>=<span class="string">'123456'</span>;          <span class="comment">//对应的密码</span></div><div class="line"><span class="variable">$dsn</span>=<span class="string">"$dbms:host=$host;dbname=$dbName"</span>;</div><div class="line"></div><div class="line"></div><div class="line"><span class="keyword">try</span> {</div><div class="line">    <span class="variable">$pdo</span> = <span class="keyword">new</span> PDO(<span class="variable">$dsn</span>, <span class="variable">$user</span>, <span class="variable">$pass</span>); <span class="comment">//初始化一个PDO对象</span></div><div class="line">    <span class="variable">$pdo</span><span class="variable">-&gt;setAttribute</span>(PDO::ATTR_EMULATE_PREPARES,<span class="keyword">true</span>);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- prepare begin  -----\n"</span>;</div><div class="line">    <span class="variable">$stmt</span> = <span class="variable">$pdo</span><span class="variable">-&gt;prepare</span>(<span class="string">"select * from test.chanpin where id = ?"</span>);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- prepare after -----\n"</span>;</div><div class="line">    <span class="variable">$stmt</span><span class="variable">-&gt;execute</span>([<span class="number">333333</span>]);</div><div class="line">    <span class="keyword">echo</span> <span class="string">"----- execute after -----\n"</span>;</div><div class="line">    <span class="variable">$rs</span> = <span class="variable">$stmt</span><span class="variable">-&gt;fetchAll</span>();</div><div class="line">} <span class="keyword">catch</span> (PDOException <span class="variable">$e</span>) {</div><div class="line">    <span class="keyword">die</span> (<span class="string">"Error!: "</span> . <span class="variable">$e</span><span class="variable">-&gt;getMessage</span>() . <span class="string">"&lt;br/&gt;"</span>);</div><div class="line">}</div></pre></td></tr></table></figure>
+
+<p>strace -s200 -f php mysql1.php 跟踪  </p>
+<p><img src="/image/MGR/pdo_prepare_local_new.png" alt="pdo_prepare_local_new" title="pdo_prepare_local_new"></p>
+<p>大家可以看到这个模式下，prepare的时候，是不会将query发送给服务端的，只有execute的时候才会发送  </p>
+<p>跟业务方确认后，他们使用的是后者，也就是修改了默认值，他们原本是想提升数据库的性能，因为预处理后只需要传参数就好了<br>但是对于我们的业务场景并不适合，我们的场景是频繁打开关闭连接，也就是预处理基本就用不到  </p>
+<p>另外文档上面也明确指出prepared statements 性能会不好  </p>
+<p><img src="/image/MGR/pdo_prepare_bad_perfomance.png" alt="pdo_prepare_bad_perfomance" title="pdo_prepare_bad_perfomance">  </p>
+<h2 id="调整和验证">调整和验证</h2>
+<p>如何验证业务方是否将prepare修改为local了呢？  </p>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="header">dba:(none)&gt; show global status like 'Com_stmt_prepare';</span></div><div class="line">+------------------+-----------+</div><div class="line"><span class="header">| Variable_name    | Value     |</span></div><div class="line">+------------------+-----------+</div><div class="line"><span class="header">| Com_stmt_prepare | 716836596 |</span></div><div class="line">+------------------+-----------+</div><div class="line">1 row in set (0.00 sec)</div></pre></td></tr></table></figure>
+
+<p>通过观察，发现这个值没有变化，说明调整已经生效  </p>
+<h2 id="总结">总结</h2>
+<ul>
+<li>prepare的优点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>防止SQL注入</div><div class="line"><span class="bullet">2. </span>特定场景下提升性能</div><div class="line"><span class="code">	什么是特定场景： 就是先去服务端用占位符占位，后面可以直接发送请求来填空（参数值）     </span></div><div class="line"><span class="code">	这样理论上来说， 你填空的次数非常多，性能才能发挥出来</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>prepare的缺点</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1. 在服务器端的<span class="operator"><span class="keyword">prepare</span>毕竟有消耗，当并发量大，频繁<span class="keyword">prepare</span>的时候，就会有性能问题   </span></div><div class="line"></div><div class="line"><span class="number">2.</span> 服务端的<span class="keyword">prepare</span>模式还会带来的另外一个问题就是，排错和slow 优化有困难，因为大部分情况下是看不到真实<span class="keyword">query</span>的      </div><div class="line"></div><div class="line"><span class="number">3.</span> 尽量设置php-pdo为  $pdo-&gt;setAttribute(PDO::ATTR_EMULATE_PREPARES,<span class="literal">true</span>) ，在本地<span class="keyword">prepare</span>，不要给服务器造成额外压力</div></pre></td></tr></table></figure>
+
+<ul>
+<li>建议</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">1. 默认情况下，应该使用php-pdo的默认配置，采用本地<span class="operator"><span class="keyword">prepare</span>的方式，这样可以做到防<span class="keyword">SQL</span>注入的效果，性能差不到哪里去  </span></div><div class="line"></div><div class="line"><span class="number">2.</span> 除非真的是有上述说的特定场景，可以考虑配置成服务器<span class="keyword">prepare</span>模式，前提是要做好测试</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-share/">MySQL share</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2019/03/06/prepare_slow/" data-title="MySQL运维实战 之 PHP访问MySQL你使用对了吗 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2019/01/15/18_8_group_replication/"  title="组复制官方翻译九、Group Replication Technical Details">
+ <strong>NEXT:</strong><br/> 
+ <span>组复制官方翻译九、Group Replication Technical Details
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2019/03/06/prepare_slow/" data-title="MySQL运维实战 之 PHP访问MySQL你使用对了吗" data-url="https://Keithlan.github.io/2019/03/06/prepare_slow/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#一、症状"><span class="toc-number">1.</span> <span class="toc-text">一、症状</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#二、排查"><span class="toc-number">2.</span> <span class="toc-text">二、排查</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL开启slow=0的抓包模式"><span class="toc-number">3.</span> <span class="toc-text">MySQL开启slow=0的抓包模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#php-pdo_两种prepare模式"><span class="toc-number">4.</span> <span class="toc-text">php-pdo 两种prepare模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#验证两种prepare模式"><span class="toc-number">5.</span> <span class="toc-text">验证两种prepare模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#调整和验证"><span class="toc-number">6.</span> <span class="toc-text">调整和验证</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-number">7.</span> <span class="toc-text">总结</span></a></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>48</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">March 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>46</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
