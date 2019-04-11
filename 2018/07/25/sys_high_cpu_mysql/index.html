@@ -81,7 +81,7 @@
     </p>
   <p class="article-time">
     <time datetime="2018-07-25T00:03:24.000Z" itemprop="datePublished">Jul 25 2018</time>
-    Updated:<time datetime="2018-07-25T01:26:08.000Z" itemprop="dateModified">Jul 25 2018</time>
+    Updated:<time datetime="2019-04-11T09:27:26.000Z" itemprop="dateModified">Apr 11 2019</time>
     
   </p>
 </header>
@@ -332,7 +332,8 @@
 <li><p>简单的SQL模型意味着更高的QPS，SQL越简单越好，复杂的业务逻辑可以放在程序端处理   </p>
 </li>
 <li><p>time_zone = ‘+8:00’ 来代替 time_zone=’system’ , 用以获得更好的性能  </p>
-</li>
+<pre><code> <span class="attr_selector">[ ]</span> 如果发现perf <span class="attribute">top</span> 中，mysqld  libc-2<span class="class">.12</span><span class="class">.so</span>         <span class="attr_selector">[.]</span> __tz_convert ，那么这个设置会带来极好的性能优化  
+</code></pre></li>
 <li><p>tcmalloc 来替换 malloc ， 用以获得更好的并发，tcmalloc 在小内存分配管理上更加优秀   </p>
 </li>
 <li><p>透明大页需要关闭 : 在之前的N次测试中，perf偶尔会看到compact_zone的出现，而这个可能跟透明大页相关，此问题我没能复现出来，但仍引起我们的关心  </p>
