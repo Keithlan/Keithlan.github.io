@@ -1,0 +1,842 @@
+
+ <!DOCTYPE HTML>
+<html >
+<head>
+  <meta charset="UTF-8">
+  
+    <title>MySQL 运维常用工具&amp;命令 | Focus on MySQL,Focus on Life</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=3, minimum-scale=1">
+    
+    <meta name="author" content="兰春">
+    
+    <meta name="description" content="以下列出的是平常工作中用到的小工具和命令
+
+连接
+
+如何不需要密码的登录，直接mysql
+
+12345678910111213141516171819202122my.cnf  或者写在 ~/.my.cnf， 相对安全[mysql]  --表示： 只有mysql命令才能免密码user=rootpas">
+    
+    
+    
+    
+    
+    <link rel="icon" href="/img/lanchun.jpg">
+    
+    
+    <link rel="apple-touch-icon" href="/img/lanchun.jpg">
+    <link rel="apple-touch-icon-precomposed" href="/img/lanchun.jpg">
+    
+
+	
+	<link href="http://cdn.bootcss.com/highlight.js/8.2/styles/railscasts.min.css" rel="stylesheet">
+	<script src="http://cdn.bootcss.com/highlight.js/8.2/highlight.min.js"></script>
+	<script>hljs.initHighlightingOnLoad();</script>
+	
+
+    <link rel="stylesheet" href="/css/style.css" type="text/css">
+
+
+</head>
+
+  <body>
+    <header>
+      <div>
+		
+			<div id="textlogo">
+				<h1 class="site-name"><a href="/" title="Focus on MySQL,Focus on Life">Focus on MySQL,Focus on Life</a></h1>
+				<h2 class="blog-motto"></h2>
+			</div>
+			<div class="navbar"><a class="navbutton navmobile" href="#" title="Menu">
+			</a></div>
+			<nav class="animated">
+				<ul>
+                    <ul>
+					 
+						<li><a href="/">首页</a></li>
+					
+						<li><a href="/archives">归档</a></li>
+					
+						<li><a href="http://Keithlan.github.io/">Page</a></li>
+					
+					<li>
+					
+					</li>
+                <li><div class="closeaside"><a class="closebutton" href="#" title="Hide Sidebar"></a></div></li>
+
+				</ul>
+			</nav>	
+</div>
+
+    </header>
+    <div id="container" class="clearfix">
+      <div id="main" class="post" itemscope itemprop="blogPost">
+	<article itemprop="articleBody"> 
+		<header class="article-info clearfix">
+  <h1 itemprop="name">
+    
+      <a href="/2020/04/11/mysql_tools_cmd/" title="MySQL 运维常用工具&amp;命令" itemprop="url">MySQL 运维常用工具&amp;命令</a>
+  </h1>
+  <p class="article-author">By
+    
+      <a href="https://Keithlan.github.io" title="兰春">兰春</a>
+    </p>
+  <p class="article-time">
+    <time datetime="2020-04-10T22:35:24.000Z" itemprop="datePublished">Apr 11 2020</time>
+    Updated:<time datetime="2020-04-10T22:36:23.000Z" itemprop="dateModified">Apr 11 2020</time>
+    
+  </p>
+</header>
+	<div class="article-content">
+		
+		
+		<div id="toc" class="toc-article">
+			<strong class="toc-title">Contents</strong>
+		<ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#以下列出的是平常工作中用到的小工具和命令"><span class="toc-number">1.</span> <span class="toc-text">以下列出的是平常工作中用到的小工具和命令</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#连接"><span class="toc-number">1.1.</span> <span class="toc-text">连接</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL如何查看用户名密码"><span class="toc-number">1.2.</span> <span class="toc-text">MySQL如何查看用户名密码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#information_schema相关"><span class="toc-number">1.3.</span> <span class="toc-text">information_schema相关</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#如何在线kill掉满足某种条件的session"><span class="toc-number">1.3.1.</span> <span class="toc-text">如何在线kill掉满足某种条件的session</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PROCESSLIST"><span class="toc-number">1.3.2.</span> <span class="toc-text">PROCESSLIST</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TABLES"><span class="toc-number">1.3.3.</span> <span class="toc-text">TABLES</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#performance_schema相关"><span class="toc-number">1.4.</span> <span class="toc-text">performance_schema相关</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#performance_schema占用多少内存"><span class="toc-number">1.4.1.</span> <span class="toc-text">performance_schema占用多少内存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#performance_schema_瓶颈"><span class="toc-number">1.4.2.</span> <span class="toc-text">performance_schema 瓶颈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何查看每个threads当前session变量的值"><span class="toc-number">1.4.3.</span> <span class="toc-text">如何查看每个threads当前session变量的值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TOP_SQL_相关"><span class="toc-number">1.4.4.</span> <span class="toc-text">TOP SQL 相关</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#实例中：_求SQL"><span class="toc-number">1.4.4.1.</span> <span class="toc-text">实例中： 求SQL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#库中：_求SQL"><span class="toc-number">1.4.4.2.</span> <span class="toc-text">库中： 求SQL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#实例中：求table"><span class="toc-number">1.4.4.3.</span> <span class="toc-text">实例中：求table</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Table_IO_相关的监控"><span class="toc-number">1.4.5.</span> <span class="toc-text">Table IO 相关的监控</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#库级别"><span class="toc-number">1.4.5.1.</span> <span class="toc-text">库级别</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#表级别"><span class="toc-number">1.4.5.2.</span> <span class="toc-text">表级别</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#抓包"><span class="toc-number">1.5.</span> <span class="toc-text">抓包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#slow_query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断"><span class="toc-number">1.6.</span> <span class="toc-text">slow query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#cpu_模式调节"><span class="toc-number">1.7.</span> <span class="toc-text">cpu 模式调节</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#NC_传送"><span class="toc-number">1.8.</span> <span class="toc-text">NC 传送</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#rsync"><span class="toc-number">1.9.</span> <span class="toc-text">rsync</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pigz使用"><span class="toc-number">1.10.</span> <span class="toc-text">pigz使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#axel_&_httpd_多线程数据传输"><span class="toc-number">1.11.</span> <span class="toc-text">axel & httpd 多线程数据传输</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#git_基本"><span class="toc-number">1.12.</span> <span class="toc-text">git 基本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何模拟网络延迟或丢包"><span class="toc-number">1.13.</span> <span class="toc-text">如何模拟网络延迟或丢包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何模拟网络故障"><span class="toc-number">1.14.</span> <span class="toc-text">如何模拟网络故障</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ansible_基础知识"><span class="toc-number">1.15.</span> <span class="toc-text">ansible 基础知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文档"><span class="toc-number">1.15.1.</span> <span class="toc-text">文档</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基础用法"><span class="toc-number">1.15.2.</span> <span class="toc-text">基础用法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#网络流量诊断"><span class="toc-number">1.16.</span> <span class="toc-text">网络流量诊断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#vim块操作"><span class="toc-number">1.17.</span> <span class="toc-text">vim块操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TGW_接口"><span class="toc-number">1.18.</span> <span class="toc-text">TGW 接口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SSH_如何跳过输入密码，只允许认证模式"><span class="toc-number">1.19.</span> <span class="toc-text">SSH 如何跳过输入密码，只允许认证模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何永久清空一台机器上的history"><span class="toc-number">1.20.</span> <span class="toc-text">如何永久清空一台机器上的history</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nohup_失效的问题"><span class="toc-number">1.21.</span> <span class="toc-text">nohup 失效的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何让iTerm2_tab页面显示从哪台机器上登陆过来的"><span class="toc-number">1.22.</span> <span class="toc-text">如何让iTerm2 tab页面显示从哪台机器上登陆过来的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何查看memcache/redis当前哪个链接数最多"><span class="toc-number">1.23.</span> <span class="toc-text">如何查看memcache/redis当前哪个链接数最多</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#kibana简单语法"><span class="toc-number">1.24.</span> <span class="toc-text">kibana简单语法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#定位系统问题的工具和方法"><span class="toc-number">1.25.</span> <span class="toc-text">定位系统问题的工具和方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#atop的使用方法"><span class="toc-number">1.26.</span> <span class="toc-text">atop的使用方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何优化swap被占用的情况"><span class="toc-number">1.27.</span> <span class="toc-text">如何优化swap被占用的情况</span></a></li></ol></li></ol>
+		</div>
+		
+		<h1 id="以下列出的是平常工作中用到的小工具和命令">以下列出的是平常工作中用到的小工具和命令</h1>
+<hr>
+<h2 id="连接">连接</h2>
+<ul>
+<li><strong>如何不需要密码的登录，直接mysql</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">my.cnf  或者写在 ~/.my.cnf， 相对安全</div><div class="line"></div><div class="line">[mysql]  --表示： 只有mysql命令才能免密码</div><div class="line"><span class="variable">user=</span>root</div><div class="line"><span class="variable">password=</span><span class="number">123</span></div><div class="line"><span class="variable">socket=</span>/tmp/mysql.sock</div><div class="line"> </div><div class="line">[mysqladmin] --表示： 只有mysqladmin命令才能免密码</div><div class="line"><span class="variable">user=</span>root</div><div class="line"><span class="variable">password=</span><span class="number">123</span></div><div class="line"><span class="variable">socket=</span>/tmp/mysql.sock</div><div class="line"></div><div class="line"></div><div class="line">[mysqldump] --表示： 只有mysqldump命令才能免密码</div><div class="line"><span class="variable">user=</span>root</div><div class="line"><span class="variable">password=</span><span class="number">123</span></div><div class="line"><span class="variable">socket=</span>/tmp/mysql.sock</div><div class="line"></div><div class="line">[client]   --表示：只要是客户端的命令，都是可以免密码的</div><div class="line"><span class="variable">user=</span>root</div><div class="line"><span class="variable">password=</span><span class="number">123</span></div><div class="line"><span class="variable">socket=</span>/tmp/mysql.sock</div></pre></td></tr></table></figure>
+
+<h2 id="MySQL如何查看用户名密码">MySQL如何查看用户名密码</h2>
+<ul>
+<li>MySQL5.7.6之前</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">show</span> <span class="keyword">grants</span> <span class="keyword">for</span> $<span class="keyword">user</span>;</span></div><div class="line"></div><div class="line">2. <span class="operator"><span class="keyword">select</span> host,<span class="keyword">user</span>,<span class="keyword">Password</span> <span class="keyword">from</span> <span class="keyword">user</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>MySQL5.7.6+</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">1. <span class="operator"><span class="keyword">select</span> host,<span class="keyword">user</span>,authentication_string,password_lifetime,password_expired,password_last_changed <span class="keyword">from</span> mysql.<span class="keyword">user</span> <span class="keyword">where</span> <span class="keyword">user</span>=<span class="string">'lc_rx'</span>;</span></div></pre></td></tr></table></figure>
+
+<h2 id="information_schema相关">information_schema相关</h2>
+<h3 id="如何在线kill掉满足某种条件的session">如何在线kill掉满足某种条件的session</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">DB_SYS: perl <span class="regexp">/home/</span>Keithlan<span class="regexp">/scripts/</span>outage<span class="regexp">/kill_connection/</span>kill_sleepconn_by_opt.pl -opt $opt</div></pre></td></tr></table></figure>
+
+<h3 id="PROCESSLIST">PROCESSLIST</h3>
+<ul>
+<li><strong>分析出当前连接过来的客户端ip的分布情况</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> substring_index(host,<span class="string">':'</span>, <span class="number">1</span>) <span class="keyword">as</span> appip ,<span class="keyword">count</span>(*) <span class="keyword">as</span> <span class="keyword">count</span> <span class="keyword">from</span> information_schema.<span class="keyword">PROCESSLIST</span> <span class="keyword">group</span> <span class="keyword">by</span> appip <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">count</span> <span class="keyword">desc</span> ;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>分析处于Sleep状态的连接分布情况</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> substring_index(host,<span class="string">':'</span>, <span class="number">1</span>) <span class="keyword">as</span> appip ,<span class="keyword">count</span>(*) <span class="keyword">as</span> <span class="keyword">count</span> <span class="keyword">from</span> information_schema.<span class="keyword">PROCESSLIST</span> <span class="keyword">where</span> COMMAND=<span class="string">'Sleep'</span> <span class="keyword">group</span> <span class="keyword">by</span> appip <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">count</span> <span class="keyword">desc</span> ;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>分析哪些DB访问的比较多</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> DB ,<span class="keyword">count</span>(*) <span class="keyword">as</span> <span class="keyword">count</span> <span class="keyword">from</span> information_schema.<span class="keyword">PROCESSLIST</span> <span class="keyword">where</span> COMMAND=<span class="string">'Sleep'</span> <span class="keyword">group</span> <span class="keyword">by</span> DB <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">count</span> <span class="keyword">desc</span> ;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>分析哪些用户访问的比较多</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> <span class="keyword">user</span> ,<span class="keyword">count</span>(*) <span class="keyword">as</span> <span class="keyword">count</span> <span class="keyword">from</span> information_schema.<span class="keyword">PROCESSLIST</span> <span class="keyword">where</span> COMMAND=<span class="string">'Sleep'</span> <span class="keyword">group</span> <span class="keyword">by</span> <span class="keyword">user</span> <span class="keyword">order</span> <span class="keyword">by</span> <span class="keyword">count</span> <span class="keyword">desc</span> ;</span></div></pre></td></tr></table></figure>
+
+<h3 id="TABLES">TABLES</h3>
+<ul>
+<li><strong>列出大于10G以上的表</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> TABLE_SCHEMA,TABLE_NAME,TABLE_ROWS,<span class="keyword">ROUND</span>((INDEX_LENGTH+DATA_FREE+DATA_LENGTH)/<span class="number">1024</span>/<span class="number">1024</span>/<span class="number">1024</span>) <span class="keyword">as</span> size_G <span class="keyword">from</span> information_schema.<span class="keyword">tables</span> <span class="keyword">where</span> <span class="keyword">ROUND</span>((INDEX_LENGTH+DATA_FREE+DATA_LENGTH)/<span class="number">1024</span>/<span class="number">1024</span>/<span class="number">1024</span>) &gt; <span class="number">10</span> <span class="keyword">order</span> <span class="keyword">by</span> size_G <span class="keyword">desc</span> ;</span></div></pre></td></tr></table></figure>
+
+<h2 id="performance_schema相关">performance_schema相关</h2>
+<h3 id="performance_schema占用多少内存">performance_schema占用多少内存</h3>
+<blockquote>
+<p><a href="http://dev.mysql.com/doc/refman/5.7/en/show-engine.html" target="_blank" rel="external">http://dev.mysql.com/doc/refman/5.7/en/show-engine.html</a><br>SHOW ENGINE PERFORMANCE_SCHEMA STATUS;<br>For the Performance Schema as a whole, performance_schema.memory is the sum of all the memory used (the sum of all other memory values).  </p>
+</blockquote>
+<h3 id="performance_schema_瓶颈">performance_schema 瓶颈</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">1) <span class="operator"><span class="keyword">SHOW</span> <span class="keyword">VARIABLES</span> <span class="keyword">LIKE</span> <span class="string">'perf%'</span>;</span></div><div class="line">2) <span class="operator"><span class="keyword">SHOW</span> <span class="keyword">STATUS</span> <span class="keyword">LIKE</span> <span class="string">'perf%'</span>;</span></div><div class="line">3) <span class="operator"><span class="keyword">SHOW</span> <span class="keyword">ENGINE</span> PERFORMANCE_SCHEMA <span class="keyword">STATUS</span>\G</span></div><div class="line"></div><div class="line">详细细节：http://keithlan.github.io/<span class="number">2015</span>/<span class="number">07</span>/<span class="number">17</span>/<span class="number">22</span>_performance_schema/</div></pre></td></tr></table></figure>
+
+<h3 id="如何查看每个threads当前session变量的值">如何查看每个threads当前session变量的值</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="operator"><span class="keyword">select</span> * <span class="keyword">from</span> performance_schema.variables_by_thread <span class="keyword">as</span> a,(<span class="keyword">select</span> THREAD_ID,PROCESSLIST_ID,PROCESSLIST_USER,PROCESSLIST_HOST,PROCESSLIST_COMMAND,PROCESSLIST_STATE <span class="keyword">from</span> performance_schema.threads <span class="keyword">where</span> PROCESSLIST_USER&lt;&gt;<span class="string">'NULL'</span>) <span class="keyword">as</span> b <span class="keyword">where</span> a.THREAD_ID = b.THREAD_ID <span class="keyword">and</span> a.VARIABLE_NAME = <span class="string">'sql_safe_updates'</span></span></div></pre></td></tr></table></figure>
+
+<h3 id="TOP_SQL_相关">TOP SQL 相关</h3>
+<blockquote>
+<p>能够解决什么问题： 可以找到某个表是否还有业务访问？<br>能够解决什么问题： 可以确定某个库，某个表的业务是否迁移干净？<br>能够解决什么问题： 可以用于分析业务是否异常？<br>能够解决什么问题： 根据TopN 可以分析压力？<br>能够解决什么问题： 可以用于分析哪些表是热点数据，这些TopN的表才是值得优化的表。只要每一条语句快0.01ms，那么1亿条呢？  </p>
+</blockquote>
+<h4 id="实例中：_求SQL">实例中： 求SQL</h4>
+<ul>
+<li><strong>一个实例中查询最多的TopN SQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> SCHEMA_NAME,DIGEST_TEXT,COUNT_STAR,FIRST_SEEN,LAST_SEEN  <span class="keyword">from</span> performance_schema.events_statements_summary_by_digest <span class="keyword">where</span> DIGEST_TEXT <span class="keyword">like</span> <span class="string">'select%'</span> <span class="keyword">and</span> DIGEST_TEXT <span class="keyword">not</span> <span class="keyword">like</span> <span class="string">'%SESSION%'</span> <span class="keyword">order</span> <span class="keyword">by</span> COUNT_STAR <span class="keyword">desc</span> <span class="keyword">limit</span> <span class="number">10</span>\G</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>一个实例中写入最多的TopN SQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> SCHEMA_NAME,DIGEST_TEXT,COUNT_STAR,FIRST_SEEN,LAST_SEEN  <span class="keyword">from</span> performance_schema.events_statements_summary_by_digest <span class="keyword">where</span> DIGEST_TEXT <span class="keyword">like</span> <span class="string">'insert%'</span> <span class="keyword">or</span> DIGEST_TEXT <span class="keyword">like</span> <span class="string">'update%'</span><span class="keyword">or</span> DIGEST_TEXT <span class="keyword">like</span> <span class="string">'delete%'</span> <span class="keyword">or</span> DIGEST_TEXT <span class="keyword">like</span> <span class="string">'replace%'</span>  <span class="keyword">order</span> <span class="keyword">by</span> COUNT_STAR <span class="keyword">desc</span> <span class="keyword">limit</span> <span class="number">10</span>\G</span></div></pre></td></tr></table></figure>
+
+<h4 id="库中：_求SQL">库中： 求SQL</h4>
+<ul>
+<li><strong>一个库中查询最多的TopN SQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">同上 实例中： 求SQL</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>一个库中写入最多的TopN SQL</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">同上 实例中： 求SQL</div></pre></td></tr></table></figure>
+
+<h4 id="实例中：求table">实例中：求table</h4>
+<ul>
+<li><strong>使用说明</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line">usage: perl xx.pl -i <span class="number">192.168</span>.<span class="number">1.10</span> -p <span class="number">3306</span> -e <span class="keyword">read</span>|<span class="keyword">write</span>|all <span class="number">2</span>&gt;<span class="regexp">/dev/</span><span class="keyword">null</span> ;</div><div class="line">opt e:</div><div class="line"> <span class="keyword">read</span>       get select <span class="keyword">count</span></div><div class="line"> <span class="keyword">write</span>      get insert,update,<span class="keyword">delete</span> <span class="keyword">count</span></div><div class="line"> all        get all sql <span class="keyword">count</span></div><div class="line">opt i:</div><div class="line">  <span class="number">192</span>.xx.xx.xx  ip address</div><div class="line">opt p:</div><div class="line">  <span class="number">3306</span>          db port</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>查看一个实例中，哪个表的SQL语句 访问最多?</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">DB_SYS: perl get_table_from_sql<span class="built_in">.</span>pl <span class="attribute">-i</span> <span class="variable">$ip</span> <span class="attribute">-p</span> <span class="variable">$port</span> <span class="attribute">-e</span> <span class="literal">all</span> <span class="number">2</span><span class="subst">&gt;</span> /dev/<span class="built_in">null</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>查看一个实例中，哪个表的SQL语句 select【读】最多？</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">DB_SYS: perl get_table_from_sql.pl -i <span class="variable">$ip</span> -p <span class="variable">$port</span> <span class="operator">-e</span> <span class="built_in">read</span> <span class="number">2</span>&gt; /dev/null</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>查看一个实例中，哪个表的SQL语句 insert+update+delete+replace【写】最多？</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">DB_SYS: perl get_table_from_sql.pl -i <span class="variable">$ip</span> -p <span class="variable">$port</span> <span class="operator">-e</span> write <span class="number">2</span>&gt; /dev/null</div></pre></td></tr></table></figure>
+
+<h3 id="Table_IO_相关的监控">Table IO 相关的监控</h3>
+<h4 id="库级别">库级别</h4>
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的all latency时间最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(SUM_TIMER_READ) <span class="keyword">as</span> all_read_time,<span class="keyword">sum</span>(SUM_TIMER_WRITE) <span class="keyword">as</span> all_write_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_time  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的read latency时间最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(SUM_TIMER_READ) <span class="keyword">as</span> all_read_time,<span class="keyword">sum</span>(SUM_TIMER_WRITE) <span class="keyword">as</span> all_write_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_read_time  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的write latency时间最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(SUM_TIMER_READ) <span class="keyword">as</span> all_read_time,<span class="keyword">sum</span>(SUM_TIMER_WRITE) <span class="keyword">as</span> all_write_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_write_time  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的总访问量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_star  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的查询量(除了select中的fetchs外,还包括update，delete过程中的fetchs)最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_read  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的写入量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_write  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的update量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_update  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的insert量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_insert  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>如何查看一个MySQL实例中哪个库的delete量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,<span class="keyword">sum</span>(SUM_TIMER_WAIT) <span class="keyword">as</span> all_time,<span class="keyword">sum</span>(COUNT_STAR) <span class="keyword">as</span> all_star,<span class="keyword">sum</span>(COUNT_read) <span class="keyword">as</span> all_read ,<span class="keyword">sum</span>(COUNT_WRITE) <span class="keyword">as</span> all_write,<span class="keyword">sum</span>(COUNT_FETCH) <span class="keyword">as</span> all_fetch,<span class="keyword">sum</span>(COUNT_INSERT) <span class="keyword">as</span> all_insert,<span class="keyword">sum</span>(COUNT_UPDATE) <span class="keyword">as</span> all_update,<span class="keyword">sum</span>(COUNT_DELETE) <span class="keyword">as</span> all_delete  <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table   <span class="keyword">group</span> <span class="keyword">by</span> OBJECT_SCHEMA <span class="keyword">order</span> <span class="keyword">by</span> all_delete  <span class="keyword">desc</span>;</span></div></pre></td></tr></table></figure>
+
+<h4 id="表级别">表级别</h4>
+<ul>
+<li><strong>表的all latency时间(read + write)最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,SUM_TIMER_READ,SUM_TIMER_WRITE,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span> SUM_TIMER_WAIT <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的read latency(fetch)时间最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,SUM_TIMER_READ,SUM_TIMER_WRITE,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span> SUM_TIMER_READ <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的write latency 时间最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,SUM_TIMER_READ,SUM_TIMER_WRITE,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span> SUM_TIMER_WRITE <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows 总访问量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span> COUNT_STAR  <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows 查询量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span>  COUNT_read <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows 写入量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span>  COUNT_WRITE <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows update量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span>  COUNT_update <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows insert量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span>  COUNT_insert <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>表的rows delete量最大</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="operator"><span class="keyword">select</span> OBJECT_SCHEMA,OBJECT_NAME,SUM_TIMER_WAIT,COUNT_STAR,COUNT_read,COUNT_WRITE,COUNT_UPDATE,COUNT_insert,COUNT_delete <span class="keyword">from</span> performance_schema.table_io_waits_summary_by_table  <span class="keyword">order</span> <span class="keyword">by</span>  COUNT_delete <span class="keyword">desc</span>  <span class="keyword">limit</span> <span class="number">10</span></span></div></pre></td></tr></table></figure>
+
+<h2 id="抓包">抓包</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"></div><div class="line"><span class="http"></span></div><div class="line"></div><div class="line"><span class="bash">* tshark 中的 <span class="operator">-e</span>参数有哪些内容请参考</span></div><div class="line">	http://www.wireshark.org/docs/dfref/</div><div class="line">	https://www.wireshark.org/docs/dfref/m/mysql.html</div><div class="line">	https://www.wireshark.org/docs/dfref/t/tcp.html</div><div class="line">	https://www.wireshark.org/docs/dfref/m/memcache.html</div><div class="line">	https://www.wireshark.org/docs/dfref/h/http.html</div><div class="line"></div><div class="line"></div><div class="line"></div><div class="line">* tshark: 抓取mysql tcp包，以及大小</div><div class="line">	tshark -i any -R <span class="string">'tcp.port == 3306 && mysql'</span> -T fields <span class="operator">-e</span> tcp.port <span class="operator">-e</span> ip.addr <span class="operator">-e</span> mysql.query  <span class="operator">-e</span> mysql.packet_length <span class="operator">-e</span> tcp.len</div><div class="line">	tshark 高级版本将 -R 替换成了 -Y</div><div class="line"></div><div class="line">* tshark: 抓mysql包</div><div class="line">tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql -T fields <span class="operator">-e</span> frame.time <span class="operator">-e</span> <span class="string">'ip.src'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span> &gt; yy.tshark  --这种方式，会在/tmp/目录下创建很多临时文件，要小心，会产生磁盘报警。</div><div class="line"></div><div class="line">* tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql -T fields <span class="operator">-e</span> <span class="string">'ip.src'</span> <span class="operator">-e</span> <span class="string">'tcp.srcport'</span> <span class="operator">-e</span> <span class="string">'mysql.schema'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span> -w yy.tshark  --类似于tcpdump。</div><div class="line"></div><div class="line">nohup tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql <span class="operator">-a</span> duration:<span class="number">20</span>  -T fields <span class="operator">-e</span> mysql.schema <span class="operator">-e</span> frame.time <span class="operator">-e</span> ip.src <span class="operator">-e</span> tcp.srcport <span class="operator">-e</span> mysql.query -w xx.sql &  -- <span class="operator">-a</span> duration 当时间超过 <span class="number">20</span>秒时，停止抓取。  </div><div class="line"></div><div class="line"></div><div class="line">nohup tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql <span class="operator">-a</span> filesize:<span class="number">2000000</span> -T fields <span class="operator">-e</span> mysql.schema <span class="operator">-e</span> frame.time <span class="operator">-e</span> ip.src <span class="operator">-e</span> tcp.srcport <span class="operator">-e</span> mysql.query -w xx.sql &     注：当文件超过<span class="number">2</span>G时，停止抓取。单位是Kilobyte。</div><div class="line"></div><div class="line">* 只抓取MySQL的包,不会有空格之类的了</div><div class="line">tshark -i any dst host <span class="variable">${ip}</span> and dst port <span class="number">3306</span> <span class="operator">-l</span> <span class="operator">-a</span> duration:<span class="number">10</span> -R <span class="string">'mysql.query'</span> -T fields <span class="operator">-e</span> <span class="string">'ip.src'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span></div><div class="line"></div><div class="line"></div><div class="line">==from gitlab http://gitlab.corp.anjuke.com/_incubator/knowledge/blob/master/tshark.md</div><div class="line"></div><div class="line"></div><div class="line">* thark：解tcpdump包</div><div class="line">tshark -r xx.tcpdump <span class="operator">-d</span> tcp.port==<span class="number">3306</span>,mysql -T fields <span class="operator">-e</span> mysql.schema  <span class="operator">-e</span> frame.time <span class="operator">-e</span> ip.src <span class="operator">-e</span> mysql.query  &gt; test.tshark</div><div class="line"></div><div class="line"></div><div class="line">* 案例一、 memcache</div><div class="line">	<span class="comment"># 需要使用 -d 让 tshark 认为 11213 是使用的 memcache 协议，否则 tshark 默认是将 11211 认为是 memcache 协议</span></div><div class="line">	~ tshark -i eth0 <span class="operator">-d</span> tcp.port==<span class="number">11213</span>,memcache -R <span class="string">'tcp.dstport == 11213 && memcache'</span></div><div class="line"></div><div class="line">* 案例二、 mysql</div><div class="line">	~ tshark -i eth0 -R <span class="string">'tcp.port == 3306 && mysql.query'</span> -T fields <span class="operator">-e</span> frame.time <span class="operator">-e</span> <span class="string">'ip.src'</span>  <span class="operator">-e</span> <span class="string">'mysql.query'</span></div><div class="line"></div><div class="line">* 案例三、http</div><div class="line">	~ tshark -i eth0 -R <span class="string">'tcp.port == 80 && http'</span></div><div class="line"></div><div class="line">	<span class="comment"># 这个命令非常有用，当我们的程序非常慢，但是有没有打印任何日志时，我们怀疑可能是某个 http 请求慢了，可以用这个命令检查</span></div><div class="line">	<span class="comment"># http.time 表示整个 http请求 消耗的时间</span></div><div class="line">	<span class="comment"># http.response.code 200、403、500 等</span></div><div class="line">	<span class="comment"># tcp.analysis.initial_rtt tcp 三次握手时间</span></div><div class="line">	<span class="comment"># tcp.stream tshark 针对每一个5元组，都有一个编号，根据这个编号，可以方便的查到整个会话过程的所有请求 src.ip,src.port,tcp,dst.ip,dst.port，例如在这里，可以根据这个编号，找到请求所对应的 http.response.code ,因为在并发很高的时候，2个记录不一定紧挨着</span></div><div class="line"></div><div class="line">	~ tshark -i eth0 -R <span class="string">'http && tcp.port == 80'</span> -T fields <span class="operator">-e</span> tcp.analysis.initial_rtt <span class="operator">-e</span> frame.time <span class="operator">-e</span> ip.addr <span class="operator">-e</span> tcp.port <span class="operator">-e</span> http.request.uri <span class="operator">-e</span> tcp.stream <span class="operator">-e</span> http.response.code <span class="operator">-e</span> http.time</div><div class="line"></div><div class="line">* 案例四、tcp</div><div class="line">	<span class="comment"># 检查是否有tcp 包重传</span></div><div class="line">	~ tshark -i eth0 -R <span class="string">'tcp.analysis.retransmission'</span></div></pre></td></tr></table></figure>
+
+<h2 id="slow_query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断">slow query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) 先搞清楚时间到底花在哪里&&为什么时间会花在那  （show profile）</div><div class="line">   <span class="number">1.1</span> ) 主要工具和方法就是profiling</div><div class="line">   <span class="number">1.2</span> ) 整个性能优化，应该花<span class="number">90</span>%的时间在测量上面，只有这样才能够对症下药</div><div class="line">   <span class="number">1.3</span> ) 通过show profile 可以知道，时间都花在哪里</div><div class="line">   <span class="number">1.4</span> ）通过session级别的status，可以知道为什么时间会花在那里</div><div class="line">       flush status;</div><div class="line">       <span class="keyword">select</span> xx <span class="keyword">from</span> tt <span class="keyword">where</span> ff ;</div><div class="line">       show status <span class="keyword">where</span> variable_name <span class="keyword">like</span> <span class="comment">'Handler%' or Variable_name like 'Created%';</span></div><div class="line"></div><div class="line"><span class="number">2</span>) 完成一项任务的时间分两个部分  执行时间和等待时间</div><div class="line">   如何优化执行时间呢 --比较简单？</div><div class="line">   <span class="number">2.1</span>) 降低子任务数量</div><div class="line">   <span class="number">2.2</span>) 降低子任务的执行频率</div><div class="line">   <span class="number">2.3</span>) 提升子任务的执行效率并且判断任务在什么时间执行最长</div><div class="line"></div><div class="line">   如何优化等待时间呢 --比较复杂？</div><div class="line">   <span class="number">2.4</span>) 一般是由于资源竞争导致，要用合适的工具找到竞争点。</div><div class="line">       <span class="number">2.5</span>) 判断任务在什么地方被阻塞的时间最长。</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">3</span>) 通过slow，可以找到值得优化的SQL</div><div class="line">   awk <span class="comment">'/^# Time:/{print $3, $4, c;c=0}/^# User/{c++}' dbbak10-001-slow.log    --可以统计出每个时间点的slow 数量，精度比较细</span></div><div class="line"><span class="number">3.1</span>) 执行总时间最多的SQL</div><div class="line"><span class="number">3.2</span>) 单条SQL执行时间最多的SQL</div><div class="line"></div><div class="line"><span class="number">4</span>) 三种轻量级别的SQL抓取  show processlist  &  tcpdump  & slow-query   解析工具可以用：pt-query-digest 解析tcpdump和slow query</div><div class="line">   msyql -e <span class="comment">'show proceslist\G' | grep State: | sort | uniq -c | sort -rn     --轻量级 （show processlist && show status）</span></div><div class="line"></div><div class="line"><span class="number">5</span>) 找到最需要优化的SQL后，可以开始跟踪分析单条SQL来获得更加底层实际的东 西，目前最好的三种方法是a）show profile b）show status c）slow query条目</div><div class="line">a）show profile</div><div class="line">SQL&gt; <span class="keyword">set</span> profiling=<span class="number">1</span>;</div><div class="line">SQL&gt; <span class="keyword">select</span> * <span class="keyword">from</span> table;</div><div class="line">SQL&gt; show profiles;</div><div class="line">SQL&gt; show profile <span class="keyword">for</span> query <span class="number">1</span>;</div><div class="line">格式化输出：</div><div class="line">SQL&gt; <span class="keyword">set</span> @query_id = <span class="number">1</span>;</div><div class="line">SQL&gt; <span class="keyword">SELECT</span> STATE,SUM(DURATION) <span class="keyword">AS</span> Total_R,</div><div class="line">        ROUND(</div><div class="line">       <span class="number">100</span>*SUM(DURATION) /</div><div class="line">         (<span class="keyword">SELECT</span> SUM(DURATION)</div><div class="line">           <span class="keyword">FROM</span> INFORMATION_SCHEMA.PROFILING</div><div class="line">           <span class="keyword">WHERE</span> QUERY_ID = @query_id</div><div class="line">             ), <span class="number">2</span>) <span class="keyword">AS</span> Pct_R,</div><div class="line">    COUNT(*) <span class="keyword">AS</span> CallS,</div><div class="line">        SUM(DURATION) / COUNT(*) <span class="keyword">AS</span> <span class="string">"R/CALL"</span></div><div class="line">     <span class="keyword">FROM</span> INFORMATION_SCHEMA.PROFILING</div><div class="line">     <span class="keyword">WHERE</span> QUERY_ID = @query_id</div><div class="line">     <span class="keyword">GROUP</span> <span class="keyword">BY</span> STATE</div><div class="line">     <span class="keyword">ORDER</span> <span class="keyword">BY</span> Total_R DESC;</div><div class="line"></div><div class="line">当然，通过show profile 可以知道时间主要花在什么地方，但是你不知道为什么 会花在那些地方？这是时候就必须要跟踪堆栈来找到进一步的原因了。</div><div class="line"></div><div class="line">查看是否使用了磁盘临时表还是内存临时表：</div><div class="line">flush status;</div><div class="line">sql;</div><div class="line">show status <span class="keyword">where</span> variable_name <span class="keyword">like</span> <span class="comment">'Handler%' or variable_name like 'Created%';</span></div><div class="line"></div><div class="line">b) show status</div><div class="line">SQL&gt; 句柄计数器 handler counter,临时文件，表计数器</div><div class="line">SQL&gt;  flush status ; 刷新绘画级别的状态值。</div><div class="line">SQL&gt; <span class="keyword">select</span> * <span class="keyword">from</span> table;</div><div class="line">SQL&gt; show status <span class="keyword">where</span> variable_name <span class="keyword">like</span> <span class="comment">'Handler%' or Variable_name like 'Created%';  --可以看到是否利用了磁盘临时表，而explain是无法看到的。</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="number">6.</span> 监控点  -- 通过监控状态数据可以发现哪些地方是异常的，然后再具体分析异 常时间点的日志。</div><div class="line">a）show <span class="keyword">global</span> status;   --开销比较低</div><div class="line">b）show processlist | grep state;   或者使用innotop --开销比较低</div><div class="line">c）slow query + pt-query-digest</div><div class="line">d）show innoDB status;</div><div class="line">e) vmstat</div><div class="line">f) iostat</div><div class="line"></div><div class="line"></div><div class="line"><span class="number">7.</span> 关于索引统计</div><div class="line">	发生过一件事情，show table status看到的大小<span class="number">100</span>M，但是实际物理大小<span class="number">10</span>G，通过这个发型索引统计有的时候非常不准确    </div><div class="line">	这里简单介绍下：  </div><div class="line"></div><div class="line">	innodb_stats_persistent=<span class="keyword">on</span> ,  db重启后不会清空，不需要重新收集  </div><div class="line">	innodb_stats_persistent=<span class="keyword">off</span>， db重启后统计信息清空，需要重新收集统计  </div><div class="line">	<span class="number">1</span>、针对是否持久化统计信息mysql可以通过innodb_stats_persistent参数来控制  </div><div class="line">　　<span class="number">2</span>、针对统计信息的时效性，mysql通过innodb_stats_auto_recalc参数来控制是否自动更新  </div><div class="line">　　<span class="number">3</span>、针对统计信息的准确性，mysql通过innodb_stats_persistent_sample_pages 参数来控制更新  </div><div class="line">    <span class="number">4</span>、mysql通过analyze table 语句来手动的更新统计信息  </div><div class="line">	<span class="number">5</span>、mysql&gt; <span class="keyword">select</span> * <span class="keyword">from</span> innodb_table_stats; last_update可以查看索引统计的最后更新时间    </div><div class="line">	<span class="number">6</span>、当索引统计不准确的时候，可以通过analyze table来更新索引统计信息，让执行计划更加准确。    </div><div class="line">		如果这样做后，执行计划还是不准确，那么可以试图调大innodb_stats_persistent_sample_pages，让索引页收集的更加多，让执行计划更准确    </div><div class="line"></div><div class="line"></div><div class="line"><span class="number">8.</span> 关于索引选择性:  字段<span class="number">1</span> building_id，字段<span class="number">2</span> status  </div><div class="line">	单索引字段的索引选择性： <span class="keyword">select</span> count(<span class="keyword">distinct</span> building_id)/count(*) <span class="keyword">as</span> selectivity <span class="keyword">from</span> community_units;     </div><div class="line">	组合索引的索引选择性：   <span class="keyword">select</span> count(<span class="keyword">distinct</span> (concat(building_id,status)))/count(*) <span class="keyword">as</span> selectivity <span class="keyword">from</span> community_units;    </div><div class="line">    组合前缀的索引选择性：   <span class="keyword">select</span> count(<span class="keyword">distinct</span> (concat(building_id,left(status,<span class="number">2</span>))))/count(*) <span class="keyword">as</span> selectivity <span class="keyword">from</span> community_units;     </div><div class="line">	得到的结果越接近<span class="number">1</span>，效果越好</div></pre></td></tr></table></figure>
+
+<h2 id="cpu_模式调节">cpu 模式调节</h2>
+<blockquote>
+<p><a href="https://wiki.archlinux.org/index.php/CPU_frequency_scaling" target="_blank" rel="external">https://wiki.archlinux.org/index.php/CPU_frequency_scaling</a>  </p>
+</blockquote>
+<ul>
+<li><strong>有哪几种模式</strong></li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Governor</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ondemand</td>
+<td>Dynamically switch between CPU(s) available if at 95% cpu load</td>
+</tr>
+<tr>
+<td>performance</td>
+<td>Run the cpu at max frequency</td>
+</tr>
+<tr>
+<td>conservative</td>
+<td>Dynamically switch between CPU(s) available if at 75% load</td>
+</tr>
+<tr>
+<td>powersave</td>
+<td>Run the cpu at the minimum frequency</td>
+</tr>
+<tr>
+<td>userspace</td>
+<td>Run the cpu at user specified frequencies</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><p><strong>如何查看当前的cpu模式</strong></p>
+<blockquote>
+<p>cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor  </p>
+</blockquote>
+</li>
+<li><p><strong>如何查看cpu支持哪几种模式</strong></p>
+<blockquote>
+<p>cat /sys/devices/system/cpu/cpu2/cpufreq/scaling_available_governors  </p>
+</blockquote>
+</li>
+<li><p><strong>如何设置</strong></p>
+<blockquote>
+<ol>
+<li>bios里面设置  </li>
+<li>os设置  </li>
+</ol>
+</blockquote>
+</li>
+</ul>
+<h2 id="NC_传送">NC 传送</h2>
+<hr>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">传送文件</div><div class="line">目的主机监听</div><div class="line">nc -l 监听端口&lt;未使用端口&gt;  &gt; 要接收的文件名</div><div class="line">nc -l 4444 &gt; cache.tar.gz</div><div class="line"><span class="code"> </span></div><div class="line">源主机发起请求</div><div class="line">nc  目的主机ip    目的端口 &lt; 要发送的文件</div><div class="line"><span class="header">nc  192.168.0.85  4444 &lt; /root/cache.tar.gz</span></div><div class="line">=============================================</div><div class="line"></div><div class="line">==传送文件夹==</div><div class="line">接收方的命令：</div><div class="line">nc -l ${ip} 4444 | tar xf -</div><div class="line"></div><div class="line">传送方的命令：</div><div class="line">tar -cvf - ppc<span class="emphasis">_* | nc ${ip} 4444</span></div></pre></td></tr></table></figure>
+
+<h2 id="rsync">rsync</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div></pre></td><td class="code"><pre><div class="line">核心算法：http://www.oschina.net/question/28_54213?fromerr=DHoiMICG  </div><div class="line">小bug：如果rsync一段时间，突然不传了，且流量中断，不妨加上这个参数试试  /usr/bin/rsync <span class="comment">--sockopts=SO_RCVBUF=10485760   </span></div><div class="line"></div><div class="line">配置：/etc/rsyncd.conf</div><div class="line">uid = root</div><div class="line">gid = root</div><div class="line"><span class="operator"><span class="keyword">use</span> chroot = <span class="keyword">no</span></span></div><div class="line"><span class="keyword">max</span> connections = <span class="number">64</span></div><div class="line">pid file = /<span class="keyword">var</span>/run/rsyncd.pid</div><div class="line"><span class="keyword">lock</span> file = /<span class="keyword">var</span>/run/rsync.<span class="keyword">lock</span></div><div class="line"><span class="keyword">log</span> file = /<span class="keyword">var</span>/<span class="keyword">log</span>/rsyncd.<span class="keyword">log</span></div><div class="line"></div><div class="line">[dbbak]</div><div class="line">path = /<span class="keyword">data</span>/dbbackup</div><div class="line"><span class="keyword">use</span> chroot = <span class="keyword">no</span></div><div class="line"><span class="keyword">ignore</span> <span class="keyword">errors</span></div><div class="line"><span class="keyword">read</span> <span class="keyword">only</span> = <span class="keyword">no</span></div><div class="line">list = <span class="keyword">no</span></div><div class="line"></div><div class="line">[<span class="keyword">Binlog</span>]</div><div class="line">path = /<span class="keyword">data</span>/BINLOG_BACKUP</div><div class="line"><span class="keyword">use</span> chroot = <span class="keyword">no</span></div><div class="line"><span class="keyword">ignore</span> <span class="keyword">errors</span></div><div class="line"><span class="keyword">read</span> <span class="keyword">only</span> = <span class="keyword">no</span></div><div class="line">list = <span class="keyword">no</span></div><div class="line"></div><div class="line">[fullbak]</div><div class="line">path = /<span class="keyword">data</span>/FULL_BACKUP</div><div class="line"><span class="keyword">use</span> chroot = <span class="keyword">no</span></div><div class="line"><span class="keyword">ignore</span> <span class="keyword">errors</span></div><div class="line"><span class="keyword">read</span> <span class="keyword">only</span> = <span class="keyword">no</span></div><div class="line">list = <span class="keyword">no</span>	</div><div class="line"></div><div class="line">启动： /usr/<span class="keyword">bin</span>/rsync <span class="comment">--daemon</span></div><div class="line"></div><div class="line">限速<span class="number">100</span>k/s传输 ：</div><div class="line">	/usr/<span class="keyword">bin</span>/rsync -av <span class="comment">--progress  --update --bwlimit=100 --checksum --compress  $file  root@$ip::dbbak</span></div><div class="line"></div><div class="line">正常传输：</div><div class="line">   /usr/<span class="keyword">bin</span>/rsync -av <span class="comment">--progress   $file  root@$ip::dbbak</span></div></pre></td></tr></table></figure>
+
+<h2 id="pigz使用">pigz使用</h2>
+<ul>
+<li><strong>常用知识普及</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">错误的写法：nohup tar -cvf - xx_20151129 | pigz  -p <span class="number">24</span> &gt; xx_20151129.tar.gz & --一定不能加nohup，因为中间有管道符，不能传递下去的</div><div class="line">错误的代价：</div><div class="line">	tar: This does not look like a tar archive</div><div class="line">	tar: Skipping to <span class="keyword">next</span> header</div><div class="line">	tar: Exiting with failure status due to previous errors</div><div class="line">以上错误的案例中，为此付出过很大的代价，哭晕在厕所N次了<span class="keyword">...</span></div><div class="line"></div><div class="line">正确的写法：  tar -cvf - xx_20151129 | pigz  -p <span class="number">24</span> &gt; xx_20151129.tar.gz &</div></pre></td></tr></table></figure>
+
+<ul>
+<li><strong>用法</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">* 压缩</div><div class="line">tar cvf - 目录名 | pigz -<span class="number">9</span> -p <span class="number">24</span> &gt; <span class="keyword">file</span>.tgz</div><div class="line">pigz：用法-<span class="number">9</span>是压缩比率比较大，-p是指定cpu的核数。</div><div class="line"></div><div class="line">* 解压<span class="number">1</span></div><div class="line">pigz -d <span class="keyword">file</span>.tgz</div><div class="line">tar -xf --<span class="keyword">format</span>=posix <span class="keyword">file</span></div><div class="line"></div><div class="line">* 解压<span class="number">2</span></div><div class="line">tar xf <span class="keyword">file</span>.tgz</div></pre></td></tr></table></figure>
+
+<h2 id="axel_&amp;_httpd_多线程数据传输">axel &amp; httpd 多线程数据传输</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div></pre></td><td class="code"><pre><div class="line">* axel 下载&安装</div><div class="line">wget -c http:<span class="comment">//pkgs.repoforge.org/axel/axel-2.4-1.el5.rf.x86_64.rpm</span></div><div class="line">rpm -ivh axel-<span class="number">2.4</span>-<span class="number">1</span>.el5.rf.x86_64.rpm</div><div class="line"></div><div class="line">* axel 核心参数</div><div class="line">-n   指定线程数</div><div class="line">-o   指定另存为目录</div><div class="line"></div><div class="line"></div><div class="line">* httpd服务搭建与配置</div><div class="line"></div><div class="line">	yum install httpd</div><div class="line"></div><div class="line">* httpd配置主目录</div><div class="line">	<span class="regexp">/etc/</span>httpd<span class="regexp">/conf/</span>httpd.conf</div><div class="line"></div><div class="line">[xx html]# cat <span class="regexp">/etc/</span>httpd<span class="regexp">/conf/</span>httpd.conf | <span class="keyword">grep</span> DocumentRoot</div><div class="line"># DocumentRoot: The directory out of which you will serve your</div><div class="line">#DocumentRoot <span class="string">"/var/www/html"</span> --注释</div><div class="line">DocumentRoot <span class="string">"/data/dbbackup/html"</span> --配置成容量大的地址</div><div class="line"></div><div class="line">* 开启httpd服务</div><div class="line"></div><div class="line">service httpd restart</div><div class="line"></div><div class="line">* 下载数据</div><div class="line">目的地ip shell&gt; nohup axel -n <span class="number">10</span> -v -o <span class="regexp">/data/</span>dbbackup<span class="regexp">/ http:/</span><span class="regexp">/$数据源ip/</span>xx_20151129.tar.gz &</div></pre></td></tr></table></figure>
+
+<h2 id="git_基本">git 基本</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">1. </span>git add xx</div><div class="line"><span class="bullet">2. </span>git commit -m 'xx'</div><div class="line"><span class="bullet">3. </span>git pull</div><div class="line"><span class="bullet">4. </span>git push</div></pre></td></tr></table></figure>
+
+<h2 id="如何模拟网络延迟或丢包">如何模拟网络延迟或丢包</h2>
+<ul>
+<li>模拟网络eth0 timeout 1000ms</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">tc</span> qdisc <span class="built_in">add</span> dev eth0 root netem delay <span class="number">1000</span>ms</div></pre></td></tr></table></figure>
+
+<ul>
+<li>模拟网络eth0丢包率 10%</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">tc</span> qdisc <span class="built_in">add</span> dev eth0 root netem loss <span class="number">10</span>%</div></pre></td></tr></table></figure>
+
+<ul>
+<li>删除以上tc命令导致的网络延迟或者丢包规则</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">tc</span> qdisc del dev eth0 root</div></pre></td></tr></table></figure>
+
+<h2 id="如何模拟网络故障">如何模拟网络故障</h2>
+<ul>
+<li>host1 网络断掉，只允许host2 访问</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">host1&gt;</span> iptables -<span class="constant">A</span> <span class="constant">INPUT</span> -p tcp -s host2  -j <span class="constant">ACCEPT</span></span></div><div class="line"><span class="input"><span class="prompt">host1&gt;</span> iptables -<span class="constant">A</span> <span class="constant">INPUT</span> -p tcp -s <span class="number">0</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">0</span>/<span class="number">0</span> -j <span class="constant">DROP</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>host1 网络断掉，只允许host2的22端口访问</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">host1&gt;</span> iptables -<span class="constant">A</span> <span class="constant">INPUT</span> -p tcp -s host2 --dport <span class="number">22</span>  -j <span class="constant">ACCEPT</span></span></div><div class="line"><span class="input"><span class="prompt">host1&gt;</span> iptables -<span class="constant">A</span> <span class="constant">INPUT</span> -p tcp -s <span class="number">0</span>.<span class="number">0</span>.<span class="number">0</span>.<span class="number">0</span>/<span class="number">0</span> -j <span class="constant">DROP</span></span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>恢复host1 网络</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="input"><span class="prompt">host1&gt;</span> service iptables restart</span></div></pre></td></tr></table></figure>
+
+<h2 id="ansible_基础知识">ansible 基础知识</h2>
+<h3 id="文档">文档</h3>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">官方： http:<span class="comment">//docs.ansible.com/</span></div><div class="line">个人： http:<span class="comment">//sofar.blog.51cto.com/353572/1579894</span></div></pre></td></tr></table></figure>
+
+<h3 id="基础用法">基础用法</h3>
+<ul>
+<li>ssh互信</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>) 不需要加入key，也能登陆到所有机器</div><div class="line"><span class="number">2</span>）前提是：</div><div class="line">	ssh-<span class="built_in">add</span> <span class="comment">--mac本地，线下，将私钥加入到内存</span></div><div class="line">	ssh -A root@xx ；  <span class="comment">--会将私钥传送到远端机器</span></div><div class="line">	ssh-<span class="built_in">add</span> -L 查看下。 <span class="comment">--查看私钥是否传送过来</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>yaml</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"></div><div class="line">- hosts: etl</div><div class="line">  remote_user: root</div><div class="line">  tasks:</div><div class="line">        - shell: cat /home/mysql/xx.pl</div><div class="line">        - copy: src=files/rsync dest=/usr/bin/</div><div class="line">        - <span class="keyword">template</span>: src=files/xx.pl dest=/home/mysql/</div></pre></td></tr></table></figure>
+
+<ul>
+<li>hosts</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">[test1]</div><div class="line"><span class="number">10</span>.x.x.x <span class="variable">bak_dest_ip=</span><span class="number">10</span>.y.y.y <span class="variable">bak_source_port=</span>xx</div><div class="line"></div><div class="line">[etl]</div><div class="line"><span class="number">10</span>.x.x.x <span class="variable">bak_dest_ip=</span><span class="number">10</span>.y.y.y <span class="variable">bak_source_port=</span>xx</div></pre></td></tr></table></figure>
+
+<ul>
+<li>files</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">*</span>.pl</div><div class="line"><span class="keyword">*</span>.file</div></pre></td></tr></table></figure>
+
+<ul>
+<li>常用语法</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">* 命令中如果有管道等多种命令，需要用bash -c ，并且引号起来</div><div class="line">* -T：ping延迟时间 <span class="operator">-f</span>：线程数 -i：后面接hosts文件，xx标签  -m：command 命令模式 <span class="operator">-a</span>：命令内容</div><div class="line">ansible -T <span class="number">2</span> <span class="operator">-f</span> <span class="number">1</span> -i ./hosts etl -m command <span class="operator">-a</span> <span class="string">"bash -c 'cat /home/mysql/xx.pl |grep bin/rsync'"</span></div><div class="line"></div><div class="line">* playbook方式跑ansible</div><div class="line"></div><div class="line">ansible-playbook -i ./hosts rsync.yaml</div></pre></td></tr></table></figure>
+
+<h2 id="网络流量诊断">网络流量诊断</h2>
+<ul>
+<li><strong>tools</strong></li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div></pre></td><td class="code"><pre><div class="line">* <span class="function_or_atom">ifstat</span></div><div class="line"></div><div class="line">* <span class="function_or_atom">iftop</span></div><div class="line"></div><div class="line"><span class="function_or_atom">iftop</span> -<span class="function_or_atom">nNP</span> -<span class="function_or_atom">i</span> <span class="function_or_atom">tunl1</span> —看出口流量</div><div class="line"><span class="function_or_atom">iftop</span> -<span class="function_or_atom">nNP</span> —看看整体的</div><div class="line"></div><div class="line">* 查看<span class="function_or_atom">ip1</span> 与 <span class="function_or_atom">ip2</span> 之间的流量</div><div class="line"></div><div class="line"><span class="function_or_atom">root</span>@<span class="function_or_atom">ip1</span>&gt; <span class="function_or_atom">iftop</span> -<span class="variable">F</span> $<span class="function_or_atom">ip2</span>/<span class="number">32</span>     =============   <span class="function_or_atom">iftop</span> -<span class="variable">F</span> $<span class="variable">P</span>{<span class="function_or_atom">ip</span>}/<span class="number">32</span></div><div class="line"></div><div class="line">* 如何查看一个机器上哪个端口占用的流量最大</div><div class="line"></div><div class="line"><span class="prompt">1&gt; </span><span class="function_or_atom">iftop</span> 进入界面</div><div class="line"><span class="prompt">2&gt; </span>按 <span class="variable">N</span></div><div class="line"><span class="prompt">3&gt; </span>按 <span class="variable">S</span></div></pre></td></tr></table></figure>
+
+<h2 id="vim块操作">vim块操作</h2>
+<ul>
+<li>[选择] -&gt; 在普通模式下按ctrl+v或者v进入块操作模式</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="tag">v</span>（小写）　　　　 按字符选择，选中按下<span class="tag">V</span>时光标所在的字符到当前光标所在字符间的内容  </div><div class="line"><span class="tag">V</span>（大写)　　　　　按行选择  </div><div class="line"><span class="attr_selector">[Ctrl]</span>+<span class="tag">V</span>　　　　　选择矩形字符块</div></pre></td></tr></table></figure>
+
+<ul>
+<li>[动作] -&gt; 通过光标移动选中内容，可以进行ydp操作 </li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="label">y:</span>复制选中内容到粘贴板  </div><div class="line"><span class="label">d:</span>删除选中内容  </div><div class="line"><span class="label">p:</span>用粘贴板里的内容替换选中的内容  </div><div class="line">=:对齐选中内容  </div><div class="line">对于矩阵字符块：[Shift] + i xxx [esc] :把xxx写到每一行的光标前面的位置</div></pre></td></tr></table></figure>
+
+<ul>
+<li>[替换] -&gt; 批量缩进或反缩进，类似于文本编辑器中的格式化</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">选中多行，按<span class="keyword">I</span>(大写)进入插入模式，写入<span class="keyword">Tab</span>，之后按ESC，即可完成批量缩进的功能  </div><div class="line">也可以写入内容，到选中的每一行的光标位置</div></pre></td></tr></table></figure>
+
+<h2 id="TGW_接口">TGW 接口</h2>
+<ul>
+<li>TGW相关问题</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">* 根据vip，vport，找到rsip(不需要固定key，因为不需要访问real-server)</div><div class="line"></div><div class="line">wget -O- --post-data 'data={ <span class="string">"operator"</span>:<span class="string">"xx_DEV"</span>, <span class="string">"rulelist"</span>:[ { <span class="string">"vip"</span>:<span class="string">"'"</span><span class="variable">$vip</span><span class="string">"'"</span>, <span class="string">"vport"</span>:'<span class="string">"<span class="variable">$vport</span>"</span>', <span class="string">"protocol"</span>:<span class="string">"TCP"</span> } ] }' <span class="string">"http://10.126.70.51/cgi-bin/fun_logic/bin/public_api/getrs.cgi"</span></div><div class="line"></div><div class="line">* 将vip 从rsip下线（需要固定key，因为要访问real-server）</div><div class="line"></div><div class="line"><span class="variable">$del_rs</span>=`wget -O- --post-data 'data={ <span class="string">"client_type"</span> : <span class="string">"x'x_DB"</span>, <span class="string">"ignore_exist_error"</span> : <span class="literal">false</span>, <span class="string">"operator"</span> : <span class="string">"xx_DEV"</span>, <span class="string">"rs_type"</span> : <span class="string">"linux_tunl"</span>, <span class="string">"need_setup_rs"</span> : <span class="literal">true</span>, <span class="string">"op_type"</span> : <span class="string">"'del'"</span>, <span class="string">"rule_list"</span> : [ { <span class="string">"rule_group"</span>:[ { <span class="string">"vip"</span>:<span class="string">"'<span class="variable">$vip</span>'"</span>, <span class="string">"vport"</span>:'<span class="variable">$vport</span>', <span class="string">"protocol"</span>:<span class="string">"TCP"</span> } ], <span class="string">"rs_os_type"</span>:<span class="string">"linux"</span>, <span class="string">"rs_list"</span>:[ { <span class="string">"rs_ip"</span>:<span class="string">"'<span class="variable">$source_ip</span>'"</span>, <span class="string">"rs_port"</span>:'<span class="variable">$source_port</span>', <span class="string">"rs_weight"</span>:<span class="number">100</span> } ] } ], <span class="string">"sync"</span> : <span class="literal">true</span> }' 'http://xx/cgi-bin/fun_logic/bin/public_api/op_rs.cgi' <span class="number">2</span>&gt;/dev/null`<span class="comment">;</span></div><div class="line"></div><div class="line"></div><div class="line">* 将vip 从rsip上线（需要固定key，因为要访问real-server）</div><div class="line"></div><div class="line"><span class="variable">$add_rs</span>=`wget -O- --post-data 'data={ <span class="string">"client_type"</span> : <span class="string">"xx_DB"</span>, <span class="string">"ignore_exist_error"</span> : <span class="literal">false</span>, <span class="string">"operator"</span> : <span class="string">"xx_DEV"</span>, <span class="string">"rs_type"</span> : <span class="string">"linux_tunl"</span>, <span class="string">"need_setup_rs"</span> : <span class="literal">true</span>, <span class="string">"op_type"</span> : <span class="string">"'add'"</span>, <span class="string">"rule_list"</span> : [ { <span class="string">"rule_group"</span>:[ { <span class="string">"vip"</span>:<span class="string">"'<span class="variable">$vip</span>'"</span>, <span class="string">"vport"</span>:'<span class="variable">$vport</span>', <span class="string">"protocol"</span>:<span class="string">"TCP"</span> } ], <span class="string">"rs_os_type"</span>:<span class="string">"linux"</span>, <span class="string">"rs_list"</span>:[ { <span class="string">"rs_ip"</span>:<span class="string">"'<span class="variable">$target_ip</span>'"</span>, <span class="string">"rs_port"</span>:'<span class="variable">$target_port</span>', <span class="string">"rs_weight"</span>:<span class="number">100</span> } ] } ], <span class="string">"sync"</span> : <span class="literal">true</span> }' 'http://xx/cgi-bin/fun_logic/bin/public_api/op_rs.cgi' <span class="number">2</span>&gt;/dev/null`<span class="comment">;</span></div><div class="line"></div><div class="line">* 问题</div><div class="line"></div><div class="line">其实TGW的接口会做两步操作：<span class="number">1</span>，操作TGW server上的配置  <span class="number">2</span>，操作real-server上的配置，这两步应该是原子操作。</div><div class="line"></div><div class="line">&gt; 假设：<span class="number">1</span> 成功，<span class="number">2</span>失败，那么就会导致tgw上的配置，请求均切换了，但是real-server却没做改变，导致两端出现问题。</div><div class="line"></div><div class="line">临时解决方案：<span class="number">2</span>失败了，那么手动执行<span class="number">2</span>的操作。假设在TGW上执行的操作是del_rs,那么可以在read-server上执行  /usr/local/realserver/RS_TUNL0/etc/setup_rs.sh -c (将本地的rsip和vip直接的配置关系清理掉)</div><div class="line"></div><div class="line">&gt; 假设：<span class="number">1</span> 没有执行，<span class="number">2</span> 执行了，那么就会导致tgw上的配置没变，但是real-server的配置改变了，导致从tgw来的请求均在real-server上找不到，出现问题。</div><div class="line"></div><div class="line">临时解决方案：<span class="number">2</span>执行了，那么手动让<span class="number">2</span>还原到没有执行的状态。假设在read-server上误清理掉相关rs配置（/usr/local/realserver/RS_TUNL0/etc/setup_rs.sh -c），那么可以调用add_rs 来恢复。</div></pre></td></tr></table></figure>
+
+<ul>
+<li>vip漂移脚本</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"></div><div class="line"><span class="comment">*</span> <span class="comment">位置：</span> <span class="comment">db_sys:</span> <span class="comment">/data/online/tools/tgw_vip_shift</span></div><div class="line"></div><div class="line"><span class="comment">usage:</span></div><div class="line">    <span class="comment">python</span> <span class="comment">vip_shift</span><span class="string">.</span><span class="comment">py</span> <span class="comment">view</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip=$vip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip_port=$vip_port</span></div><div class="line">    <span class="comment">python</span> <span class="comment">vip_shift</span><span class="string">.</span><span class="comment">py</span> <span class="comment">del</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip=$vip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip_port=$vip_port</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">src_ip=$src_ip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">src_port=$src_port</span></div><div class="line">    <span class="comment">python</span> <span class="comment">vip_shift</span><span class="string">.</span><span class="comment">py</span> <span class="comment">add</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip=$vip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip_port=$vip_port</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">target_ip=$target_ip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">target_port=$target_port</span></div><div class="line">    <span class="comment">python</span> <span class="comment">vip_shift</span><span class="string">.</span><span class="comment">py</span> <span class="comment">change</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip=$vip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">vip_port=$vip_port</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">src_ip=$src_ip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">src_port=$src_port</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">target_ip=$target_ip</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">target_port=$target_port</span></div><div class="line"></div><div class="line">       <span class="title">[</span><span class="literal">-</span><span class="comment">h</span><span class="title">]</span> <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">vip</span> <span class="comment">VIP</span><span class="title">]</span> <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">vip_port</span> <span class="comment">VIP_PORT</span><span class="title">]</span> <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">src_ip</span> <span class="comment">SRC_IP</span><span class="title">]</span></div><div class="line">       <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">src_port</span> <span class="comment">SRC_PORT</span><span class="title">]</span> <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">target_ip</span> <span class="comment">TARGET_IP</span><span class="title">]</span></div><div class="line">       <span class="title">[</span><span class="literal">-</span><span class="literal">-</span><span class="comment">target_port</span> <span class="comment">TARGET_PORT</span><span class="title">]</span> <span class="title">[</span><span class="literal">-</span><span class="comment">v</span> <span class="comment">VERBOSITY</span><span class="title">]</span></div><div class="line">       <span class="comment">{del</span><span class="string">,</span><span class="comment">add</span><span class="string">,</span><span class="comment">change</span><span class="string">,</span><span class="comment">view}</span></div></pre></td></tr></table></figure>
+
+<h2 id="SSH_如何跳过输入密码，只允许认证模式">SSH 如何跳过输入密码，只允许认证模式</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="title">ssh</span> -o BatchMode=<span class="built_in">yes</span> -o PasswordAuthentication=<span class="built_in">no</span> root<span class="variable">@ip</span></div></pre></td></tr></table></figure>
+
+<h2 id="如何永久清空一台机器上的history">如何永久清空一台机器上的history</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">* 立即清空里的<span class="keyword">history</span>当前历史命令的记录 </div><div class="line">	<span class="keyword">history</span> -<span class="keyword">c</span></div><div class="line"></div><div class="line">* 要求bash立即更新<span class="keyword">history</span>文件</div><div class="line">	<span class="keyword">history</span> -<span class="keyword">w</span></div></pre></td></tr></table></figure>
+
+<h2 id="nohup_失效的问题">nohup 失效的问题</h2>
+<ul>
+<li>在secureCRT 或者 iterm2 等类似终端，使用nohup 执行命令，为啥退出后，后台执行的命令也就停止了？</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div></pre></td><td class="code"><pre><div class="line"><span class="bullet">* </span>错误的做法</div><div class="line"><span class="bullet">1. </span>nohup xx_cmd &</div><div class="line"><span class="bullet">2. </span>点击左上角或者右上角的xx按钮退出</div><div class="line"><span class="bullet">3. </span>然后发现，刚刚在后台的命令异常终止了</div><div class="line"></div><div class="line"><span class="bullet">* </span>正确的做法</div><div class="line"><span class="bullet">1. </span>nohup xx_cmd &</div><div class="line"><span class="bullet">2. </span>必须显示的 exit 退出shell，接下来，你想干嘛干嘛</div><div class="line"><span class="bullet">3. </span>然后发现，刚刚在后台的命令，安然无恙，放心睡觉吧</div></pre></td></tr></table></figure>
+
+<h2 id="如何让iTerm2_tab页面显示从哪台机器上登陆过来的">如何让iTerm2 tab页面显示从哪台机器上登陆过来的</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="built_in">sudo</span> vi /bin/go</div><div class="line"></div><div class="line"><span class="shebang">#!/bin/sh</span></div><div class="line"></div><div class="line"><span class="keyword">if</span> [ <span class="string">"<span class="variable">$1</span>"</span> = <span class="string">""</span> ]; <span class="keyword">then</span></div><div class="line">    <span class="built_in">echo</span> <span class="string">"pleaes input ip"</span></div><div class="line"><span class="keyword">else</span></div><div class="line"></div><div class="line">	<span class="built_in">echo</span> <span class="string">"go ==&gt; ssh -A root@<span class="variable">$1</span>"</span></div><div class="line">    <span class="built_in">echo</span>  <span class="string">"\033]0;<span class="variable">$1</span>\007"</span></div><div class="line">	ssh -A root@<span class="variable">$1</span></div><div class="line"><span class="comment">#   ssh -A Keithlan@$堡垒机 -t "ssh root@xx"</span></div><div class="line"><span class="keyword">fi</span></div></pre></td></tr></table></figure>
+
+<h2 id="如何查看memcache/redis当前哪个链接数最多">如何查看memcache/redis当前哪个链接数最多</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="title">ss</span> | grep <span class="string">'<span class="variable">$ip</span>:<span class="variable">$port</span>'</span> | awk <span class="string">'{print <span class="variable">$5</span>}'</span> | awk -F <span class="string">':'</span> <span class="string">'{print <span class="variable">$1</span>}'</span> | sort -nr | uniq -c | sort -nr</div></pre></td></tr></table></figure>
+
+<h2 id="kibana简单语法">kibana简单语法</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">*</span> 地址：http://opses.corp.anjuke.com/</div><div class="line"><span class="keyword">*</span> 注意：选择搜索的时间段，右上角</div><div class="line"><span class="keyword">*</span> filter: </div><div class="line">	语法： message:(+SQLSTATE +connection)    每个关键字用+号，不能有空格</div><div class="line"><span class="keyword">*</span> 选择log name:</div><div class="line">	ops-user-userlog<span class="keyword">*</span></div><div class="line">	ops-xinfang-userlog<span class="keyword">*</span></div><div class="line">	ops-broker-userlog<span class="keyword">*</span></div><div class="line"><span class="keyword">*</span> 哪些关键字跟DB紧密相关</div><div class="line">	SQLSTATE</div><div class="line">	connection time out</div><div class="line">	too many connection</div><div class="line">	max_user_connections</div></pre></td></tr></table></figure>
+
+<h2 id="定位系统问题的工具和方法">定位系统问题的工具和方法</h2>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div></pre></td><td class="code"><pre><div class="line">*  perf top -G : 当CPU性能出现问题的时候，使用最佳    --注意： 会卡住,导致linux宕机，小心 : http:<span class="regexp">//blog</span>.<span class="number">51</span>cto.com/<span class="number">1152313</span>/<span class="number">1767927</span></div><div class="line">	[ ] perf record -g  --保留文件，稍后可以用 perf report分析  </div><div class="line">		[ ] 如果需要分析某一个进程，可以加 -p ， perf record -g -p <span class="variable">$pid</span></div><div class="line">	[ ] perf top -g 实时分析，不保留数据到文件</div><div class="line">		[ ] 如果需要分析某一个进程，可以加 -p ， perf top -g -p <span class="variable">$pid</span></div><div class="line">	 </div><div class="line">* pidstat <span class="number">1</span> <span class="number">5</span> ：分析cpu问题的好工具       </div><div class="line"></div><div class="line">* dstat</div><div class="line">* pstack : 当进程卡住的时候，使用效果最佳  </div><div class="line">* ss -tnlp</div><div class="line">* nstat</div><div class="line">    <span class="number">1</span>. 检查back_log 是否设置合理，如果不合理，那么就会看到很多如下信息,代表客户端的请求会<span class="keyword">connect</span> timeout</div><div class="line">        linux&gt; nstat -a | <span class="keyword">grep</span> -i <span class="string">'drops\|Overflow'</span></div><div class="line">        TcpExtListenOverflows           <span class="number">208539</span>             <span class="number">0</span>.<span class="number">0</span></div><div class="line">        TcpExtListenDrops               <span class="number">236999</span>             <span class="number">0</span>.<span class="number">0</span></div><div class="line">* top :</div><div class="line">	<span class="number">1</span>. top -Hp <span class="variable">$pid</span></div><div class="line">	<span class="number">2</span>. top , 然后输入f，然后输入p和<span class="keyword">y</span> ， 就可以看到top显示中对了<span class="number">2</span>列， p对应的是swap(查看swap的进程)，<span class="keyword">y</span>对应的是wchan(Sleeping in Function),很实用  </div><div class="line"></div><div class="line">* gdb   https:<span class="regexp">//groups</span>.google.com/forum/<span class="comment">#!topic/mechanical-sympathy/QbmpZxp6C64</span></div><div class="line"></div><div class="line">	gdb -p <span class="variable">$id</span></div><div class="line">    	info thread</div><div class="line">        	thread <span class="variable">$id</span></div><div class="line">            	bt</div><div class="line"></div><div class="line">* strace</div><div class="line">	第一种： strace -o /data/dbbackup/strace.<span class="keyword">log</span>  -fp <span class="variable">$pid</span></div><div class="line">	第二种： 跟踪某些具体的操作 strace -o /data/dbbackup/strace.<span class="keyword">log</span>  -T -tt -f -e trace=<span class="keyword">read</span>,<span class="keyword">open</span> -p <span class="variable">$pid</span></div><div class="line"></div><div class="line">* other</div><div class="line">	http:<span class="regexp">//blog</span>.donghao.org/<span class="number">2014</span>/<span class="number">04</span>/<span class="number">24</span>/<span class="variable">%E8</span><span class="variable">%BF</span><span class="variable">%BD</span><span class="variable">%E8</span><span class="variable">%B8</span><span class="variable">%AAcpu</span><span class="variable">%E8</span><span class="variable">%B7</span><span class="variable">%91</span><span class="variable">%E6</span><span class="variable">%BB</span><span class="variable">%A1</span>/  </div><div class="line">	如果perf都用不了，可以尝试 echo t &gt; <span class="regexp">/proc/sysrq</span>-trigger ， 然后dmesg 或者查看kernel日志</div><div class="line">	如果上述方法还不行， 可以尝试  /proc/<span class="string">{pid}</span>/wchan</div></pre></td></tr></table></figure>
+
+<h2 id="atop的使用方法"><a href="atop_doc.pdf">atop的使用方法</a></h2>
+<blockquote>
+<p>查看历史的top  </p>
+</blockquote>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">atop -r <span class="regexp">/var/</span>log<span class="regexp">/atop/</span>atop_20180906 -b <span class="number">4</span>:<span class="number">00</span> -e <span class="number">5</span>:<span class="number">00</span>   --查看某台机器凌晨<span class="number">4</span>点~<span class="number">5</span>点的top日志， t 下一页，T 上一页</div></pre></td></tr></table></figure>
+
+<h2 id="如何优化swap被占用的情况">如何优化swap被占用的情况</h2>
+<ul>
+<li>处理原则</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. 如果<span class="built_in">swap</span>占用的内存比较小(500M以内)，那么通过 swapoff -a && swapon -a 可以快速释放掉(此操作有风险，谨慎)    </div><div class="line"></div><div class="line"><span class="number">2</span>. 如果<span class="built_in">swap</span>占用的内存比较大，则需要保证两点</div><div class="line">	<span class="number">2.1</span> 必须保证linux的空闲内存 大于 <span class="built_in">swap</span>占用空间</div><div class="line">	<span class="number">2.2</span> 然后通过下面的方法找到占用<span class="built_in">swap</span>最多的进程，优化处理进程，让其达到第一点后再释放<span class="built_in">swap</span></div></pre></td></tr></table></figure>
+
+<ul>
+<li>发现swap占用最多的进程</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="number">1</span>. <span class="keyword">for</span> i <span class="keyword">in</span> $(ls /<span class="keyword">proc</span> | grep <span class="string">"^[0-9]"</span> | awk '$<span class="number">0</span>&gt;<span class="number">100</span>'); <span class="keyword">do</span> awk '/<span class="type">Swap</span>:/{a=a+$<span class="number">2</span>}<span class="type">END</span>{print '<span class="string">"$i"</span>',a/<span class="number">1024</span><span class="string">"M"</span>}' /<span class="keyword">proc</span>/$i/smaps;done| sort -k2nr | head</div><div class="line"></div><div class="line">有些linux无法跑上面的程序，可参考下一条命令  </div><div class="line"></div><div class="line"><span class="number">2</span>. <span class="keyword">for</span> i <span class="keyword">in</span> $(ll /<span class="keyword">proc</span> | awk '{print $<span class="number">9</span>}' | grep <span class="string">"^[0-9]"</span> | awk '$<span class="number">0</span>&gt;<span class="number">100</span>'); <span class="keyword">do</span> awk '/<span class="type">Swap</span>:/{a=a+$<span class="number">2</span>}<span class="type">END</span>{print '<span class="string">"$i"</span>',a/<span class="number">1024</span><span class="string">"M"</span>}' /<span class="keyword">proc</span>/$i/smaps;done| sort -k2nr | head</div></pre></td></tr></table></figure>
+
+<ul>
+<li>查看机器有哪些服务</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="literal">ss</span> -tpnl</div></pre></td></tr></table></figure>
+
+<ul>
+<li>如何是否os的cache</li>
+</ul>
+<figure class="highlight"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line">cat  /<span class="keyword">proc</span>/sys/vm/drop_caches</div><div class="line">sync;sync;sync;</div><div class="line">sync;sync;sync;</div><div class="line">sync;sync;sync;</div><div class="line"></div><div class="line">echo <span class="number">3</span> &gt; /<span class="keyword">proc</span>/sys/vm/drop_caches</div><div class="line">sync;sync;sync;</div><div class="line">sync;sync;sync;</div><div class="line">echo <span class="number">0</span> &gt; /<span class="keyword">proc</span>/sys/vm/drop_caches</div><div class="line">sync;sync;sync;</div><div class="line">sync;sync;sync;</div><div class="line">cat /<span class="keyword">proc</span>/sys/vm/drop_caches</div></pre></td></tr></table></figure>
+
+  
+	</div>
+		<footer class="article-footer clearfix">
+
+  <div class="article-tags">
+  
+  <span></span> <a href="/tags/MySQL-tools/">MySQL tools</a>
+  </div>
+
+
+<div class="article-categories">
+  <span></span>
+  <a class="article-category-link" href="/categories/MySQL/">MySQL</a>
+</div>
+
+
+
+<div class="article-share" id="share">
+
+  <div data-url="https://Keithlan.github.io/2020/04/11/mysql_tools_cmd/" data-title="MySQL 运维常用工具&amp;命令 | Focus on MySQL,Focus on Life" data-tsina="null" class="share clearfix">
+  </div>
+
+</div>
+</footer>   	       
+	</article>
+	
+<nav class="article-nav clearfix">
+ 
+
+<div class="next">
+<a href="/2020/04/11/gtid_monitor/"  title="MySQL运维实战 之 价值一个亿的GTID监控">
+ <strong>NEXT:</strong><br/> 
+ <span>MySQL运维实战 之 价值一个亿的GTID监控
+</span>
+</a>
+</div>
+
+</nav>
+
+	
+
+<!-- 多说评论框 start -->
+<div class="ds-thread" data-thread-key="/2020/04/11/mysql_tools_cmd/" data-title="MySQL 运维常用工具&命令" data-url="https://Keithlan.github.io/2020/04/11/mysql_tools_cmd/"></div>
+<!-- 多说评论框 end -->
+<!-- 多说公共JS代码 start (一个网页只需插入一次) -->
+<script type="text/javascript">
+var duoshuoQuery = {short_name:keithlan};
+	(function() {
+		var ds = document.createElement('script');
+		ds.type = 'text/javascript';ds.async = true;
+		ds.src = (document.location.protocol == 'https:' ? 'https:' : 'http:') + '//static.duoshuo.com/embed.js';
+		ds.charset = 'UTF-8';
+		(document.getElementsByTagName('head')[0] 
+		 || document.getElementsByTagName('body')[0]).appendChild(ds);
+	})();
+	</script>
+<!-- 多说公共JS代码 end -->
+
+
+</div>  
+      
+  <div id="toc" class="toc-aside">
+  <strong class="toc-title">Contents</strong>
+  <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#以下列出的是平常工作中用到的小工具和命令"><span class="toc-number">1.</span> <span class="toc-text">以下列出的是平常工作中用到的小工具和命令</span></a><ol class="toc-child"><li class="toc-item toc-level-2"><a class="toc-link" href="#连接"><span class="toc-number">1.1.</span> <span class="toc-text">连接</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#MySQL如何查看用户名密码"><span class="toc-number">1.2.</span> <span class="toc-text">MySQL如何查看用户名密码</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#information_schema相关"><span class="toc-number">1.3.</span> <span class="toc-text">information_schema相关</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#如何在线kill掉满足某种条件的session"><span class="toc-number">1.3.1.</span> <span class="toc-text">如何在线kill掉满足某种条件的session</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#PROCESSLIST"><span class="toc-number">1.3.2.</span> <span class="toc-text">PROCESSLIST</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TABLES"><span class="toc-number">1.3.3.</span> <span class="toc-text">TABLES</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#performance_schema相关"><span class="toc-number">1.4.</span> <span class="toc-text">performance_schema相关</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#performance_schema占用多少内存"><span class="toc-number">1.4.1.</span> <span class="toc-text">performance_schema占用多少内存</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#performance_schema_瓶颈"><span class="toc-number">1.4.2.</span> <span class="toc-text">performance_schema 瓶颈</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#如何查看每个threads当前session变量的值"><span class="toc-number">1.4.3.</span> <span class="toc-text">如何查看每个threads当前session变量的值</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#TOP_SQL_相关"><span class="toc-number">1.4.4.</span> <span class="toc-text">TOP SQL 相关</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#实例中：_求SQL"><span class="toc-number">1.4.4.1.</span> <span class="toc-text">实例中： 求SQL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#库中：_求SQL"><span class="toc-number">1.4.4.2.</span> <span class="toc-text">库中： 求SQL</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#实例中：求table"><span class="toc-number">1.4.4.3.</span> <span class="toc-text">实例中：求table</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Table_IO_相关的监控"><span class="toc-number">1.4.5.</span> <span class="toc-text">Table IO 相关的监控</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#库级别"><span class="toc-number">1.4.5.1.</span> <span class="toc-text">库级别</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#表级别"><span class="toc-number">1.4.5.2.</span> <span class="toc-text">表级别</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#抓包"><span class="toc-number">1.5.</span> <span class="toc-text">抓包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#slow_query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断"><span class="toc-number">1.6.</span> <span class="toc-text">slow query优化—切忌：不要在master进行分析和调优，在没有业务的机器上或者etl上分析诊断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#cpu_模式调节"><span class="toc-number">1.7.</span> <span class="toc-text">cpu 模式调节</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#NC_传送"><span class="toc-number">1.8.</span> <span class="toc-text">NC 传送</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#rsync"><span class="toc-number">1.9.</span> <span class="toc-text">rsync</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#pigz使用"><span class="toc-number">1.10.</span> <span class="toc-text">pigz使用</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#axel_&_httpd_多线程数据传输"><span class="toc-number">1.11.</span> <span class="toc-text">axel & httpd 多线程数据传输</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#git_基本"><span class="toc-number">1.12.</span> <span class="toc-text">git 基本</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何模拟网络延迟或丢包"><span class="toc-number">1.13.</span> <span class="toc-text">如何模拟网络延迟或丢包</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何模拟网络故障"><span class="toc-number">1.14.</span> <span class="toc-text">如何模拟网络故障</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#ansible_基础知识"><span class="toc-number">1.15.</span> <span class="toc-text">ansible 基础知识</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#文档"><span class="toc-number">1.15.1.</span> <span class="toc-text">文档</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#基础用法"><span class="toc-number">1.15.2.</span> <span class="toc-text">基础用法</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#网络流量诊断"><span class="toc-number">1.16.</span> <span class="toc-text">网络流量诊断</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#vim块操作"><span class="toc-number">1.17.</span> <span class="toc-text">vim块操作</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#TGW_接口"><span class="toc-number">1.18.</span> <span class="toc-text">TGW 接口</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#SSH_如何跳过输入密码，只允许认证模式"><span class="toc-number">1.19.</span> <span class="toc-text">SSH 如何跳过输入密码，只允许认证模式</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何永久清空一台机器上的history"><span class="toc-number">1.20.</span> <span class="toc-text">如何永久清空一台机器上的history</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#nohup_失效的问题"><span class="toc-number">1.21.</span> <span class="toc-text">nohup 失效的问题</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何让iTerm2_tab页面显示从哪台机器上登陆过来的"><span class="toc-number">1.22.</span> <span class="toc-text">如何让iTerm2 tab页面显示从哪台机器上登陆过来的</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何查看memcache/redis当前哪个链接数最多"><span class="toc-number">1.23.</span> <span class="toc-text">如何查看memcache/redis当前哪个链接数最多</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#kibana简单语法"><span class="toc-number">1.24.</span> <span class="toc-text">kibana简单语法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#定位系统问题的工具和方法"><span class="toc-number">1.25.</span> <span class="toc-text">定位系统问题的工具和方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#atop的使用方法"><span class="toc-number">1.26.</span> <span class="toc-text">atop的使用方法</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#如何优化swap被占用的情况"><span class="toc-number">1.27.</span> <span class="toc-text">如何优化swap被占用的情况</span></a></li></ol></li></ol>
+  </div>
+
+<div id="asidepart">
+<div id="authorInfo">
+	
+		<div class="author-logo"></div>		
+	
+	
+	<section class="author-info">
+		
+			<p> 幸福,不在于得到的多</p>
+		
+		
+			<p>	而在于计较的少</p>
+		
+	</section>
+	 
+	<div class="social-font" class="clearfix">
+		
+		<a href="http://weibo.com/2101743962" target="_blank" title="weibo"></a>
+		
+		
+		
+		<a href="https://github.com/Keithlan" target="_blank" title="github"></a>
+		
+		
+	</div>
+</div>
+<aside class="clearfix">
+
+
+  
+<div class="categorieslist">
+	<p class="asidetitle">Categories</p>
+		<ul>
+		
+			<li><a href="/categories/MySQL/" title="MySQL">MySQL<sup>50</sup></a></li>
+		
+			<li><a href="/categories/personal/" title="personal">personal<sup>1</sup></a></li>
+		
+			<li><a href="/categories/分享/" title="分享">分享<sup>37</sup></a></li>
+		
+		</ul>
+</div>
+
+
+  
+  <div class="archiveslist">
+    <p class="asidetitle"><a href="/archives">Archives</a></p>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2020/04/">April 2020</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/03/">March 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">January 2019</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">December 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/11/">November 2018</a><span class="archive-list-count">8</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">August 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">July 2018</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">June 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/05/">May 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">March 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/11/">November 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">October 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">September 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">August 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">June 2017</a><span class="archive-list-count">9</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/04/">April 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">March 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/02/">February 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/12/">December 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/08/">August 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/07/">July 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/06/">June 2016</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/05/">May 2016</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/04/">April 2016</a><span class="archive-list-count">5</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2016/03/">March 2016</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/12/">December 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/11/">November 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/10/">October 2015</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/08/">August 2015</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/07/">July 2015</a><span class="archive-list-count">12</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a><span class="archive-list-count">1</span></li></ul>
+  </div>
+
+
+  
+<div class="tagslist">
+	<p class="asidetitle">Tags</p>
+		<ul class="clearfix">
+		
+			<li><a href="/tags/Error/" title="Error">Error<sup>2</sup></a></li>
+		
+			<li><a href="/tags/InnoDB-Lock/" title="InnoDB Lock">InnoDB Lock<sup>9</sup></a></li>
+		
+			<li><a href="/tags/Life-share/" title="Life share">Life share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/Linux-share/" title="Linux share">Linux share<sup>1</sup></a></li>
+		
+			<li><a href="/tags/MHA/" title="MHA">MHA<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-Error/" title="MySQL Error">MySQL Error<sup>12</sup></a></li>
+		
+			<li><a href="/tags/MySQL-SYS-toolkit/" title="MySQL SYS toolkit">MySQL SYS toolkit<sup>2</sup></a></li>
+		
+			<li><a href="/tags/MySQL-feature/" title="MySQL feature">MySQL feature<sup>4</sup></a></li>
+		
+			<li><a href="/tags/MySQL-share/" title="MySQL share">MySQL share<sup>46</sup></a></li>
+		
+			<li><a href="/tags/MySQL-tools/" title="MySQL tools">MySQL tools<sup>6</sup></a></li>
+		
+			<li><a href="/tags/MySQL-实战/" title="MySQL 实战">MySQL 实战<sup>1</sup></a></li>
+		
+			<li><a href="/tags/SQL-Tuning/" title="SQL Tuning">SQL Tuning<sup>1</sup></a></li>
+		
+			<li><a href="/tags/sysbench/" title="sysbench">sysbench<sup>1</sup></a></li>
+		
+		</ul>
+</div>
+
+
+</aside>
+</div>
+    </div>
+    <footer><div id="footer" >
+
+</div>
+</footer>
+    <script src="/js/jquery-2.1.0.min.js"></script>
+<script type="text/javascript">
+$(document).ready(function(){ 
+  //back to top
+  function backToTop(){
+    var buttonHTML = $("<a href=\"#top\" id=\"back-top\">" + "<span>Back to Top</span></a>");
+    buttonHTML.appendTo($("body"));
+    var buttonToTop = $("#back-top");
+    // hide #back-top first
+    buttonToTop.hide();
+
+    // fade in #back-top
+    $(function() {
+        $(window).scroll(function() {
+            if ($(this).scrollTop() > 200) {
+                buttonToTop.fadeIn();
+            } else {
+                buttonToTop.fadeOut();
+            }
+        });
+        // scroll body to 0px on click
+        buttonToTop.click(function() {
+            $('body,html').animate({
+                scrollTop: 0
+            }, 800);
+            return false;
+        });
+    });
+  }
+  backToTop();
+
+  $('.navbar').click(function(){
+    $('header nav').toggleClass('shownav');
+  });
+  var myWidth = 0;
+  function getSize(){
+    if( typeof( window.innerWidth ) == 'number' ) {
+      myWidth = window.innerWidth;
+    } else if( document.documentElement && document.documentElement.clientWidth) {
+      myWidth = document.documentElement.clientWidth;
+    };
+  };
+  var m = $('#main'),
+      a = $('#asidepart'),
+      c = $('.closeaside'),
+      ta = $('#toc.toc-aside');
+  $(window).resize(function(){
+    getSize(); 
+    if (myWidth >= 1024) {
+      $('header nav').removeClass('shownav');
+    }else
+    {
+      m.removeClass('moveMain');
+      a.css('display', 'block').removeClass('fadeOut');
+      
+      $('#toc.toc-aside').css('display', 'none');
+        
+    }
+  });
+
+  var show = true;
+  c.click(function(){
+    if(show == true){
+        a.addClass('fadeOut').css('display', 'none');
+        ta.css('display', 'block').addClass('fadeIn');
+        m.addClass('moveMain');  
+    }else{
+        a.css('display', 'block').removeClass('fadeOut').addClass('fadeIn');     
+        ta.css('display', 'none'); 
+        m.removeClass('moveMain');
+        $('#toc.toc-aside').css('display', 'none');
+    }
+    show = !show;
+  });
+});
+</script>
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var ai = $('.article-content>iframe'),
+      ae = $('.article-content>embed'),
+      t  = $('#toc'),
+      h  = $('article h2')
+      ah = $('article h2'),
+      ta = $('#toc.toc-aside'),
+      o  = $('.openaside'),
+      c  = $('.closeaside');
+  if(ai.length>0){
+    ai.wrap('<div class="video-container" />');
+  };
+  if(ae.length>0){
+   ae.wrap('<div class="video-container" />');
+  };
+  if(ah.length==0){
+    t.css('display','none');
+  }else{
+
+    $(window).scroll(function(){
+      ta.css("top",Math.max(140,240-$(this).scrollTop()));
+    });
+  };
+});
+</script>
+
+
+<script type="text/javascript">
+$(document).ready(function(){ 
+  var $this = $('.share'),
+      url = $this.attr('data-url'),
+      encodedUrl = encodeURIComponent(url),
+      title = $this.attr('data-title'),
+      tsina = $this.attr('data-tsina');
+  var html = [
+  '<a href="#" class="overlay" id="qrcode"></a>',
+  '<div class="qrcode clearfix"><span>扫描二维码分享到微信朋友圈</span><a class="qrclose" href="#share"></a><strong>Loading...Please wait</strong><img id="qrcode-pic" data-src="http://s.jiathis.com/qrcode.php?url=' + encodedUrl + '"/></div>',
+  '<a href="#textlogo" class="article-back-to-top" title="Top"></a>',
+  '<a href="https://www.facebook.com/sharer.php?u=' + encodedUrl + '" class="article-share-facebook" target="_blank" title="Facebook"></a>',
+  '<a href="#qrcode" class="article-share-qrcode" title="QRcode"></a>',
+  '<a href="https://twitter.com/intent/tweet?url=' + encodedUrl + '" class="article-share-twitter" target="_blank" title="Twitter"></a>',
+  '<a href="http://service.weibo.com/share/share.php?title='+title+'&url='+encodedUrl +'&ralateUid='+ tsina +'&searchPic=true&style=number' +'" class="article-share-weibo" target="_blank" title="Weibo"></a>',
+  '<span title="Share to"></span>'
+  ].join('');
+  $this.append(html);
+  $('.article-share-qrcode').click(function(){
+    var imgSrc = $('#qrcode-pic').attr('data-src');
+    $('#qrcode-pic').attr('src', imgSrc);
+    $('#qrcode-pic').load(function(){
+        $('.qrcode strong').text(' ');
+    });
+  });
+});     
+</script>
+
+
+<script type="text/javascript">
+  var duoshuoQuery = {short_name:"keithlan"};
+  (function() {
+    var ds = document.createElement('script');
+    ds.type = 'text/javascript';ds.async = true;
+    ds.src = '//static.duoshuo.com/embed.js';
+    ds.charset = 'UTF-8';
+    (document.getElementsByTagName('head')[0] 
+    || document.getElementsByTagName('body')[0]).appendChild(ds);
+  })();
+</script> 
+
+
+
+
+
+  </body>
+</html>
